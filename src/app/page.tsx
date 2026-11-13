@@ -1,0 +1,638 @@
+"use client";
+
+import { useState } from "react";
+import Image from "next/image";
+import { Heart, Play, ArrowRight, ShieldCheck, RefreshCw, Sparkles, Check, X, Clock } from "lucide-react";
+import { CATEGORIES_DATA, PRODUCTS_DATA, ProductItem, RahayuCategory } from "@/data/mock-data";
+import Footer from "@/components/Footer";
+import HeaderNavbar from "@/components/HeaderNavbar";
+import { useStore } from "@/context/StoreContext";
+
+export default function HomePage() {
+  const { categories, addToCart } = useStore();
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedSizeFilter, setSelectedSizeFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [isLiveModalOpen, setIsLiveModalOpen] = useState<boolean>(false);
+
+  // PDP Modal State
+  const [activeModalProduct, setActiveModalProduct] = useState<ProductItem | null>(null);
+  const [pdpMediaType, setPdpMediaType] = useState<"photo" | "video">("photo");
+  const [selectedSize, setSelectedSize] = useState<string>("");
+  const [selectedColor, setSelectedColor] = useState<string>("");
+
+  // Countdown timer mock
+  const [hours] = useState("06");
+  const [mins] = useState("42");
+  const [secs] = useState("19");
+
+  const currentCategoryConfig = categories.find((c) => c.id === selectedCategory);
+
+  const filteredProducts = PRODUCTS_DATA.filter((p) => {
+    const matchCat = selectedCategory === "all" || p.category === selectedCategory;
+    const matchSearch =
+      !searchQuery ||
+      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.category.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchCat && matchSearch;
+  });
+
+  const promoHighlightProducts = PRODUCTS_DATA.filter((p) => p.isPromoHighlight);
+
+  const openPdpModal = (product: ProductItem) => {
+    setActiveModalProduct(product);
+    const cat = categories.find((c) => c.id === product.category) || categories[0];
+    setSelectedSize(cat.sizes[0] || "All Size");
+    setSelectedColor(cat.colors[0]?.name || "Default");
+    setPdpMediaType("photo");
+  };
+
+  const handleAddToCart = (product: ProductItem) => {
+    const cat = categories.find((c) => c.id === product.category) || categories[0];
+    const sizeToUse = selectedSize || cat.sizes[0] || "All Size";
+    const colorToUse = selectedColor || cat.colors[0]?.name || "Default";
+    addToCart(product, sizeToUse, colorToUse, 1);
+    setActiveModalProduct(null);
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col bg-white">
+      {/* Editorial Header Navbar */}
+      <HeaderNavbar
+        selectedCategory={selectedCategory}
+        onSelectCategory={(catId) => {
+          setSelectedCategory(catId);
+          setSelectedSizeFilter("all");
+        }}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        onOpenLiveModal={() => setIsLiveModalOpen(true)}
+      />
+
+      {/* 3. Main Content Body */}
+      <main className="flex-1">
+        {/* Editorial Hero Banner + Live Showcase */}
+        <section className="max-w-[1320px] mx-auto px-4 pt-5 pb-8">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            {/* Left Hero */}
+            <div className="lg:col-span-9 relative bg-[#F6F4F0] border border-zinc-200 overflow-hidden min-h-[340px] flex items-center">
+              <div className="p-8 sm:p-12 max-w-lg z-10 space-y-4">
+                <div className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.25em] text-zinc-600 font-semibold">
+                  <span>RAHAYU EXCLUSIVE COLLECTION</span>
+                  <span className="text-rose-600 font-bold">· UP TO 35% OFF</span>
+                </div>
+                <h1 className="editorial-serif text-3xl sm:text-5xl text-zinc-900 leading-[1.12] font-normal">
+                  Refined Modesty for Modern Women.
+                </h1>
+                <p className="text-xs sm:text-sm text-zinc-600 leading-relaxed">
+                  Kurasi 11 kategori utama dengan panduan ukuran akurat, video singkat di setiap halaman produk, dan pengiriman cepat ke seluruh Indonesia.
+                </p>
+                <div className="pt-2 flex flex-wrap items-center gap-3">
+                  <button
+                    onClick={() => {
+                      const el = document.getElementById("catalog-anchor");
+                      el?.scrollIntoView({ behavior: "smooth" });
+                    }}
+                    className="px-6 py-3 bg-zinc-900 hover:bg-[#7C3AED] text-white text-[11px] font-semibold uppercase tracking-[0.18em] transition cursor-pointer"
+                  >
+                    Belanja Sekarang
+                  </button>
+                  <button
+                    onClick={() => openPdpModal(PRODUCTS_DATA[0])}
+                    className="px-5 py-3 bg-white hover:bg-zinc-100 text-zinc-900 border border-zinc-900 text-[11px] font-semibold uppercase tracking-[0.15em] transition flex items-center gap-2 cursor-pointer"
+                  >
+                    <Play className="w-3.5 h-3.5" /> Tonton Video Produk
+                  </button>
+                </div>
+              </div>
+
+              {/* Graphic Backdrop */}
+              <div className="hidden sm:flex absolute right-0 top-0 bottom-0 w-80 items-end justify-center bg-gradient-to-l from-[#EDE8E0] to-transparent pointer-events-none">
+                <svg viewBox="0 0 260 340" className="w-64 h-80">
+                  <path d="M40 340 V120 C40 55 90 20 135 20 C180 20 230 55 230 120 V340 Z" fill="#E5DFD5" />
+                  <path d="M55 340 V130 C55 72 95 40 135 40 C175 40 215 72 215 130 V340 Z" fill="#FAF8F5" />
+                  <path d="M82 340 L96 155 C96 135 112 124 135 124 C158 124 174 135 174 155 L188 340 Z" fill="#27272A" />
+                  <path d="M98 135 L135 205 L172 135 L182 260 L88 260 Z" fill="#D6C7B2" />
+                  <path d="M104 82 C104 52 166 52 166 82 C170 115 174 148 148 162 C120 168 98 140 104 82 Z" fill="#7C3AED" />
+                  <circle cx="135" cy="86" r="20" fill="#F5CBA7" />
+                </svg>
+              </div>
+            </div>
+
+            {/* Right TikTok Live Widget */}
+            <div className="lg:col-span-3 bg-zinc-900 text-white p-5 flex flex-col justify-between border border-zinc-800">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-rose-600 text-[10px] font-bold uppercase tracking-widest">
+                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span> TIKTOK LIVE
+                  </span>
+                  <span className="text-[11px] text-zinc-400 font-mono">1.428 Penonton</span>
+                </div>
+                <div className="text-xs font-semibold text-[#E879F9]">@rahayufashion.store</div>
+                <h3 className="editorial-serif text-lg font-normal leading-snug">
+                  Live Try-On: Koleksi Tunik Silk & Hijab Voal
+                </h3>
+                <p className="text-[11px] text-zinc-400 leading-relaxed">
+                  Host sedang memperagakan ukuran S, M, L, XL secara langsung. Klaim voucher <strong className="text-white font-mono">RAHAYULIVE20</strong>.
+                </p>
+              </div>
+
+              <div className="my-4 p-3 bg-zinc-800/90 border border-zinc-700 space-y-1.5">
+                <div className="text-[10px] uppercase tracking-wider text-amber-400 font-bold">📌 Sedang Di-Spill di Live</div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-medium truncate">Amira Armani Silk Tunic</span>
+                  <span className="text-rose-400 font-bold shrink-0">Rp 249.000</span>
+                </div>
+                <div className="text-[10px] text-zinc-400">Ukuran tersedia: S · M · L · XL</div>
+              </div>
+
+              <button
+                onClick={() => setIsLiveModalOpen(true)}
+                className="w-full py-2.5 bg-white text-zinc-900 hover:bg-[#E879F9] text-[11px] font-bold uppercase tracking-widest transition cursor-pointer"
+              >
+                Tonton Preview Live →
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {/* 4. Hijup-Style Circular Category Portraits */}
+        <section className="max-w-[1320px] mx-auto px-4 py-6 border-t border-b border-zinc-100">
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 block">EXPLORE BY CATEGORY</span>
+              <h2 className="editorial-serif text-xl text-zinc-900">11 Kategori Pilihan Rahayu</h2>
+            </div>
+            <span className="text-xs text-zinc-500 hidden sm:inline">
+              Klik kategori untuk melihat koleksi & ukuran spesifik
+            </span>
+          </div>
+
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-11 gap-4">
+            {CATEGORIES_DATA.map((c) => {
+              const isSelected = selectedCategory === c.id;
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => {
+                    setSelectedCategory(c.id);
+                    setSelectedSizeFilter("all");
+                  }}
+                  className="group flex flex-col items-center text-center space-y-2 focus:outline-none cursor-pointer"
+                >
+                  <div
+                    className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full p-0.5 transition ${
+                      isSelected ? "ring-2 ring-zinc-900" : "ring-1 ring-zinc-200 group-hover:ring-zinc-900"
+                    }`}
+                  >
+                    <div
+                      className="w-full h-full rounded-full flex items-center justify-center overflow-hidden"
+                      style={{ background: c.iconBg }}
+                    >
+                      <div className="w-11 h-14 group-hover:scale-105 transition">
+                        <svg viewBox="0 0 80 100" className="w-full h-full">
+                          <circle cx="40" cy="26" r="10" fill="#E6C2A6" />
+                          <path d="M22 42 L15 88 L65 88 L58 42 Z" fill={c.colorHex} />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                  <span
+                    className={`text-[10px] font-semibold uppercase tracking-wider leading-tight line-clamp-2 ${
+                      isSelected ? "text-zinc-950 underline" : "text-zinc-600 group-hover:text-zinc-950"
+                    }`}
+                  >
+                    {c.nameId}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* 5. Promo Highlight Section */}
+        <section id="promo-highlight-section" className="bg-[#FAF8F5] border-b border-zinc-200 py-10 my-6">
+          <div className="max-w-[1320px] mx-auto px-4 space-y-6">
+            <div className="flex flex-wrap items-end justify-between gap-4 border-b border-zinc-200 pb-4">
+              <div>
+                <div className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-rose-600 mb-1">
+                  <span>🔥 HIGHLIGHTED PROMO CAMPAIGN</span>
+                </div>
+                <h2 className="editorial-serif text-2xl sm:text-3xl text-zinc-900">Special Promo Highlight</h2>
+              </div>
+              <div className="flex items-center gap-3 text-xs">
+                <span className="text-zinc-500 uppercase tracking-wider text-[11px]">Berakhir Dalam:</span>
+                <div className="flex items-center gap-1 font-mono font-bold text-white text-xs">
+                  <span className="bg-zinc-900 px-2.5 py-1">{hours}</span>:
+                  <span className="bg-zinc-900 px-2.5 py-1">{mins}</span>:
+                  <span className="bg-rose-600 px-2.5 py-1">{secs}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
+              {promoHighlightProducts.map((p) => {
+                const catCfg = CATEGORIES_DATA.find((c) => c.id === p.category) || CATEGORIES_DATA[0];
+                return (
+                  <article
+                    key={p.id}
+                    onClick={() => openPdpModal(p)}
+                    className="group cursor-pointer flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="relative aspect-[3/4] bg-[#F6F4F0] border border-zinc-200/80 overflow-hidden mb-3 flex items-center justify-center">
+                        <div className="w-4/5 h-4/5 group-hover:scale-105 transition duration-300">
+                          <svg viewBox="0 0 180 240" className="w-full h-full">
+                            <path d="M25 230 V85 C25 45 55 20 90 20 C125 20 155 45 155 85 V230 Z" fill={catCfg.iconBg} opacity="0.75" />
+                            <path d="M56 75 L38 155 L55 158 L64 112 L60 218 L120 218 L116 112 L125 158 L142 155 L124 75 Z" fill={catCfg.colorHex} />
+                            <path d="M74 75 L90 105 L106 75 Z" fill="#FAF8F5" />
+                            <circle cx="90" cy="54" r="14" fill="#E6C2A6" />
+                          </svg>
+                        </div>
+                        {p.promoBadge && (
+                          <span className="absolute top-3 left-3 px-2.5 py-1 bg-rose-600 text-white text-[10px] font-bold uppercase tracking-widest">
+                            {p.promoBadge}
+                          </span>
+                        )}
+                        <span className="absolute top-3 right-3 w-7 h-7 bg-white/90 text-zinc-700 flex items-center justify-center text-xs">
+                          <Heart className="w-3.5 h-3.5" />
+                        </span>
+                        {p.hasVideo && (
+                          <span className="absolute bottom-3 left-3 px-2 py-0.5 bg-zinc-900/90 text-white text-[9px] font-semibold uppercase tracking-widest flex items-center gap-1">
+                            <span className="text-[#E879F9]">▶</span> VIDEO
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-400">{p.category}</span>
+                          <div className="flex items-center gap-1">
+                            {catCfg.colors.map((col) => (
+                              <span key={col.name} className="w-2.5 h-2.5 rounded-full border border-zinc-300" style={{ background: col.hex }} />
+                            ))}
+                          </div>
+                        </div>
+                        <h3 className="text-xs sm:text-sm font-medium text-zinc-900 group-hover:underline line-clamp-1">{p.name}</h3>
+                        <div className="flex items-baseline gap-2 pt-0.5">
+                          <span className="text-xs sm:text-sm font-bold text-zinc-900">Rp {p.priceIdr.toLocaleString("id-ID")}</span>
+                          {p.discountPct > 0 && (
+                            <span className="text-[11px] text-zinc-400 line-through">Rp {p.origPriceIdr.toLocaleString("id-ID")}</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* 6. Main Catalog & Dynamic Size Filters */}
+        <section id="catalog-anchor" className="max-w-[1320px] mx-auto px-4 py-8 space-y-6">
+          <div className="flex flex-wrap items-end justify-between gap-4 border-b border-zinc-200 pb-4">
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 block">OFFICIAL CATALOG</span>
+              <h2 className="editorial-serif text-2xl text-zinc-900">
+                {selectedCategory === "all" ? `Semua Koleksi (${filteredProducts.length} Produk)` : `${selectedCategory} (${filteredProducts.length} Produk)`}
+              </h2>
+              {currentCategoryConfig && (
+                <p className="text-xs text-zinc-500 mt-1">
+                  Standar Ukuran <strong>{currentCategoryConfig.nameId}</strong> ({currentCategoryConfig.measurementLabel}):{" "}
+                  <span className="text-[#7C3AED] font-semibold">{currentCategoryConfig.sizes.join(", ")}</span>
+                </p>
+              )}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3 text-xs">
+              {currentCategoryConfig && (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[11px] text-zinc-500 mr-1">Filter Ukuran:</span>
+                  <button
+                    onClick={() => setSelectedSizeFilter("all")}
+                    className={`px-2 py-1 border text-[11px] cursor-pointer ${
+                      selectedSizeFilter === "all" ? "bg-zinc-900 text-white border-zinc-900" : "bg-white border-zinc-300"
+                    }`}
+                  >
+                    Semua
+                  </button>
+                  {currentCategoryConfig.sizes.map((sz) => (
+                    <button
+                      key={sz}
+                      onClick={() => setSelectedSizeFilter(sz)}
+                      className={`px-2 py-1 border text-[11px] cursor-pointer ${
+                        selectedSizeFilter === sz ? "bg-zinc-900 text-white border-zinc-900" : "bg-white border-zinc-300"
+                      }`}
+                    >
+                      {sz}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-5 gap-y-9">
+            {filteredProducts.map((p) => {
+              const catCfg = CATEGORIES_DATA.find((c) => c.id === p.category) || CATEGORIES_DATA[0];
+              return (
+                <article
+                  key={p.id}
+                  onClick={() => openPdpModal(p)}
+                  className="group cursor-pointer flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="relative aspect-[3/4] bg-[#F6F4F0] border border-zinc-200/80 overflow-hidden mb-3 flex items-center justify-center">
+                      <div className="w-4/5 h-4/5 group-hover:scale-105 transition duration-300">
+                        <svg viewBox="0 0 180 240" className="w-full h-full">
+                          <path d="M25 230 V85 C25 45 55 20 90 20 C125 20 155 45 155 85 V230 Z" fill={catCfg.iconBg} opacity="0.75" />
+                          <path d="M56 75 L38 155 L55 158 L64 112 L60 218 L120 218 L116 112 L125 158 L142 155 L124 75 Z" fill={catCfg.colorHex} />
+                          <path d="M74 75 L90 105 L106 75 Z" fill="#FAF8F5" />
+                          <circle cx="90" cy="54" r="14" fill="#E6C2A6" />
+                        </svg>
+                      </div>
+                      {p.promoBadge && (
+                        <span className="absolute top-3 left-3 px-2.5 py-1 bg-rose-600 text-white text-[10px] font-bold uppercase tracking-widest">
+                          {p.promoBadge}
+                        </span>
+                      )}
+                      <span className="absolute top-3 right-3 w-7 h-7 bg-white/90 text-zinc-700 flex items-center justify-center text-xs">
+                        <Heart className="w-3.5 h-3.5" />
+                      </span>
+                      {p.hasVideo && (
+                        <span className="absolute bottom-3 left-3 px-2 py-0.5 bg-zinc-900/90 text-white text-[9px] font-semibold uppercase tracking-widest flex items-center gap-1">
+                          <span className="text-[#E879F9]">▶</span> VIDEO
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-400">{p.category}</span>
+                        <div className="flex items-center gap-1">
+                          {catCfg.colors.map((col) => (
+                            <span key={col.name} className="w-2.5 h-2.5 rounded-full border border-zinc-300" style={{ background: col.hex }} />
+                          ))}
+                        </div>
+                      </div>
+                      <h3 className="text-xs sm:text-sm font-medium text-zinc-900 group-hover:underline line-clamp-1">{p.name}</h3>
+                      <div className="flex items-baseline gap-2 pt-0.5">
+                        <span className="text-xs sm:text-sm font-bold text-zinc-900">Rp {p.priceIdr.toLocaleString("id-ID")}</span>
+                        {p.discountPct > 0 && (
+                          <span className="text-[11px] text-zinc-400 line-through">Rp {p.origPriceIdr.toLocaleString("id-ID")}</span>
+                        )}
+                      </div>
+                      <div className="text-[10px] text-zinc-500 pt-0.5 font-mono truncate">
+                        Ukuran: {catCfg.sizes.slice(0, 4).join(" · ")}
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+      </main>
+
+      {/* 7. Footer Component (SEO-Friendly & Social Media Links) */}
+      <Footer
+        onCategoryClick={(catId) => {
+          setSelectedCategory(catId);
+          const el = document.getElementById("catalog-anchor");
+          el?.scrollIntoView({ behavior: "smooth" });
+        }}
+        onProfileClick={() => alert("Halaman Akun & Profile Pelanggan terintegrasi.")}
+      />
+
+      {/* =================================================================== */}
+      {/* PRODUCT DETAIL MODAL (PDP WITH 9:16 SHORT PRODUCT VIDEO)            */}
+      {/* =================================================================== */}
+      {activeModalProduct && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white max-w-3xl w-full overflow-hidden shadow-2xl border border-zinc-200 max-h-[90vh] flex flex-col">
+            <div className="px-6 py-4 border-b border-zinc-200 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs">
+                <span className="uppercase tracking-widest text-[10px] font-bold text-zinc-500">
+                  {activeModalProduct.category}
+                </span>
+                {activeModalProduct.promoBadge && (
+                  <span className="px-2 py-0.5 bg-rose-600 text-white text-[10px] font-bold uppercase tracking-wider">
+                    {activeModalProduct.promoBadge}
+                  </span>
+                )}
+              </div>
+              <button onClick={() => setActiveModalProduct(null)} className="w-8 h-8 hover:bg-zinc-100 flex items-center justify-center text-zinc-800 font-bold cursor-pointer">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+              {/* Media Column */}
+              <div className="md:col-span-6 space-y-3">
+                <div className="flex border border-zinc-200 text-xs font-semibold uppercase tracking-wider">
+                  <button
+                    onClick={() => setPdpMediaType("photo")}
+                    className={`flex-1 py-2 cursor-pointer ${pdpMediaType === "photo" ? "bg-zinc-900 text-white" : "bg-white text-zinc-700"}`}
+                  >
+                    Foto Lookbook (3:4)
+                  </button>
+                  <button
+                    onClick={() => setPdpMediaType("video")}
+                    className={`flex-1 py-2 flex items-center justify-center gap-1 cursor-pointer ${
+                      pdpMediaType === "video" ? "bg-rose-600 text-white" : "bg-white text-rose-600"
+                    }`}
+                  >
+                    <Play className="w-3 h-3" /> Video Singkat (0:15)
+                  </button>
+                </div>
+
+                {pdpMediaType === "photo" ? (
+                  <div className="bg-[#F6F4F0] border border-zinc-200 aspect-[3/4] flex items-center justify-center p-6">
+                    <div className="w-48 h-64 flex items-center justify-center">
+                      <svg viewBox="0 0 180 240" className="w-full h-full">
+                        <path d="M25 230 V85 C25 45 55 20 90 20 C125 20 155 45 155 85 V230 Z" fill="#F3E8FF" opacity="0.75" />
+                        <path d="M56 75 L38 155 L55 158 L64 112 L60 218 L120 218 L116 112 L125 158 L142 155 L124 75 Z" fill="#7C3AED" />
+                        <path d="M74 75 L90 105 L106 75 Z" fill="#FAF8F5" />
+                        <circle cx="90" cy="54" r="14" fill="#E6C2A6" />
+                      </svg>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-zinc-900 text-white aspect-[3/4] relative overflow-hidden flex flex-col justify-between p-4">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="px-2 py-0.5 bg-rose-600 font-bold uppercase tracking-wider">▶ VIDEO SINGKAT PRODUK</span>
+                      <span className="text-zinc-300 font-mono">00:09 / 00:15</span>
+                    </div>
+                    <div className="my-auto text-center space-y-2">
+                      <div className="text-3xl">👗</div>
+                      <div className="text-xs font-semibold">Preview Jatuhnya Bahan & Detail Jahitan</div>
+                      <p className="text-[11px] text-zinc-400">Streaming Cloudflare R2 (Rp 0 Bandwidth)</p>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="w-full bg-zinc-700 h-1">
+                        <div className="bg-[#E879F9] h-full w-2/3"></div>
+                      </div>
+                      <div className="flex justify-between text-[11px]">
+                        <span>🔊 Audio Asli</span>
+                        <a href={activeModalProduct.videoUrl} target="_blank" rel="noopener noreferrer" className="text-[#E879F9] underline font-semibold">
+                          Buka Tautan di TikTok ↗
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Product Info Column */}
+              <div className="md:col-span-6 space-y-4">
+                <div>
+                  <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400">RAHAYU OFFICIAL</div>
+                  <h2 className="editorial-serif text-2xl text-zinc-900 mt-0.5">{activeModalProduct.name}</h2>
+                  <p className="text-[11px] text-zinc-400 font-mono mt-0.5">SKU: {activeModalProduct.sku}</p>
+                </div>
+
+                <div className="py-3 border-y border-zinc-200 flex items-baseline gap-3">
+                  <span className="text-xl font-bold text-rose-600">
+                    Rp {activeModalProduct.priceIdr.toLocaleString("id-ID")}
+                  </span>
+                  {activeModalProduct.discountPct > 0 && (
+                    <span className="text-xs text-zinc-400 line-through">
+                      Rp {activeModalProduct.origPriceIdr.toLocaleString("id-ID")}
+                    </span>
+                  )}
+                  {activeModalProduct.discountPct > 0 && (
+                    <span className="ml-auto text-[10px] font-bold uppercase tracking-wider text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5">
+                      Hemat {activeModalProduct.discountPct}%
+                    </span>
+                  )}
+                </div>
+
+                <p className="text-xs text-zinc-600 leading-relaxed">{activeModalProduct.desc}</p>
+
+                {/* Sizes Selector */}
+                {(() => {
+                  const catCfg = CATEGORIES_DATA.find((c) => c.id === activeModalProduct.category) || CATEGORIES_DATA[0];
+                  return (
+                    <div className="space-y-2 text-xs">
+                      <span className="font-bold uppercase tracking-wider text-[11px] text-zinc-800 block">
+                        Pilih Ukuran ({catCfg.measurementLabel}):
+                      </span>
+                      <div className="flex flex-wrap gap-2">
+                        {catCfg.sizes.map((s) => (
+                          <button
+                            key={s}
+                            onClick={() => setSelectedSize(s)}
+                            className={`px-3.5 py-2 border text-xs font-mono transition cursor-pointer ${
+                              selectedSize === s
+                                ? "border-zinc-900 bg-zinc-900 text-white font-bold"
+                                : "border-zinc-300 text-zinc-800 hover:border-zinc-900"
+                            }`}
+                          >
+                            {s}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Colors Selector */}
+                {(() => {
+                  const catCfg = CATEGORIES_DATA.find((c) => c.id === activeModalProduct.category) || CATEGORIES_DATA[0];
+                  return (
+                    <div className="space-y-1.5 text-xs">
+                      <span className="font-bold uppercase tracking-wider text-[11px] text-zinc-800 block">
+                        Pilihan Warna / Varian:
+                      </span>
+                      <div className="flex items-center gap-2">
+                        {catCfg.colors.map((c) => (
+                          <button
+                            key={c.name}
+                            onClick={() => setSelectedColor(c.name)}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1 border text-xs cursor-pointer ${
+                              selectedColor === c.name ? "border-zinc-900 font-semibold bg-zinc-50" : "border-zinc-200"
+                            }`}
+                          >
+                            <span className="w-3 h-3 rounded-full border border-zinc-300" style={{ background: c.hex }}></span>
+                            <span>{c.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                <div className="pt-3 flex gap-2.5">
+                  <button
+                    onClick={() => handleAddToCart(activeModalProduct)}
+                    className="flex-1 py-3 bg-zinc-900 hover:bg-[#7C3AED] text-white text-xs font-bold uppercase tracking-wider transition cursor-pointer"
+                  >
+                    + Masukkan Tas Belanja
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =================================================================== */}
+      {/* TIKTOK LIVE PREVIEW MODAL                                           */}
+      {/* =================================================================== */}
+      {isLiveModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-zinc-900 text-white max-w-lg w-full overflow-hidden border border-zinc-700 shadow-2xl">
+            <div className="p-4 bg-gradient-to-r from-rose-600 to-[#7C3AED] flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-white animate-pulse"></span>
+                <span className="text-xs font-bold tracking-wider uppercase">
+                  TIKTOK LIVE PREVIEW · @rahayufashion.store
+                </span>
+              </div>
+              <button onClick={() => setIsLiveModalOpen(false)} className="w-7 h-7 bg-black/30 text-white text-xs font-bold cursor-pointer">
+                ✕
+              </button>
+            </div>
+            <div className="p-5 space-y-4 text-xs">
+              <div className="p-4 bg-zinc-800 border border-zinc-700 flex items-center justify-between">
+                <div>
+                  <div className="text-amber-400 font-bold">🎁 Voucher Penonton Live: RAHAYULIVE20</div>
+                  <div className="text-zinc-300 mt-0.5">Potongan ekstra 20% untuk produk yang sedang di-spill!</div>
+                </div>
+                <a
+                  href="https://www.tiktok.com/@rahayufashion.store"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3.5 py-2 bg-rose-600 text-white font-bold uppercase tracking-wider text-[10px]"
+                >
+                  Buka TikTok ↗
+                </a>
+              </div>
+              <div className="space-y-2">
+                {PRODUCTS_DATA.slice(0, 4).map((p, idx) => (
+                  <div key={p.id} className="p-3 bg-zinc-800 border border-zinc-700 flex items-center justify-between gap-2">
+                    <div>
+                      <span className="text-[10px] font-bold text-rose-400">Etalase #0{idx + 1} · {p.category}</span>
+                      <div className="font-bold text-white text-xs">{p.name}</div>
+                      <div className="text-amber-300 font-bold text-xs mt-0.5">Rp {p.priceIdr.toLocaleString("id-ID")}</div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setIsLiveModalOpen(false);
+                        openPdpModal(p);
+                      }}
+                      className="px-3 py-1.5 bg-white text-zinc-900 text-[10px] font-bold uppercase tracking-wider shrink-0 cursor-pointer"
+                    >
+                      Pilih Ukuran
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
