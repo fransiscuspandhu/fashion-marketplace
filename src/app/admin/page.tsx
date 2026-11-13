@@ -52,13 +52,17 @@ import {
   PaymentConfig,
   HomepageSectionConfig,
 } from "@/context/StoreContext";
-import { PRODUCTS_DATA, ProductItem, RahayuCategory } from "@/data/mock-data";
+import { PRODUCTS_DATA, ProductItem, RahayuCategory, MarketplacePillar } from "@/data/mock-data";
 
 export default function AdminPage() {
   const {
     orders,
     updateOrderStatus,
     updateOrderAwb,
+    pillars,
+    addPillar,
+    updatePillar,
+    deletePillar,
     categories,
     addCategory,
     updateCategory,
@@ -89,6 +93,15 @@ export default function AdminPage() {
     | "layout"
   >("analytics");
 
+  // Pillar Management State (Kelompok Kategori Dinamis tanpa kata "Pilar")
+  const [isPillarModalOpen, setIsPillarModalOpen] = useState(false);
+  const [editingPillar, setEditingPillar] = useState<MarketplacePillar | null>(null);
+  const [newPillarForm, setNewPillarForm] = useState<MarketplacePillar>({
+    id: "",
+    name: "",
+    description: "",
+  });
+
   // Category CRUD State
   const [selectedCatId, setSelectedCatId] = useState<string>(categories[0]?.id || "Hijab");
   const [newSizeInput, setNewSizeInput] = useState<string>("");
@@ -98,7 +111,7 @@ export default function AdminPage() {
     slug: "",
     nameId: "",
     nameEn: "",
-    pillar: 1,
+    pillar: pillars[0]?.name || "Modest Fashion Wanita",
     iconBg: "bg-purple-100",
     colorHex: "#8A2BE2",
     measurementLabel: "Lingkar Dada (LD) & Panjang",
@@ -106,6 +119,7 @@ export default function AdminPage() {
     sizes: ["S", "M", "L", "XL"],
     colors: [{ name: "Default", hex: "#8A2BE2" }],
     iconName: "Sparkles",
+    imageUrl: "",
   });
   const [editCatForm, setEditCatForm] = useState<Partial<RahayuCategory>>({});
   const [isEditingCat, setIsEditingCat] = useState(false);
@@ -170,6 +184,46 @@ export default function AdminPage() {
     }, 1200);
   };
 
+  const handleSavePillar = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingPillar) {
+      if (!editingPillar.name.trim()) return;
+      updatePillar(editingPillar.id, {
+        name: editingPillar.name.trim(),
+        description: editingPillar.description?.trim(),
+      });
+      setEditingPillar(null);
+      alert(`Kelompok kategori "${editingPillar.name}" berhasil diperbarui!`);
+    } else {
+      if (!newPillarForm.id.trim() || !newPillarForm.name.trim()) {
+        alert("Harap isi ID dan Nama kelompok kategori!");
+        return;
+      }
+      if (pillars.some((p) => p.id.toLowerCase() === newPillarForm.id.trim().toLowerCase())) {
+        alert("ID kelompok kategori sudah terdaftar!");
+        return;
+      }
+      addPillar({
+        id: newPillarForm.id.trim().toLowerCase().replace(/\s+/g, "-"),
+        name: newPillarForm.name.trim(),
+        description: newPillarForm.description?.trim(),
+      });
+      setNewPillarForm({ id: "", name: "", description: "" });
+      setIsPillarModalOpen(false);
+      alert("Kelompok kategori baru berhasil ditambahkan!");
+    }
+  };
+
+  const handleDeletePillar = (pillarId: string, pillarName: string) => {
+    if (pillars.length <= 1) {
+      alert("Minimal harus tersisa 1 kelompok kategori.");
+      return;
+    }
+    if (confirm(`Apakah Anda yakin ingin menghapus kelompok kategori "${pillarName}"? Kategori di dalamnya tetap tersimpan.`)) {
+      deletePillar(pillarId);
+    }
+  };
+
   const handleCreateCategory = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCatForm.id.trim() || !newCatForm.nameId.trim()) {
@@ -186,8 +240,10 @@ export default function AdminPage() {
       slug: newCatForm.id.trim().toLowerCase(),
       nameId: newCatForm.nameId.trim(),
       nameEn: newCatForm.nameEn.trim() || newCatForm.nameId.trim(),
+      pillar: newCatForm.pillar || pillars[0]?.name || "Modest Fashion Wanita",
       sizes: newCatForm.sizes.length > 0 ? newCatForm.sizes : ["All Size"],
       colors: newCatForm.colors || [{ name: "Default", hex: newCatForm.colorHex || "#8A2BE2" }],
+      imageUrl: newCatForm.imageUrl?.trim() || undefined,
     });
     setSelectedCatId(newCatForm.id.trim());
     setIsAddCatModalOpen(false);
@@ -196,7 +252,7 @@ export default function AdminPage() {
       slug: "",
       nameId: "",
       nameEn: "",
-      pillar: 1,
+      pillar: pillars[0]?.name || "Modest Fashion Wanita",
       iconBg: "bg-purple-100",
       colorHex: "#8A2BE2",
       measurementLabel: "Lingkar Dada (LD) & Panjang",
@@ -204,6 +260,7 @@ export default function AdminPage() {
       sizes: ["S", "M", "L", "XL"],
       colors: [{ name: "Default", hex: "#8A2BE2" }],
       iconName: "Sparkles",
+      imageUrl: "",
     });
     alert("Kategori baru berhasil ditambahkan!");
   };
@@ -627,21 +684,33 @@ export default function AdminPage() {
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
                   <h1 className="text-xl font-bold text-zinc-900">
-                    Manajemen Kategori, Icon & Ukuran Dinamis
+                    Manajemen Kategori, Icon Foto & Kelompok Dinamis
                   </h1>
                   <p className="text-xs text-zinc-500">
-                    Tambah, edit nama/icon, hapus kategori, dan atur preset ukuran dinamis.
-                    Perubahan langsung sinkron ke Frontstore & Filter Katalog.
+                    Tambah, edit nama/icon foto, hapus kategori, atur kelompok tanpa kata "pilar", dan preset ukuran dinamis.
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setIsAddCatModalOpen(true)}
-                  className="px-4 py-2 bg-purple-700 hover:bg-purple-800 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 self-start cursor-pointer shadow-xs transition"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Tambah Kategori Baru</span>
-                </button>
+                <div className="flex items-center gap-2 self-start">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingPillar(null);
+                      setIsPillarModalOpen(true);
+                    }}
+                    className="px-3.5 py-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 rounded-lg text-xs font-semibold flex items-center gap-1.5 cursor-pointer border border-zinc-300 transition"
+                  >
+                    <Layers className="w-4 h-4 text-purple-700" />
+                    <span>Kelola Kelompok ({pillars.length})</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsAddCatModalOpen(true)}
+                    className="px-4 py-2 bg-purple-700 hover:bg-purple-800 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs transition"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Tambah Kategori Baru</span>
+                  </button>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -652,7 +721,7 @@ export default function AdminPage() {
                       Daftar Kategori ({categories.length})
                     </h3>
                     <span className="text-[10px] text-zinc-400 font-medium">
-                      Pilar 1 - 3
+                      {pillars.length} Kelompok
                     </span>
                   </div>
 
@@ -677,19 +746,27 @@ export default function AdminPage() {
                             className="flex items-center gap-3 text-left flex-1 cursor-pointer"
                           >
                             <div
-                              className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
-                                cat.iconBg || "bg-purple-100"
-                              }`}
-                              style={{ color: cat.colorHex || "#8A2BE2" }}
+                              className="w-10 h-10 rounded-lg overflow-hidden shrink-0 border border-zinc-200 flex items-center justify-center"
+                              style={{ background: cat.iconBg || "#EDE9FE" }}
                             >
-                              {renderCatIcon(cat.iconName, "w-4 h-4")}
+                              {cat.imageUrl ? (
+                                <img
+                                  src={cat.imageUrl}
+                                  alt={cat.nameId}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div style={{ color: cat.colorHex || "#8A2BE2" }}>
+                                  {renderCatIcon(cat.iconName, "w-4 h-4")}
+                                </div>
+                              )}
                             </div>
                             <div>
                               <span className="block font-semibold text-zinc-900 leading-tight">
                                 {cat.nameId}
                               </span>
                               <span className="text-[10px] text-zinc-500">
-                                {cat.nameEn} • {cat.sizes.length} ukuran
+                                {cat.pillar} • {cat.sizes.length} ukuran
                               </span>
                             </div>
                           </button>
@@ -773,27 +850,26 @@ export default function AdminPage() {
 
                         <div>
                           <label className="block font-semibold text-zinc-700 mb-1">
-                            Pilar Marketplace
+                            Kelompok Kategori
                           </label>
                           <select
-                            value={editCatForm.pillar ?? 1}
+                            value={editCatForm.pillar || pillars[0]?.name || "Modest Fashion Wanita"}
                             onChange={(e) =>
-                              setEditCatForm({
-                                ...editCatForm,
-                                pillar: Number(e.target.value) as 1 | 2 | 3,
-                              })
+                              setEditCatForm({ ...editCatForm, pillar: e.target.value })
                             }
                             className="w-full px-3 py-2 border border-zinc-300 rounded-md text-xs bg-white"
                           >
-                            <option value={1}>Pilar 1: Modest Fashion Wanita</option>
-                            <option value={2}>Pilar 2: Kehamilan, Busui & Nifas</option>
-                            <option value={3}>Pilar 3: Bayi & Anak</option>
+                            {pillars.map((p) => (
+                              <option key={p.id} value={p.name}>
+                                {p.name}
+                              </option>
+                            ))}
                           </select>
                         </div>
 
                         <div>
                           <label className="block font-semibold text-zinc-700 mb-1">
-                            Pilihan Icon
+                            Pilihan Icon Vektor
                           </label>
                           <div className="flex gap-2">
                             <select
@@ -813,6 +889,45 @@ export default function AdminPage() {
                               {renderCatIcon(editCatForm.iconName || "Sparkles", "w-4 h-4")}
                             </div>
                           </div>
+                        </div>
+
+                        {/* Custom Image / Photo Icon URL */}
+                        <div className="sm:col-span-2">
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="block font-semibold text-zinc-700">
+                              Foto / Icon Kategori (URL Foto / Gambar)
+                            </label>
+                            <span className="text-[10px] text-purple-700 font-semibold bg-purple-50 px-2 py-0.5 rounded border border-purple-200">
+                              Standar: Rasio 1:1, 200×200 px (Maks 500 KB)
+                            </span>
+                          </div>
+                          <div className="flex gap-3 items-center">
+                            <input
+                              type="text"
+                              value={editCatForm.imageUrl || ""}
+                              onChange={(e) =>
+                                setEditCatForm({ ...editCatForm, imageUrl: e.target.value })
+                              }
+                              placeholder="https://images.unsplash.com/... atau URL foto terupload"
+                              className="flex-1 px-3 py-2 border border-zinc-300 rounded-md text-xs focus:outline-none focus:border-purple-700"
+                            />
+                            {editCatForm.imageUrl ? (
+                              <div className="w-10 h-10 rounded-full border border-purple-300 overflow-hidden shrink-0">
+                                <img
+                                  src={editCatForm.imageUrl}
+                                  alt="Preview"
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-zinc-100 border border-zinc-200 flex items-center justify-center shrink-0 text-zinc-400 text-[10px]">
+                                Vector
+                              </div>
+                            )}
+                          </div>
+                          <p className="text-[10px] text-zinc-400 mt-1">
+                            Format rekomendasi: PNG (transparan), WebP, atau JPG. Resolusi min. 120×120 px, maks. 500×500 px. Jika kosong, akan menggunakan icon grafis.
+                          </p>
                         </div>
 
                         <div>
@@ -919,12 +1034,20 @@ export default function AdminPage() {
                       <div className="flex items-center justify-between border-b border-zinc-100 pb-4">
                         <div className="flex items-center gap-3">
                           <div
-                            className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                              activeCategory?.iconBg || "bg-purple-100"
-                            }`}
-                            style={{ color: activeCategory?.colorHex || "#8A2BE2" }}
+                            className="w-12 h-12 rounded-xl overflow-hidden border border-zinc-200 flex items-center justify-center shrink-0"
+                            style={{ background: activeCategory?.iconBg || "#EDE9FE" }}
                           >
-                            {renderCatIcon(activeCategory?.iconName, "w-6 h-6")}
+                            {activeCategory?.imageUrl ? (
+                              <img
+                                src={activeCategory.imageUrl}
+                                alt={activeCategory.nameId}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div style={{ color: activeCategory?.colorHex || "#8A2BE2" }}>
+                                {renderCatIcon(activeCategory?.iconName, "w-6 h-6")}
+                              </div>
+                            )}
                           </div>
                           <div>
                             <span className="text-[10px] font-bold uppercase tracking-wider text-purple-700">
@@ -1020,10 +1143,151 @@ export default function AdminPage() {
                 </div>
               </div>
 
+              {/* MODAL KELOLA KELOMPOK KATEGORI (PILLARS) */}
+              {isPillarModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                  <div className="bg-white rounded-2xl border border-zinc-200 shadow-2xl max-w-lg w-full p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+                    <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
+                      <div>
+                        <h2 className="text-base font-bold text-zinc-900">
+                          Kelola Kelompok Kategori
+                        </h2>
+                        <p className="text-xs text-zinc-500">
+                          Tambah, ubah nama, dan hapus kelompok kategori (tanpa kata "pilar") untuk mega-menu.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsPillarModalOpen(false);
+                          setEditingPillar(null);
+                        }}
+                        className="text-zinc-400 hover:text-zinc-600 p-1 rounded-full cursor-pointer"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
+
+                    {/* Pillar List */}
+                    <div className="space-y-2 max-h-56 overflow-y-auto">
+                      {pillars.map((pillar) => (
+                        <div
+                          key={pillar.id}
+                          className="flex items-center justify-between p-3 bg-zinc-50 border border-zinc-200 rounded-lg text-xs"
+                        >
+                          <div>
+                            <span className="font-bold text-zinc-900 block">{pillar.name}</span>
+                            <span className="text-[11px] text-zinc-500">{pillar.description || "ID: " + pillar.id}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => setEditingPillar({ ...pillar })}
+                              className="p-1.5 text-zinc-500 hover:text-purple-700 hover:bg-purple-100/60 rounded cursor-pointer"
+                              title="Edit Kelompok"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeletePillar(pillar.id, pillar.name)}
+                              className="p-1.5 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 rounded cursor-pointer"
+                              title="Hapus Kelompok"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Add / Edit Pillar Form */}
+                    <form onSubmit={handleSavePillar} className="pt-3 border-t border-zinc-100 space-y-3 text-xs">
+                      <span className="font-bold text-zinc-800 uppercase tracking-wider text-[11px] block">
+                        {editingPillar ? `Edit Kelompok: ${editingPillar.name}` : "Tambah Kelompok Baru:"}
+                      </span>
+                      {!editingPillar && (
+                        <div>
+                          <label className="block font-semibold text-zinc-700 mb-1">
+                            ID Kelompok (Slug unik) *
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={newPillarForm.id}
+                            onChange={(e) =>
+                              setNewPillarForm({ ...newPillarForm, id: e.target.value })
+                            }
+                            placeholder="cth. busana-pria atau aksesoris"
+                            className="w-full px-3 py-2 border border-zinc-300 rounded-md font-mono text-xs focus:outline-none focus:border-purple-700"
+                          />
+                        </div>
+                      )}
+                      <div>
+                        <label className="block font-semibold text-zinc-700 mb-1">
+                          Nama Kelompok *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={editingPillar ? editingPillar.name : newPillarForm.name}
+                          onChange={(e) => {
+                            if (editingPillar) {
+                              setEditingPillar({ ...editingPillar, name: e.target.value });
+                            } else {
+                              setNewPillarForm({ ...newPillarForm, name: e.target.value });
+                            }
+                          }}
+                          placeholder="cth. Busana Pria & Koko"
+                          className="w-full px-3 py-2 border border-zinc-300 rounded-md text-xs focus:outline-none focus:border-purple-700"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-semibold text-zinc-700 mb-1">
+                          Deskripsi Singkat
+                        </label>
+                        <input
+                          type="text"
+                          value={editingPillar ? (editingPillar.description || "") : (newPillarForm.description || "")}
+                          onChange={(e) => {
+                            if (editingPillar) {
+                              setEditingPillar({ ...editingPillar, description: e.target.value });
+                            } else {
+                              setNewPillarForm({ ...newPillarForm, description: e.target.value });
+                            }
+                          }}
+                          placeholder="cth. Kemeja Koko, Kurta & Sarung"
+                          className="w-full px-3 py-2 border border-zinc-300 rounded-md text-xs"
+                        />
+                      </div>
+
+                      <div className="flex justify-end gap-2 pt-2">
+                        {editingPillar && (
+                          <button
+                            type="button"
+                            onClick={() => setEditingPillar(null)}
+                            className="px-3 py-1.5 border border-zinc-300 text-zinc-600 rounded-md font-semibold cursor-pointer"
+                          >
+                            Batal Edit
+                          </button>
+                        )}
+                        <button
+                          type="submit"
+                          className="px-4 py-2 bg-purple-700 hover:bg-purple-800 text-white rounded-md font-bold flex items-center gap-1.5 cursor-pointer shadow-xs"
+                        >
+                          <Save className="w-3.5 h-3.5" />
+                          <span>{editingPillar ? "Simpan Perubahan" : "Tambah Kelompok"}</span>
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              )}
+
               {/* MODAL TAMBAH KATEGORI BARU */}
               {isAddCatModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                  <div className="bg-white rounded-2xl border border-zinc-200 shadow-2xl max-w-lg w-full p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+                  <div className="bg-white rounded-2xl border border-zinc-200 shadow-2xl max-w-lg w-full p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
                     <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
                       <div>
                         <h2 className="text-base font-bold text-zinc-900">
@@ -1096,28 +1360,65 @@ export default function AdminPage() {
 
                       <div>
                         <label className="block font-semibold text-zinc-700 mb-1">
-                          Pilar Marketplace
+                          Kelompok Kategori
                         </label>
                         <select
                           value={newCatForm.pillar}
                           onChange={(e) =>
                             setNewCatForm({
                               ...newCatForm,
-                              pillar: Number(e.target.value) as 1 | 2 | 3,
+                              pillar: e.target.value,
                             })
                           }
                           className="w-full px-3 py-2 border border-zinc-300 rounded-md text-xs bg-white"
                         >
-                          <option value={1}>Pilar 1: Modest Fashion Wanita</option>
-                          <option value={2}>Pilar 2: Kehamilan, Busui & Nifas</option>
-                          <option value={3}>Pilar 3: Bayi & Anak</option>
+                          {pillars.map((p) => (
+                            <option key={p.id} value={p.name}>
+                              {p.name}
+                            </option>
+                          ))}
                         </select>
+                      </div>
+
+                      {/* Custom Image / Photo Icon URL */}
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="block font-semibold text-zinc-700">
+                            Foto / Icon Kategori (Upload / Custom Image)
+                          </label>
+                          <span className="text-[10px] text-purple-700 font-semibold bg-purple-50 px-2 py-0.5 rounded border border-purple-200">
+                            Standar: Rasio 1:1, 200×200 px (Maks 500 KB)
+                          </span>
+                        </div>
+                        <div className="flex gap-2 items-center">
+                          <input
+                            type="text"
+                            value={newCatForm.imageUrl || ""}
+                            onChange={(e) =>
+                              setNewCatForm({ ...newCatForm, imageUrl: e.target.value })
+                            }
+                            placeholder="https://images.unsplash.com/... atau URL foto"
+                            className="flex-1 px-3 py-2 border border-zinc-300 rounded-md text-xs focus:outline-none focus:border-purple-700"
+                          />
+                          {newCatForm.imageUrl && (
+                            <div className="w-9 h-9 rounded-full border border-purple-300 overflow-hidden shrink-0">
+                              <img
+                                src={newCatForm.imageUrl}
+                                alt="Preview"
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          )}
+                        </div>
+                        <p className="text-[10px] text-zinc-400 mt-1">
+                          Format: PNG transparan / WebP / JPG. Resolusi min 120×120 px, maks 500×500 px.
+                        </p>
                       </div>
 
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <label className="block font-semibold text-zinc-700 mb-1">
-                            Pilih Icon
+                            Pilih Icon Vektor
                           </label>
                           <div className="flex gap-2">
                             <select
@@ -1921,6 +2222,137 @@ export default function AdminPage() {
                       }
                       className="w-full px-3 py-2 border border-zinc-300 rounded-md text-xs"
                     />
+                  </div>
+
+                  {/* Background Image & Contrast Overlay */}
+                  <div className="p-3.5 bg-zinc-50 border border-zinc-200 rounded-lg space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="block font-semibold text-zinc-800">
+                        Foto Background Banner Utama (Custom Image)
+                      </label>
+                      <span className="text-[10px] text-purple-700 font-semibold bg-purple-50 px-2 py-0.5 rounded border border-purple-200">
+                        Standar: 1920×640 px (Rasio 3:1 Widescreen), Maks 1.5 MB
+                      </span>
+                    </div>
+
+                    <div className="flex gap-2 items-center">
+                      <input
+                        type="text"
+                        value={layoutDraft.hero.backgroundImageUrl || ""}
+                        onChange={(e) =>
+                          setLayoutDraft({
+                            ...layoutDraft,
+                            hero: { ...layoutDraft.hero, backgroundImageUrl: e.target.value },
+                          })
+                        }
+                        placeholder="https://images.unsplash.com/... atau URL foto banner sendiri"
+                        className="flex-1 px-3 py-2 border border-zinc-300 rounded-md text-xs font-mono bg-white focus:outline-none focus:border-purple-700"
+                      />
+                      {layoutDraft.hero.backgroundImageUrl && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setLayoutDraft({
+                              ...layoutDraft,
+                              hero: { ...layoutDraft.hero, backgroundImageUrl: "" },
+                            })
+                          }
+                          className="px-2.5 py-2 border border-zinc-300 hover:bg-zinc-100 text-zinc-600 rounded-md text-xs cursor-pointer whitespace-nowrap"
+                          title="Hapus foto (gunakan warna polos)"
+                        >
+                          Hapus Foto
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Guidelines Card */}
+                    <div className="text-[11px] text-zinc-500 bg-white p-2.5 rounded border border-zinc-200/80 space-y-1">
+                      <div className="font-semibold text-zinc-700 flex items-center gap-1.5">
+                        <span className="text-purple-600">📐</span> Aturan & Panduan Standar Ukuran Banner:
+                      </div>
+                      <ul className="list-disc list-inside space-y-0.5 text-[10.5px] text-zinc-600 pl-1">
+                        <li><strong>Rasio Aspek:</strong> ~3:1 (Widescreen Hero Banner).</li>
+                        <li><strong>Rekomendasi Dimensi:</strong> <strong>1920 × 640 px</strong> (optimal desktop & retina) atau <strong>1600 × 600 px</strong>.</li>
+                        <li><strong>Resolusi Minimal:</strong> 1200 × 480 px (agar tidak pecah saat dibuka di layar lebar).</li>
+                        <li><strong>Format & Ukuran File:</strong> Format WebP atau JPG terkompresi, ukuran maksimal <strong>1.5 MB</strong> agar loading beranda instan.</li>
+                        <li><strong>Tips Komposisi:</strong> Area fokus gambar sebaiknya di sisi kanan / tengah, karena sisi kiri akan memuat teks headline banner.</li>
+                      </ul>
+                    </div>
+
+                    {/* Overlay Opacity Slider */}
+                    {layoutDraft.hero.backgroundImageUrl && (
+                      <div className="space-y-1.5 pt-1">
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="font-semibold text-zinc-700">
+                            Tingkat Kegelapan Overlay (Kontras Teks):
+                          </span>
+                          <span className="font-mono text-purple-700 font-bold bg-purple-50 px-2 py-0.5 rounded border border-purple-200">
+                            {layoutDraft.hero.overlayOpacity ?? 40}%
+                          </span>
+                        </div>
+                        <input
+                          type="range"
+                          min={10}
+                          max={85}
+                          step={5}
+                          value={layoutDraft.hero.overlayOpacity ?? 40}
+                          onChange={(e) =>
+                            setLayoutDraft({
+                              ...layoutDraft,
+                              hero: { ...layoutDraft.hero, overlayOpacity: Number(e.target.value) },
+                            })
+                          }
+                          className="w-full accent-purple-700 cursor-pointer"
+                        />
+                        <p className="text-[10px] text-zinc-400">
+                          Geser ke kanan untuk membuat background lebih gelap agar tulisan putih semakin kontras dan mudah dibaca pembeli.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Live Preview of Hero Banner */}
+                    <div className="pt-2">
+                      <div className="text-[11px] font-semibold text-zinc-700 mb-1.5">
+                        Live Preview Tampilan Banner:
+                      </div>
+                      <div className="relative rounded-lg overflow-hidden border border-zinc-300 min-h-[140px] flex items-center p-4 bg-zinc-900 text-white">
+                        {layoutDraft.hero.backgroundImageUrl ? (
+                          <>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={layoutDraft.hero.backgroundImageUrl}
+                              alt="Preview"
+                              className="absolute inset-0 w-full h-full object-cover"
+                            />
+                            <div
+                              className="absolute inset-0 bg-gradient-to-r from-zinc-950/85 via-zinc-900/60 to-transparent"
+                              style={{
+                                opacity: ((layoutDraft.hero.overlayOpacity ?? 40) / 100) + 0.35,
+                              }}
+                            />
+                          </>
+                        ) : (
+                          <div className="absolute inset-0 bg-gradient-to-r from-purple-950 via-zinc-900 to-zinc-950" />
+                        )}
+
+                        <div className="relative z-10 max-w-sm space-y-1.5">
+                          <span className="inline-block px-1.5 py-0.5 bg-purple-600/80 text-[9px] uppercase tracking-wider font-bold rounded">
+                            {layoutDraft.hero.badge || "BADGE PREVIEW"}
+                          </span>
+                          <h4 className="text-sm font-bold text-white line-clamp-1">
+                            {layoutDraft.hero.title || "Headline Banner Utama"}
+                          </h4>
+                          <p className="text-[10px] text-zinc-200 line-clamp-2">
+                            {layoutDraft.hero.description || "Deskripsi banner beranda"}
+                          </p>
+                          <div className="pt-1">
+                            <span className="inline-block px-3 py-1 bg-purple-700 text-[10px] font-semibold uppercase text-white rounded">
+                              {layoutDraft.hero.ctaText || "Belanja Sekarang"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">

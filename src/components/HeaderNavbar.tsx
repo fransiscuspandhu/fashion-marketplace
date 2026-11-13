@@ -47,6 +47,7 @@ export default function HeaderNavbar({
     isLiveActive,
     liveViewers,
     categories,
+    pillars,
     orders,
   } = useStore();
 
@@ -334,7 +335,7 @@ export default function HeaderNavbar({
                 type="button"
                 onClick={() => setIsMegaMenuOpen(!isMegaMenuOpen)}
                 className={`hover:text-purple-700 pb-1 whitespace-nowrap flex items-center gap-1 cursor-pointer transition-colors ${
-                  pathname.startsWith("/products") && !pathname.includes("filter=")
+                  pathname.startsWith("/products")
                     ? "text-purple-700 font-bold border-b-2 border-purple-700"
                     : ""
                 }`}
@@ -344,45 +345,29 @@ export default function HeaderNavbar({
               </button>
             </div>
 
-            <Link
-              href="/products?filter=new"
-              className={`hover:text-zinc-950 pb-1 whitespace-nowrap transition-colors flex items-center gap-1 ${
-                pathname === "/products" && typeof window !== "undefined" && window.location.search.includes("filter=new")
-                  ? "border-b-2 border-zinc-900 text-zinc-950 font-bold"
-                  : ""
-              }`}
+            <a
+              href="/#produk-terbaru"
+              className="hover:text-zinc-950 pb-1 whitespace-nowrap transition-colors flex items-center gap-1"
             >
               <Sparkles className="w-3 h-3 text-purple-600" />
               <span>Produk Terbaru</span>
-            </Link>
+            </a>
 
-            <Link
-              href="/products?filter=bestseller"
-              className={`hover:text-zinc-950 pb-1 whitespace-nowrap transition-colors flex items-center gap-1 ${
-                pathname === "/products" && typeof window !== "undefined" && window.location.search.includes("filter=bestseller")
-                  ? "border-b-2 border-zinc-900 text-zinc-950 font-bold"
-                  : ""
-              }`}
+            <a
+              href="/#produk-terlaris"
+              className="hover:text-zinc-950 pb-1 whitespace-nowrap transition-colors flex items-center gap-1"
             >
               <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
               <span>Produk Terlaris</span>
-            </Link>
+            </a>
 
-            <Link
-              href="/products?filter=promo"
+            <a
+              href="/#promo-highlight-section"
               className="text-rose-600 hover:text-rose-700 font-bold pb-1 whitespace-nowrap flex items-center gap-1 transition-colors"
             >
               <Flame className="w-3.5 h-3.5 fill-current" />
               <span>Promo Highlight</span>
-            </Link>
-
-            <Link
-              href="/products"
-              className="text-zinc-500 hover:text-zinc-900 pb-1 whitespace-nowrap flex items-center gap-1 text-[10px] font-medium tracking-widest uppercase transition-colors"
-            >
-              <Grid className="w-3 h-3" />
-              <span>Semua Katalog ({categories.length} Kategori)</span>
-            </Link>
+            </a>
           </nav>
 
           {/* Mega Menu Dropdown */}
@@ -392,79 +377,56 @@ export default function HeaderNavbar({
               onMouseLeave={() => setIsMegaMenuOpen(false)}
             >
               <div className="max-w-[1320px] mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 text-xs">
-                <div>
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-purple-900 mb-3 border-b border-purple-200 pb-1">
-                    Pilar 1: Modest & Muslimah Wear
-                  </h4>
-                  <ul className="space-y-2 text-zinc-700">
-                    {categories
-                      .filter((c) => c.pillar === 1)
-                      .map((c) => (
-                        <li key={c.id}>
-                          <button
-                            onClick={() => handleCategoryNav(c.id)}
-                            className="hover:text-purple-700 text-left w-full py-0.5 cursor-pointer flex items-center justify-between"
-                          >
-                            <span className="font-medium">{c.nameId}</span>
-                            <span className="text-[10px] text-zinc-400">{c.sizes.length} ukuran</span>
-                          </button>
-                        </li>
-                      ))}
-                  </ul>
-                </div>
+                {pillars.map((pillar) => {
+                  const pillarCategories = categories.filter(
+                    (c) =>
+                      c.pillar === pillar.name ||
+                      c.pillar === pillar.id ||
+                      (pillar.id === "modest" && (c.pillar === "Modest Fashion Wanita" || (c.pillar as any) === 1)) ||
+                      (pillar.id === "kehamilan" && (c.pillar === "Kehamilan, Busui & Nifas" || (c.pillar as any) === 2)) ||
+                      (pillar.id === "anak" && (c.pillar === "Bayi & Anak" || (c.pillar as any) === 3))
+                  );
+                  return (
+                    <div key={pillar.id}>
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-900 mb-3 border-b border-zinc-200 pb-1">
+                        {pillar.name}
+                      </h4>
+                      <ul className="space-y-2 text-zinc-700">
+                        {pillarCategories.map((c) => (
+                          <li key={c.id}>
+                            <button
+                              onClick={() => handleCategoryNav(c.id)}
+                              className="hover:text-purple-700 text-left w-full py-0.5 cursor-pointer flex items-center justify-between transition-colors"
+                            >
+                              <span className="font-medium">{c.nameId}</span>
+                              <span className="text-[10px] text-zinc-400">
+                                {c.sizes.length} ukuran
+                              </span>
+                            </button>
+                          </li>
+                        ))}
+                        {pillarCategories.length === 0 && (
+                          <li className="text-zinc-400 text-[11px] italic">
+                            Belum ada kategori di kelompok ini
+                          </li>
+                        )}
+                      </ul>
+                    </div>
+                  );
+                })}
+              </div>
 
-                <div>
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-rose-900 mb-3 border-b border-rose-200 pb-1">
-                    Pilar 2: Baju Hamil & Busana Wanita
-                  </h4>
-                  <ul className="space-y-2 text-zinc-700">
-                    {categories
-                      .filter((c) => c.pillar === 2)
-                      .map((c) => (
-                        <li key={c.id}>
-                          <button
-                            onClick={() => handleCategoryNav(c.id)}
-                            className="hover:text-rose-700 text-left w-full py-0.5 cursor-pointer flex items-center justify-between"
-                          >
-                            <span className="font-medium">{c.nameId}</span>
-                            <span className="text-[10px] text-zinc-400">{c.sizes.length} ukuran</span>
-                          </button>
-                        </li>
-                      ))}
-                  </ul>
-                </div>
-
-                <div>
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-amber-900 mb-3 border-b border-amber-200 pb-1">
-                    Pilar 3: Koleksi Bayi & Anak
-                  </h4>
-                  <ul className="space-y-2 text-zinc-700">
-                    {categories
-                      .filter((c) => c.pillar === 3)
-                      .map((c) => (
-                        <li key={c.id}>
-                          <button
-                            onClick={() => handleCategoryNav(c.id)}
-                            className="hover:text-amber-700 text-left w-full py-0.5 cursor-pointer flex items-center justify-between"
-                          >
-                            <span className="font-medium">{c.nameId}</span>
-                            <span className="text-[10px] text-zinc-400">{c.sizes.length} ukuran</span>
-                          </button>
-                        </li>
-                      ))}
-                  </ul>
-
-                  <div className="mt-4 pt-3 border-t border-zinc-200">
-                    <Link
-                      href="/products"
-                      onClick={() => setIsMegaMenuOpen(false)}
-                      className="inline-flex items-center gap-1.5 text-xs font-bold text-purple-700 hover:text-purple-900"
-                    >
-                      <span>Lihat Seluruh Katalog Produk ({categories.length} Kategori)</span>
-                      <span>→</span>
-                    </Link>
-                  </div>
-                </div>
+              <div className="max-w-[1320px] mx-auto mt-4 pt-3 border-t border-zinc-200/80 flex items-center justify-between text-xs">
+                <span className="text-[11px] text-zinc-500">
+                  Total {categories.length} kategori aktif
+                </span>
+                <Link
+                  href="/products"
+                  onClick={() => setIsMegaMenuOpen(false)}
+                  className="font-bold text-purple-700 hover:text-purple-900 flex items-center gap-1 cursor-pointer"
+                >
+                  <span>Buka Halaman Katalog Lengkap →</span>
+                </Link>
               </div>
             </div>
           )}

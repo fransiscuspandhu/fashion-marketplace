@@ -8,15 +8,28 @@ export interface ColorPreset {
   hex: string;
 }
 
+export interface MarketplacePillar {
+  id: string;
+  name: string;
+  description?: string;
+}
+
+export const DEFAULT_PILLARS: MarketplacePillar[] = [
+  { id: "modest", name: "Modest Fashion Wanita", description: "Hijab, Tunik, Abaya & Busana Muslimah" },
+  { id: "kehamilan", name: "Kehamilan, Busui & Nifas", description: "Baju Hamil, Maternity & Menyusui" },
+  { id: "anak", name: "Bayi & Anak", description: "Pakaian Bayi & Anak Perempuan/Laki-laki" },
+];
+
 export interface RahayuCategory {
   id: string;
   slug: string;
   nameId: string;
   nameEn: string;
-  pillar: 1 | 2 | 3;
+  pillar: string; // Dynamic pillar name (tanpa kata "Pilar")
   iconBg: string;
   colorHex: string;
   iconName?: string;
+  imageUrl?: string; // Standar: 1:1 rasio, 200x200 px (min 120x120, max 500x500 px, maks 500 KB)
   measurementLabel: string;
   variantAttr: string;
   sizes: string[];
@@ -46,9 +59,11 @@ export const CATEGORIES_DATA: RahayuCategory[] = [
     slug: 'hijab',
     nameId: 'Hijab',
     nameEn: 'Hijab & Scarves',
-    pillar: 1,
+    pillar: 'Modest Fashion Wanita',
     iconBg: '#EDE9FE',
     colorHex: '#7C3AED',
+    iconName: 'Sparkles',
+    imageUrl: 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=300&q=80',
     measurementLabel: 'Dimensi Hijab (cm)',
     variantAttr: 'Finishing Tepi (Laser Cut / Jahit Tepi)',
     sizes: ['110x110 cm', '115x115 cm', '130x130 cm (Syari)', '180x75 cm (Pashmina)'],
@@ -64,9 +79,11 @@ export const CATEGORIES_DATA: RahayuCategory[] = [
     slug: 'atasan-muslim-wanita',
     nameId: 'Atasan Muslim Wanita',
     nameEn: "Women's Modest Tops & Tunics",
-    pillar: 1,
+    pillar: 'Modest Fashion Wanita',
     iconBg: '#F3E8FF',
     colorHex: '#6D28D9',
+    iconName: 'Shirt',
+    imageUrl: 'https://images.unsplash.com/photo-1594223274512-ad4803739b7c?auto=format&fit=crop&w=300&q=80',
     measurementLabel: 'Lingkar Dada (LD) & Panjang Tunik',
     variantAttr: 'Akses Wudhu & Busui Friendly',
     sizes: ['XS (LD 90)', 'S (LD 94)', 'M (LD 100)', 'L (LD 106)', 'XL (LD 112)', 'XXL (LD 120)'],
@@ -81,9 +98,11 @@ export const CATEGORIES_DATA: RahayuCategory[] = [
     slug: 'bawahan-muslim-wanita',
     nameId: 'Bawahan Muslim Wanita',
     nameEn: "Women's Modest Skirts & Culottes",
-    pillar: 1,
+    pillar: 'Modest Fashion Wanita',
     iconBg: '#FCE7F3',
     colorHex: '#9D174D',
+    iconName: 'ShoppingBag',
+    imageUrl: 'https://images.unsplash.com/photo-1509631179647-0177331693ae?auto=format&fit=crop&w=300&q=80',
     measurementLabel: 'Lingkar Pinggang & Panjang Rok/Kulot',
     variantAttr: 'Tipe Pinggang (Full Karet / Half Karet)',
     sizes: ['S/M (Panjang 95cm)', 'L/XL (Panjang 98cm)', 'All Size Fit XL'],
@@ -98,9 +117,11 @@ export const CATEGORIES_DATA: RahayuCategory[] = [
     slug: 'aksesoris-muslim',
     nameId: 'Aksesoris Muslim',
     nameEn: 'Modest Accessories & Brooches',
-    pillar: 1,
+    pillar: 'Modest Fashion Wanita',
     iconBg: '#FEF3C7',
     colorHex: '#B45309',
+    iconName: 'Crown',
+    imageUrl: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=300&q=80',
     measurementLabel: 'Ukuran Bros / Scrunchie',
     variantAttr: 'Material Logam / Satin',
     sizes: ['Regular (3.5 cm)', 'Mini Twin Set', 'Bundling Gift Box'],
@@ -115,9 +136,11 @@ export const CATEGORIES_DATA: RahayuCategory[] = [
     slug: 'atasan',
     nameId: 'Atasan',
     nameEn: "Women's Tops & Blouses",
-    pillar: 2,
+    pillar: 'Modest Fashion Wanita',
     iconBg: '#E0F2FE',
     colorHex: '#0369A1',
+    iconName: 'Shirt',
+    imageUrl: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=300&q=80',
     measurementLabel: 'Ukuran Standar Atasan Wanita',
     variantAttr: 'Potongan (Regular / Oversized Fit)',
     sizes: ['XS', 'S', 'M', 'L', 'XL'],
@@ -132,9 +155,11 @@ export const CATEGORIES_DATA: RahayuCategory[] = [
     slug: 'celana-panjang-legging',
     nameId: 'Celana Panjang & Legging',
     nameEn: 'Trousers & Leggings',
-    pillar: 2,
+    pillar: 'Kehamilan, Busui & Nifas',
     iconBg: '#E4E4E7',
     colorHex: '#27272A',
+    iconName: 'Footprints',
+    imageUrl: 'https://images.unsplash.com/photo-1506629082955-511b1aa562c8?auto=format&fit=crop&w=300&q=80',
     measurementLabel: 'Ukuran Pinggang (Nomor / Huruf)',
     variantAttr: 'Tingkat Stretch & Ketebalan Kain',
     sizes: ['S (27-28)', 'M (29-30)', 'L (31-32)', 'XL (33-34)', 'XXL (35-36)'],
@@ -149,9 +174,11 @@ export const CATEGORIES_DATA: RahayuCategory[] = [
     slug: 'pakaian-wanita-lainnya',
     nameId: 'Pakaian Wanita Lainnya',
     nameEn: 'Dresses, Outerwear & Co-ords',
-    pillar: 2,
+    pillar: 'Modest Fashion Wanita',
     iconBg: '#E0E7FF',
     colorHex: '#4338CA',
+    iconName: 'Heart',
+    imageUrl: 'https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=300&q=80',
     measurementLabel: 'Ukuran Dress / Outer / One-Set',
     variantAttr: 'Kelengkapan (Outer Only / Set 2-in-1)',
     sizes: ['S/M', 'L/XL', 'Custom Petite'],
@@ -165,9 +192,11 @@ export const CATEGORIES_DATA: RahayuCategory[] = [
     slug: 'pakaian-dalam',
     nameId: 'Pakaian Dalam',
     nameEn: 'Innerwear, Ciput & Essentials',
-    pillar: 3,
+    pillar: 'Kehamilan, Busui & Nifas',
     iconBg: '#F4F4F5',
     colorHex: '#52525B',
+    iconName: 'Heart',
+    imageUrl: 'https://images.unsplash.com/photo-1518895949257-7621c3c786d7?auto=format&fit=crop&w=300&q=80',
     measurementLabel: 'Ukuran Manset / Ciput / Inner',
     variantAttr: 'Bahan Serat (Bamboo / Rayon Spandex)',
     sizes: ['S/M', 'L/XL', 'Jumbo XXL', 'All Size (Ciput)'],
@@ -182,9 +211,11 @@ export const CATEGORIES_DATA: RahayuCategory[] = [
     slug: 'baju-hamil',
     nameId: 'Baju Hamil',
     nameEn: 'Maternity & Nursing Friendly',
-    pillar: 3,
+    pillar: 'Kehamilan, Busui & Nifas',
     iconBg: '#FFE4E6',
     colorHex: '#E11D48',
+    iconName: 'Heart',
+    imageUrl: 'https://images.unsplash.com/photo-1516627145497-ae6968895b74?auto=format&fit=crop&w=300&q=80',
     measurementLabel: 'Ukuran Ibu Hamil & Menyusui (Trimester 1-3)',
     variantAttr: 'Tipe Bukaan Menyusui (Zipper / Layer)',
     sizes: ['Mom S/M (LD 102)', 'Mom L (LD 110)', 'Mom XL (LD 120)'],
@@ -199,9 +230,11 @@ export const CATEGORIES_DATA: RahayuCategory[] = [
     slug: 'pakaian-anak-perempuan',
     nameId: 'Pakaian Anak Perempuan',
     nameEn: "Girls' Apparel (2-12 Yrs)",
-    pillar: 3,
+    pillar: 'Bayi & Anak',
     iconBg: '#FCE7F3',
     colorHex: '#DB2777',
+    iconName: 'Sparkles',
+    imageUrl: 'https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?auto=format&fit=crop&w=300&q=80',
     measurementLabel: 'Rentang Usia Anak Perempuan',
     variantAttr: 'Paket (Gamis + Hijab Anak)',
     sizes: ['Kids S (2-4 Thn)', 'Kids M (5-7 Thn)', 'Kids L (8-10 Thn)', 'Kids XL (11-12 Thn)'],
@@ -215,9 +248,11 @@ export const CATEGORIES_DATA: RahayuCategory[] = [
     slug: 'pakaian-bayi',
     nameId: 'Pakaian Bayi',
     nameEn: 'Baby Apparel & Gift Sets',
-    pillar: 3,
+    pillar: 'Bayi & Anak',
     iconBg: '#CCFBF1',
     colorHex: '#0D9488',
+    iconName: 'Baby',
+    imageUrl: 'https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&w=300&q=80',
     measurementLabel: 'Usia Bayi (Bulan) & Berat Badan',
     variantAttr: 'Sertifikasi Katun Organik Hypoallergenic',
     sizes: ['Newborn (0-3 Bln)', '3-6 Bln', '6-12 Bln', '12-24 Bln'],

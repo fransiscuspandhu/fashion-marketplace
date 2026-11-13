@@ -1,7 +1,14 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { CATEGORIES_DATA, PRODUCTS_DATA, ProductItem, RahayuCategory } from "@/data/mock-data";
+import {
+  CATEGORIES_DATA,
+  PRODUCTS_DATA,
+  ProductItem,
+  RahayuCategory,
+  MarketplacePillar,
+  DEFAULT_PILLARS,
+} from "@/data/mock-data";
 
 export interface CustomerAddress {
   id: string;
@@ -117,6 +124,12 @@ interface StoreContextType {
   updateOrderStatus: (orderId: string, newStatus: OrderStatus) => void;
   updateOrderAwb: (orderId: string, awb: string, courierName?: string) => void;
 
+  // Pillars (Admin control)
+  pillars: MarketplacePillar[];
+  addPillar: (newPillar: MarketplacePillar) => void;
+  updatePillar: (pillarId: string, updated: Partial<MarketplacePillar>) => void;
+  deletePillar: (pillarId: string) => void;
+
   // Categories & Dynamic Sizes (Admin control)
   categories: RahayuCategory[];
   addCategory: (newCategory: RahayuCategory) => void;
@@ -157,6 +170,8 @@ export interface HomepageSectionConfig {
     description: string;
     ctaText: string;
     ctaLink: string;
+    backgroundImageUrl?: string; // Standar: 1920x640 px (3:1 Widescreen), min 1200x480 px, maks 1.5 MB
+    overlayOpacity?: number; // 0 - 100%
   };
   categoriesSection: {
     isActive: boolean;
@@ -422,6 +437,8 @@ const INITIAL_HOMEPAGE_CONFIG: HomepageSectionConfig = {
     description: "Koleksi busana muslim wanita, hijab voal ultrafine, baju hamil busui friendly, dan pakaian anak dengan material katun & silk bersertifikasi standar tinggi.",
     ctaText: "Jelajahi Koleksi",
     ctaLink: "/products",
+    backgroundImageUrl: "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=1920&q=80",
+    overlayOpacity: 40,
   },
   categoriesSection: {
     isActive: true,
@@ -654,6 +671,23 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     );
   };
 
+  // 3b. Pillars State (Dynamic CRUD from Admin, without the word "Pilar")
+  const [pillars, setPillars] = useState<MarketplacePillar[]>(DEFAULT_PILLARS);
+
+  const addPillar = (newPillar: MarketplacePillar) => {
+    setPillars((prev) => [...prev, newPillar]);
+  };
+
+  const updatePillar = (pillarId: string, updated: Partial<MarketplacePillar>) => {
+    setPillars((prev) =>
+      prev.map((p) => (p.id === pillarId ? { ...p, ...updated } : p))
+    );
+  };
+
+  const deletePillar = (pillarId: string) => {
+    setPillars((prev) => prev.filter((p) => p.id !== pillarId));
+  };
+
   // 4. Categories State (Dynamic CRUD & Sizes per Category)
   const [categories, setCategories] = useState<RahayuCategory[]>(CATEGORIES_DATA);
 
@@ -793,6 +827,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         createOrder,
         updateOrderStatus,
         updateOrderAwb,
+        pillars,
+        addPillar,
+        updatePillar,
+        deletePillar,
         categories,
         addCategory,
         updateCategory,

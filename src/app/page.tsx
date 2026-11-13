@@ -52,48 +52,89 @@ export default function HomePage() {
         <section className="max-w-[1320px] mx-auto px-4 pt-5 pb-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
             {/* Left Hero */}
-            <div className="lg:col-span-9 relative bg-[#F6F4F0] border border-zinc-200 overflow-hidden min-h-[340px] flex items-center">
-              <div className="p-8 sm:p-12 max-w-lg z-10 space-y-4">
-                <div className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.25em] text-zinc-600 font-semibold">
-                  <span>RAHAYU EXCLUSIVE COLLECTION</span>
-                  <span className="text-rose-600 font-bold">· UP TO 35% OFF</span>
+            <div className="lg:col-span-9 relative bg-[#F6F4F0] border border-zinc-200 overflow-hidden min-h-[360px] flex items-center">
+              {/* Background Image if configured */}
+              {homepageConfig.hero.backgroundImageUrl && (
+                <div className="absolute inset-0 z-0">
+                  <img
+                    src={homepageConfig.hero.backgroundImageUrl}
+                    alt="Hero Banner Background"
+                    className="w-full h-full object-cover"
+                  />
+                  <div
+                    className="absolute inset-0 bg-gradient-to-r from-zinc-950/85 via-zinc-900/60 to-transparent"
+                    style={{
+                      opacity: (homepageConfig.hero.overlayOpacity ?? 40) / 100 + 0.35,
+                    }}
+                  />
                 </div>
-                <h1 className="editorial-serif text-3xl sm:text-5xl text-zinc-900 leading-[1.12] font-normal">
-                  Refined Modesty for Modern Women.
+              )}
+
+              <div
+                className={`p-8 sm:p-12 max-w-xl z-10 space-y-4 ${
+                  homepageConfig.hero.backgroundImageUrl ? "text-white" : "text-zinc-900"
+                }`}
+              >
+                <div className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.25em] font-semibold">
+                  <span
+                    className={
+                      homepageConfig.hero.backgroundImageUrl
+                        ? "text-purple-300 font-bold"
+                        : "text-zinc-600"
+                    }
+                  >
+                    {homepageConfig.hero.badge || "RAHAYU EXCLUSIVE COLLECTION"}
+                  </span>
+                  <span className="text-rose-500 font-bold">· UP TO 35% OFF</span>
+                </div>
+                <h1
+                  className={`editorial-serif text-3xl sm:text-5xl leading-[1.12] font-normal ${
+                    homepageConfig.hero.backgroundImageUrl ? "text-white" : "text-zinc-900"
+                  }`}
+                >
+                  {homepageConfig.hero.title || "Refined Modesty for Modern Women."}
                 </h1>
-                <p className="text-xs sm:text-sm text-zinc-600 leading-relaxed">
-                  Kurasi 11 kategori utama dengan panduan ukuran akurat, video singkat di setiap halaman produk, dan pengiriman cepat ke seluruh Indonesia.
+                <p
+                  className={`text-xs sm:text-sm leading-relaxed ${
+                    homepageConfig.hero.backgroundImageUrl ? "text-zinc-200" : "text-zinc-600"
+                  }`}
+                >
+                  {homepageConfig.hero.description ||
+                    "Kurasi 11 kategori utama dengan panduan ukuran akurat, video singkat di setiap halaman produk, dan pengiriman cepat ke seluruh Indonesia."}
                 </p>
                 <div className="pt-2 flex flex-wrap items-center gap-3">
-                  <button
-                    onClick={() => {
-                      const el = document.getElementById("catalog-anchor");
-                      el?.scrollIntoView({ behavior: "smooth" });
-                    }}
-                    className="px-6 py-3 bg-zinc-900 hover:bg-[#7C3AED] text-white text-[11px] font-semibold uppercase tracking-[0.18em] transition cursor-pointer"
+                  <Link
+                    href={homepageConfig.hero.ctaLink || "/products"}
+                    className="px-6 py-3 bg-purple-700 hover:bg-purple-800 text-white text-[11px] font-semibold uppercase tracking-[0.18em] transition shadow-md"
                   >
-                    Belanja Sekarang
-                  </button>
+                    {homepageConfig.hero.ctaText || "Belanja Sekarang"}
+                  </Link>
                   <button
                     onClick={() => openPdpModal(PRODUCTS_DATA[0])}
-                    className="px-5 py-3 bg-white hover:bg-zinc-100 text-zinc-900 border border-zinc-900 text-[11px] font-semibold uppercase tracking-[0.15em] transition flex items-center gap-2 cursor-pointer"
+                    className={`px-5 py-3 border text-[11px] font-semibold uppercase tracking-[0.15em] transition flex items-center gap-2 cursor-pointer ${
+                      homepageConfig.hero.backgroundImageUrl
+                        ? "bg-white/10 hover:bg-white/20 text-white border-white/40 backdrop-blur-xs"
+                        : "bg-white hover:bg-zinc-100 text-zinc-900 border-zinc-900"
+                    }`}
                   >
-                    <Play className="w-3.5 h-3.5" /> Tonton Video Produk
+                    <Play className="w-3.5 h-3.5 fill-current" /> Tonton Video Produk
                   </button>
                 </div>
               </div>
 
-              {/* Graphic Backdrop */}
-              <div className="hidden sm:flex absolute right-0 top-0 bottom-0 w-80 items-end justify-center bg-gradient-to-l from-[#EDE8E0] to-transparent pointer-events-none">
-                <svg viewBox="0 0 260 340" className="w-64 h-80">
-                  <path d="M40 340 V120 C40 55 90 20 135 20 C180 20 230 55 230 120 V340 Z" fill="#E5DFD5" />
-                  <path d="M55 340 V130 C55 72 95 40 135 40 C175 40 215 72 215 130 V340 Z" fill="#FAF8F5" />
-                  <path d="M82 340 L96 155 C96 135 112 124 135 124 C158 124 174 135 174 155 L188 340 Z" fill="#27272A" />
-                  <path d="M98 135 L135 205 L172 135 L182 260 L88 260 Z" fill="#D6C7B2" />
-                  <path d="M104 82 C104 52 166 52 166 82 C170 115 174 148 148 162 C120 168 98 140 104 82 Z" fill="#7C3AED" />
-                  <circle cx="135" cy="86" r="20" fill="#F5CBA7" />
-                </svg>
-              </div>
+              {/* Graphic Backdrop (only if no custom photo background) */}
+              {!homepageConfig.hero.backgroundImageUrl && (
+                <div className="hidden sm:flex absolute right-0 top-0 bottom-0 w-80 items-end justify-center bg-gradient-to-l from-[#EDE8E0] to-transparent pointer-events-none">
+                  <svg viewBox="0 0 260 340" className="w-64 h-80">
+                    <path d="M40 340 V120 C40 55 90 20 135 20 C180 20 230 55 230 120 V340 Z" fill="#E5DFD5" />
+                    <path d="M55 340 V130 C55 72 95 40 135 40 C175 40 215 72 215 130 V340 Z" fill="#FAF8F5" />
+                    <path d="M82 340 L96 155 C96 135 112 124 135 124 C158 124 174 135 174 155 L188 340 Z" fill="#27272A" />
+                    <path d="M98 135 L135 205 L172 135 L182 260 L88 260 Z" fill="#D6C7B2" />
+                    <path d="M104 82 C104 52 166 52 166 82 C170 115 174 148 148 162 C120 168 98 140 104 82 Z" fill="#7C3AED" />
+                    <circle cx="135" cy="86" r="20" fill="#F5CBA7" />
+                  </svg>
+                </div>
+              )}
             </div>
 
             {/* Right TikTok Live Widget */}
@@ -163,12 +204,20 @@ export default function HomePage() {
                       className="w-full h-full rounded-full flex items-center justify-center overflow-hidden"
                       style={{ background: c.iconBg }}
                     >
-                      <div className="w-11 h-14 group-hover:scale-105 transition">
-                        <svg viewBox="0 0 80 100" className="w-full h-full">
-                          <circle cx="40" cy="26" r="10" fill="#E6C2A6" />
-                          <path d="M22 42 L15 88 L65 88 L58 42 Z" fill={c.colorHex} />
-                        </svg>
-                      </div>
+                      {c.imageUrl ? (
+                        <img
+                          src={c.imageUrl}
+                          alt={c.nameId}
+                          className="w-full h-full object-cover group-hover:scale-110 transition duration-300"
+                        />
+                      ) : (
+                        <div className="w-11 h-14 group-hover:scale-105 transition">
+                          <svg viewBox="0 0 80 100" className="w-full h-full">
+                            <circle cx="40" cy="26" r="10" fill="#E6C2A6" />
+                            <path d="M22 42 L15 88 L65 88 L58 42 Z" fill={c.colorHex} />
+                          </svg>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <span className="text-[10px] font-semibold uppercase tracking-wider leading-tight line-clamp-2 text-zinc-600 group-hover:text-purple-700">
@@ -193,19 +242,28 @@ export default function HomePage() {
                     {homepageConfig.promoHighlightSection.title}
                   </h2>
                 </div>
-                <div className="flex items-center gap-3 text-xs">
-                  <span className="text-zinc-500 uppercase tracking-wider text-[11px]">Berakhir Dalam:</span>
-                  <div className="flex items-center gap-1 font-mono font-bold text-white text-xs">
-                    <span className="bg-zinc-900 px-2.5 py-1">
-                      {homepageConfig.promoHighlightSection.countdownHours}
-                    </span>:
-                    <span className="bg-zinc-900 px-2.5 py-1">
-                      {homepageConfig.promoHighlightSection.countdownMins}
-                    </span>:
-                    <span className="bg-rose-600 px-2.5 py-1">
-                      {homepageConfig.promoHighlightSection.countdownSecs}
-                    </span>
+                <div className="flex flex-wrap items-center gap-4">
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="text-zinc-500 uppercase tracking-wider text-[11px]">Berakhir Dalam:</span>
+                    <div className="flex items-center gap-1 font-mono font-bold text-white text-xs">
+                      <span className="bg-zinc-900 px-2.5 py-1">
+                        {homepageConfig.promoHighlightSection.countdownHours}
+                      </span>:
+                      <span className="bg-zinc-900 px-2.5 py-1">
+                        {homepageConfig.promoHighlightSection.countdownMins}
+                      </span>:
+                      <span className="bg-rose-600 px-2.5 py-1">
+                        {homepageConfig.promoHighlightSection.countdownSecs}
+                      </span>
+                    </div>
                   </div>
+                  <Link
+                    href="/products?filter=promo"
+                    className="text-xs font-bold text-rose-600 hover:text-rose-800 flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>Lihat Semua Promo ({promoHighlightProducts.length})</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
                 </div>
               </div>
 
