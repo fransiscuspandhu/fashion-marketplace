@@ -35,11 +35,12 @@ fashion-marketplace/
 │   └── ...                     # Static image assets & SVG icons
 ├── src/
 │   ├── app/
-│   │   ├── page.tsx            # Beranda Storefront (Hijup style, lookbook 3:4, video PDP, TikTok live)
+│   │   ├── page.tsx            # Beranda Storefront (Hijup style, curated sections, TikTok live showcase)
+│   │   ├── products/page.tsx   # Dedicated Catalog Page (Category tabs, search query, price filter, sorting)
 │   │   ├── login/page.tsx      # Customer Auth Gate (Login/Register, 1-Click Fast Demo)
 │   │   ├── checkout/page.tsx   # Checkout Stepper Tokopedia (Alamat, Kurir, Payment, Voucher)
 │   │   ├── profile/page.tsx    # Profil Pelanggan (Tab Pesanan, Lacak Resi AWB Live, Alamat)
-│   │   ├── admin/page.tsx      # Internal Admin Control Panel (8 Modul Lengkap)
+│   │   ├── admin/page.tsx      # Internal Admin Control Panel (9 Modul: Category CRUD & Layout Manager)
 │   │   ├── globals.css         # Styling global Tailwind CSS 4
 │   │   └── layout.tsx          # Root Layout + StoreProvider + CartDrawer + Schema.org
 │   ├── components/
@@ -130,11 +131,12 @@ Sistem mendukung 11 kategori resmi yang dibagi menjadi 3 pilar utama:
 
 | URL Path | Akses | Fungsi & Antarmuka |
 | :--- | :---: | :--- |
-| `/` | Publik | Beranda Frontstore (Layout Hijup, Koleksi 11 Kategori, PDP Video 9:16, TikTok Live) |
+| `/` | Publik | Beranda Frontstore (Hero banner, Portal Kategori, Produk Terbaru & Terlaris, USP) |
+| `/products` | Publik | Halaman Katalog Produk (Filter Kategori Dinamis, Pencarian, Rentang Harga, PDP Modal) |
 | `/login` | Publik | Auth Gate (Masuk & Daftar Pelanggan dengan tombol 1-Click Fast Demo) |
 | `/checkout` | Pelanggan | Alur Checkout Tokopedia (Alamat, Kurir JNE/SiCepat, Payment Gateway, Voucher) |
 | `/profile` | Pelanggan | Profil Pelanggan (Tab Pesanan, **Lacak Resi Kurir Real-Time**, Alamat, Wishlist) |
-| `/admin` | Internal | Internal Control Panel (8 Modul Operasional, Analisa Penjualan & Studio Foto AI) |
+| `/admin` | Internal | Internal Control Panel (9 Modul: Kategori CRUD, Tata Letak Beranda, Resi & AI Studio) |
 
 ---
 

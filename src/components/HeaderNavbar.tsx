@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import {
@@ -15,6 +15,9 @@ import {
   ShieldCheck,
   MapPin,
   ExternalLink,
+  Flame,
+  Star,
+  Grid,
 } from "lucide-react";
 import { useStore } from "@/context/StoreContext";
 
@@ -35,27 +38,49 @@ export default function HeaderNavbar({
 }: HeaderNavbarProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { user, isLoggedIn, logout, cartCount, openCartDrawer, isLiveActive, liveViewers, categories, orders } = useStore();
+  const {
+    user,
+    isLoggedIn,
+    logout,
+    cartCount,
+    openCartDrawer,
+    isLiveActive,
+    liveViewers,
+    categories,
+    orders,
+  } = useStore();
+
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isMegaMenuOpen, setIsMegaMenuOpen] = useState(false);
+  const [localSearch, setLocalSearch] = useState(searchQuery);
+
+  useEffect(() => {
+    setLocalSearch(searchQuery);
+  }, [searchQuery]);
 
   // Count active orders
   const activeOrdersCount = orders.filter(
     (o) => o.status === "MENUNGGU_PEMBAYARAN" || o.status === "DIKEMAS" || o.status === "DIKIRIM"
   ).length;
 
-  const handleCategoryClick = (catId: string) => {
-    if (onSelectCategory) {
-      onSelectCategory(catId);
-    } else {
-      router.push(`/?category=${encodeURIComponent(catId)}`);
-    }
-  };
-
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (pathname !== "/") {
-      router.push(`/?search=${encodeURIComponent(searchQuery)}`);
+    if (!localSearch.trim()) {
+      router.push("/products");
+      return;
+    }
+    if (onSearchChange) {
+      onSearchChange(localSearch);
+    }
+    router.push(`/products?search=${encodeURIComponent(localSearch.trim())}`);
+  };
+
+  const handleCategoryNav = (catId: string) => {
+    setIsMegaMenuOpen(false);
+    if (onSelectCategory && pathname === "/products") {
+      onSelectCategory(catId);
+    } else {
+      router.push(`/products?category=${encodeURIComponent(catId)}`);
     }
   };
 
@@ -103,17 +128,38 @@ export default function HeaderNavbar({
       <header className="bg-white border-b border-zinc-200 sticky top-0 z-40">
         <div className="max-w-[1320px] mx-auto px-4">
           <div className="py-4 grid grid-cols-12 items-center gap-4">
-            {/* Left: Minimal Search Bar */}
+            {/* Left: Minimal Search Bar (Redirects to /products?search=...) */}
             <div className="col-span-4 hidden md:flex items-center">
-              <form onSubmit={handleSearchSubmit} className="relative w-72">
+              <form onSubmit={handleSearchSubmit} className="relative w-80">
                 <input
                   type="text"
-                  value={searchQuery}
-                  onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
+                  value={localSearch}
+                  onChange={(e) => {
+                    setLocalSearch(e.target.value);
+                    if (onSearchChange) onSearchChange(e.target.value);
+                  }}
                   placeholder="Cari tunik, hijab voal, baju hamil..."
-                  className="w-full pl-8 pr-3 py-1.5 text-xs bg-transparent border-b border-zinc-300 focus:border-zinc-900 focus:outline-none transition placeholder:text-zinc-400"
+                  className="w-full pl-8 pr-8 py-1.5 text-xs bg-transparent border-b border-zinc-300 focus:border-zinc-900 focus:outline-none transition placeholder:text-zinc-400"
                 />
-                <Search className="w-3.5 h-3.5 text-zinc-500 absolute left-1 top-2" />
+                <button
+                  type="submit"
+                  className="w-3.5 h-3.5 text-zinc-500 absolute left-1 top-2 cursor-pointer hover:text-purple-700"
+                  title="Cari Produk"
+                >
+                  <Search className="w-3.5 h-3.5" />
+                </button>
+                {localSearch && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLocalSearch("");
+                      if (onSearchChange) onSearchChange("");
+                    }}
+                    className="absolute right-1 top-2 text-[10px] text-zinc-400 hover:text-zinc-700"
+                  >
+                    ✕
+                  </button>
+                )}
               </form>
             </div>
 
@@ -268,39 +314,75 @@ export default function HeaderNavbar({
             </div>
           </div>
 
-          {/* Lower Category Navigation Bar (Hijup Uppercase Style) */}
+          {/* 3. Refined Lower Navigation Menu (Clean, Uncluttered, Non-Redundant) */}
           <nav
-            aria-label="Navigasi Utama Kategori"
-            className="border-t border-zinc-100 flex items-center justify-start md:justify-center gap-6 lg:gap-8 py-3 overflow-x-auto no-scrollbar text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-700"
+            aria-label="Navigasi Utama"
+            className="border-t border-zinc-100 flex items-center justify-center gap-8 py-3 text-[11px] font-semibold uppercase tracking-[0.15em] text-zinc-700"
           >
-            <button
-              onClick={() => handleCategoryClick("all")}
-              className={`hover:text-zinc-950 pb-1 whitespace-nowrap cursor-pointer transition-colors ${
-                selectedCategory === "all" ? "border-b-2 border-zinc-900 text-zinc-950 font-bold" : ""
+            <Link
+              href="/"
+              className={`hover:text-zinc-950 pb-1 whitespace-nowrap transition-colors ${
+                pathname === "/" ? "border-b-2 border-zinc-900 text-zinc-950 font-bold" : ""
               }`}
             >
-              Semua Koleksi
-            </button>
+              Beranda
+            </Link>
 
-            {categories.map((cat) => (
+            {/* Dropdown Koleksi & Kategori (Mega Menu) */}
+            <div className="relative group">
               <button
-                key={cat.id}
-                onClick={() => handleCategoryClick(cat.id)}
-                className={`hover:text-zinc-950 pb-1 whitespace-nowrap cursor-pointer transition-colors ${
-                  selectedCategory === cat.id ? "border-b-2 border-zinc-900 text-zinc-950 font-bold" : ""
+                type="button"
+                onClick={() => setIsMegaMenuOpen(!isMegaMenuOpen)}
+                className={`hover:text-purple-700 pb-1 whitespace-nowrap flex items-center gap-1 cursor-pointer transition-colors ${
+                  pathname.startsWith("/products") && !pathname.includes("filter=")
+                    ? "text-purple-700 font-bold border-b-2 border-purple-700"
+                    : ""
                 }`}
               >
-                {cat.nameId}
+                <span>Koleksi & Kategori</span>
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isMegaMenuOpen ? "rotate-180" : ""}`} />
               </button>
-            ))}
+            </div>
 
-            <button
-              onClick={() => setIsMegaMenuOpen(!isMegaMenuOpen)}
-              className="inline-flex items-center gap-1 text-[#7C3AED] hover:text-[#6D28D9] pb-1 whitespace-nowrap font-bold cursor-pointer"
+            <Link
+              href="/products?filter=new"
+              className={`hover:text-zinc-950 pb-1 whitespace-nowrap transition-colors flex items-center gap-1 ${
+                pathname === "/products" && typeof window !== "undefined" && window.location.search.includes("filter=new")
+                  ? "border-b-2 border-zinc-900 text-zinc-950 font-bold"
+                  : ""
+              }`}
             >
-              <span>Semua Kategori</span>
-              <ChevronDown className="w-3 h-3" />
-            </button>
+              <Sparkles className="w-3 h-3 text-purple-600" />
+              <span>Produk Terbaru</span>
+            </Link>
+
+            <Link
+              href="/products?filter=bestseller"
+              className={`hover:text-zinc-950 pb-1 whitespace-nowrap transition-colors flex items-center gap-1 ${
+                pathname === "/products" && typeof window !== "undefined" && window.location.search.includes("filter=bestseller")
+                  ? "border-b-2 border-zinc-900 text-zinc-950 font-bold"
+                  : ""
+              }`}
+            >
+              <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
+              <span>Produk Terlaris</span>
+            </Link>
+
+            <Link
+              href="/products?filter=promo"
+              className="text-rose-600 hover:text-rose-700 font-bold pb-1 whitespace-nowrap flex items-center gap-1 transition-colors"
+            >
+              <Flame className="w-3.5 h-3.5 fill-current" />
+              <span>Promo Highlight</span>
+            </Link>
+
+            <Link
+              href="/products"
+              className="text-zinc-500 hover:text-zinc-900 pb-1 whitespace-nowrap flex items-center gap-1 text-[10px] font-medium tracking-widest uppercase transition-colors"
+            >
+              <Grid className="w-3 h-3" />
+              <span>Semua Katalog ({categories.length} Kategori)</span>
+            </Link>
           </nav>
 
           {/* Mega Menu Dropdown */}
@@ -309,56 +391,25 @@ export default function HeaderNavbar({
               className="border-t border-zinc-200 py-6 bg-zinc-50 animate-in fade-in"
               onMouseLeave={() => setIsMegaMenuOpen(false)}
             >
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <div className="max-w-[1320px] mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 text-xs">
                 <div>
                   <h4 className="text-xs font-bold uppercase tracking-wider text-purple-900 mb-3 border-b border-purple-200 pb-1">
                     Pilar 1: Modest & Muslimah Wear
                   </h4>
-                  <ul className="space-y-2 text-xs text-zinc-700">
-                    <li>
-                      <button
-                        onClick={() => {
-                          handleCategoryClick("Hijab");
-                          setIsMegaMenuOpen(false);
-                        }}
-                        className="hover:text-purple-700 cursor-pointer"
-                      >
-                        Hijab (Voal Ultrafine, Pashmina, Syari)
-                      </button>
-                    </li>
-                    <li>
-                      <button
-                        onClick={() => {
-                          handleCategoryClick("Atasan Muslim Wanita");
-                          setIsMegaMenuOpen(false);
-                        }}
-                        className="hover:text-purple-700 cursor-pointer"
-                      >
-                        Atasan Muslim Wanita (Tunik Silk, Blouse)
-                      </button>
-                    </li>
-                    <li>
-                      <button
-                        onClick={() => {
-                          handleCategoryClick("Bawahan Muslim Wanita");
-                          setIsMegaMenuOpen(false);
-                        }}
-                        className="hover:text-purple-700 cursor-pointer"
-                      >
-                        Bawahan Muslim Wanita (Rok Plisket, Kulot)
-                      </button>
-                    </li>
-                    <li>
-                      <button
-                        onClick={() => {
-                          handleCategoryClick("Aksesoris Muslim");
-                          setIsMegaMenuOpen(false);
-                        }}
-                        className="hover:text-purple-700 cursor-pointer"
-                      >
-                        Aksesoris Muslim (Bros Rose Gold, Ciput Rajut)
-                      </button>
-                    </li>
+                  <ul className="space-y-2 text-zinc-700">
+                    {categories
+                      .filter((c) => c.pillar === 1)
+                      .map((c) => (
+                        <li key={c.id}>
+                          <button
+                            onClick={() => handleCategoryNav(c.id)}
+                            className="hover:text-purple-700 text-left w-full py-0.5 cursor-pointer flex items-center justify-between"
+                          >
+                            <span className="font-medium">{c.nameId}</span>
+                            <span className="text-[10px] text-zinc-400">{c.sizes.length} ukuran</span>
+                          </button>
+                        </li>
+                      ))}
                   </ul>
                 </div>
 
@@ -366,62 +417,20 @@ export default function HeaderNavbar({
                   <h4 className="text-xs font-bold uppercase tracking-wider text-rose-900 mb-3 border-b border-rose-200 pb-1">
                     Pilar 2: Baju Hamil & Busana Wanita
                   </h4>
-                  <ul className="space-y-2 text-xs text-zinc-700">
-                    <li>
-                      <button
-                        onClick={() => {
-                          handleCategoryClick("Baju Hamil");
-                          setIsMegaMenuOpen(false);
-                        }}
-                        className="hover:text-rose-700 cursor-pointer"
-                      >
-                        Baju Hamil (Maternity Dress, Busui Friendly)
-                      </button>
-                    </li>
-                    <li>
-                      <button
-                        onClick={() => {
-                          handleCategoryClick("Celana Panjang & Legging");
-                          setIsMegaMenuOpen(false);
-                        }}
-                        className="hover:text-rose-700 cursor-pointer"
-                      >
-                        Celana Panjang & Legging (Maternity & Seamless)
-                      </button>
-                    </li>
-                    <li>
-                      <button
-                        onClick={() => {
-                          handleCategoryClick("Atasan");
-                          setIsMegaMenuOpen(false);
-                        }}
-                        className="hover:text-rose-700 cursor-pointer"
-                      >
-                        Atasan (Casual Blouse, Knit Top)
-                      </button>
-                    </li>
-                    <li>
-                      <button
-                        onClick={() => {
-                          handleCategoryClick("Pakaian Dalam");
-                          setIsMegaMenuOpen(false);
-                        }}
-                        className="hover:text-rose-700 cursor-pointer"
-                      >
-                        Pakaian Dalam (Bra Menyusui, Seamless Panty)
-                      </button>
-                    </li>
-                    <li>
-                      <button
-                        onClick={() => {
-                          handleCategoryClick("Pakaian Wanita Lainnya");
-                          setIsMegaMenuOpen(false);
-                        }}
-                        className="hover:text-rose-700 cursor-pointer"
-                      >
-                        Pakaian Wanita Lainnya (Outerwear, Kimono)
-                      </button>
-                    </li>
+                  <ul className="space-y-2 text-zinc-700">
+                    {categories
+                      .filter((c) => c.pillar === 2)
+                      .map((c) => (
+                        <li key={c.id}>
+                          <button
+                            onClick={() => handleCategoryNav(c.id)}
+                            className="hover:text-rose-700 text-left w-full py-0.5 cursor-pointer flex items-center justify-between"
+                          >
+                            <span className="font-medium">{c.nameId}</span>
+                            <span className="text-[10px] text-zinc-400">{c.sizes.length} ukuran</span>
+                          </button>
+                        </li>
+                      ))}
                   </ul>
                 </div>
 
@@ -429,30 +438,32 @@ export default function HeaderNavbar({
                   <h4 className="text-xs font-bold uppercase tracking-wider text-amber-900 mb-3 border-b border-amber-200 pb-1">
                     Pilar 3: Koleksi Bayi & Anak
                   </h4>
-                  <ul className="space-y-2 text-xs text-zinc-700">
-                    <li>
-                      <button
-                        onClick={() => {
-                          handleCategoryClick("Pakaian Bayi");
-                          setIsMegaMenuOpen(false);
-                        }}
-                        className="hover:text-amber-700 cursor-pointer"
-                      >
-                        Pakaian Bayi (Jumper Organic Cotton, Sleepsuit)
-                      </button>
-                    </li>
-                    <li>
-                      <button
-                        onClick={() => {
-                          handleCategoryClick("Pakaian Anak Perempuan");
-                          setIsMegaMenuOpen(false);
-                        }}
-                        className="hover:text-amber-700 cursor-pointer"
-                      >
-                        Pakaian Anak Perempuan (Gamis Anak, Dress Katun)
-                      </button>
-                    </li>
+                  <ul className="space-y-2 text-zinc-700">
+                    {categories
+                      .filter((c) => c.pillar === 3)
+                      .map((c) => (
+                        <li key={c.id}>
+                          <button
+                            onClick={() => handleCategoryNav(c.id)}
+                            className="hover:text-amber-700 text-left w-full py-0.5 cursor-pointer flex items-center justify-between"
+                          >
+                            <span className="font-medium">{c.nameId}</span>
+                            <span className="text-[10px] text-zinc-400">{c.sizes.length} ukuran</span>
+                          </button>
+                        </li>
+                      ))}
                   </ul>
+
+                  <div className="mt-4 pt-3 border-t border-zinc-200">
+                    <Link
+                      href="/products"
+                      onClick={() => setIsMegaMenuOpen(false)}
+                      className="inline-flex items-center gap-1.5 text-xs font-bold text-purple-700 hover:text-purple-900"
+                    >
+                      <span>Lihat Seluruh Katalog Produk ({categories.length} Kategori)</span>
+                      <span>→</span>
+                    </Link>
+                  </div>
                 </div>
               </div>
             </div>

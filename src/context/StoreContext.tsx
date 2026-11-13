@@ -119,8 +119,15 @@ interface StoreContextType {
 
   // Categories & Dynamic Sizes (Admin control)
   categories: RahayuCategory[];
+  addCategory: (newCategory: RahayuCategory) => void;
+  updateCategory: (categoryId: string, updated: Partial<RahayuCategory>) => void;
+  deleteCategory: (categoryId: string) => void;
   addCategorySize: (categoryId: string, newSize: string) => void;
   removeCategorySize: (categoryId: string, sizeToRemove: string) => void;
+
+  // Homepage & Section Management (Admin control)
+  homepageConfig: HomepageSectionConfig;
+  updateHomepageConfig: (newConfig: Partial<HomepageSectionConfig>) => void;
 
   // Payment Methods (Admin control)
   paymentMethods: PaymentConfig[];
@@ -141,6 +148,46 @@ interface StoreContextType {
     lighting: string;
     background: string;
   }) => AiPhotoLog;
+}
+
+export interface HomepageSectionConfig {
+  hero: {
+    badge: string;
+    title: string;
+    description: string;
+    ctaText: string;
+    ctaLink: string;
+  };
+  categoriesSection: {
+    isActive: boolean;
+    title: string;
+    subtitle: string;
+  };
+  promoHighlightSection: {
+    isActive: boolean;
+    title: string;
+    badgeText: string;
+    countdownHours: string;
+    countdownMins: string;
+    countdownSecs: string;
+  };
+  newArrivalsSection: {
+    isActive: boolean;
+    title: string;
+    subtitle: string;
+    maxDisplay: number;
+  };
+  bestSellersSection: {
+    isActive: boolean;
+    title: string;
+    subtitle: string;
+    maxDisplay: number;
+  };
+  uspSection: {
+    isActive: boolean;
+    title: string;
+    items: Array<{ title: string; desc: string; icon: string }>;
+  };
 }
 
 const DEFAULT_USER: CustomerUser = {
@@ -368,6 +415,67 @@ const INITIAL_AI_LOGS: AiPhotoLog[] = [
   },
 ];
 
+const INITIAL_HOMEPAGE_CONFIG: HomepageSectionConfig = {
+  hero: {
+    badge: "KOLEKSI RAYA & MODEST 2026",
+    title: "Elegansi Kesederhanaan Busana Muslimah",
+    description: "Koleksi busana muslim wanita, hijab voal ultrafine, baju hamil busui friendly, dan pakaian anak dengan material katun & silk bersertifikasi standar tinggi.",
+    ctaText: "Jelajahi Koleksi",
+    ctaLink: "/products",
+  },
+  categoriesSection: {
+    isActive: true,
+    title: "11 Kategori Resmi",
+    subtitle: "Pilih kategori untuk melihat katalog lengkap ukuran & video detail",
+  },
+  promoHighlightSection: {
+    isActive: true,
+    title: "Promo Highlight Hari Ini",
+    badgeText: "VOUCHER: RAHAYUPAYDAY",
+    countdownHours: "06",
+    countdownMins: "42",
+    countdownSecs: "19",
+  },
+  newArrivalsSection: {
+    isActive: true,
+    title: "Koleksi Terbaru (New Arrivals)",
+    subtitle: "Desain terkini rilisan minggu ini dengan finishing tepi laser cut presisi",
+    maxDisplay: 4,
+  },
+  bestSellersSection: {
+    isActive: true,
+    title: "Produk Terlaris (Best Sellers)",
+    subtitle: "Pilihan favorit ribuan muslimah Indonesia dengan rating tertinggi",
+    maxDisplay: 4,
+  },
+  uspSection: {
+    isActive: true,
+    title: "Kenapa Memilih Rahayu Fashion?",
+    items: [
+      {
+        title: "100% Produk Original",
+        desc: "Jaminan bahan berkualitas tinggi, jahitan butik, dan lolos QC ketat.",
+        icon: "ShieldCheck",
+      },
+      {
+        title: "Gratis Ongkir se-Indonesia",
+        desc: "Didukung kurir terpercaya JNE, SiCepat, J&T dengan pelacakan resi real-time.",
+        icon: "Truck",
+      },
+      {
+        title: "Garansi Tukar Ukuran 7 Hari",
+        desc: "Kekecilan atau kebesaran? Tukar ukuran mudah tanpa ribet.",
+        icon: "RefreshCw",
+      },
+      {
+        title: "Customer Support 24/7",
+        desc: "Layanan konsultasi ukuran dan pemesanan via WhatsApp resmi.",
+        icon: "Clock",
+      },
+    ],
+  },
+};
+
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
@@ -546,8 +654,22 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     );
   };
 
-  // 4. Categories State (Dynamic Sizes per Category)
+  // 4. Categories State (Dynamic CRUD & Sizes per Category)
   const [categories, setCategories] = useState<RahayuCategory[]>(CATEGORIES_DATA);
+
+  const addCategory = (newCat: RahayuCategory) => {
+    setCategories((prev) => [...prev, newCat]);
+  };
+
+  const updateCategory = (categoryId: string, updated: Partial<RahayuCategory>) => {
+    setCategories((prev) =>
+      prev.map((cat) => (cat.id === categoryId ? { ...cat, ...updated } : cat))
+    );
+  };
+
+  const deleteCategory = (categoryId: string) => {
+    setCategories((prev) => prev.filter((cat) => cat.id !== categoryId));
+  };
 
   const addCategorySize = (categoryId: string, newSize: string) => {
     setCategories((prev) =>
@@ -569,6 +691,16 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         return cat;
       })
     );
+  };
+
+  // 4b. Homepage & Section Layout Config State (Admin control)
+  const [homepageConfig, setHomepageConfig] = useState<HomepageSectionConfig>(INITIAL_HOMEPAGE_CONFIG);
+
+  const updateHomepageConfig = (newConfig: Partial<HomepageSectionConfig>) => {
+    setHomepageConfig((prev) => ({
+      ...prev,
+      ...newConfig,
+    }));
   };
 
   // 5. Payment Methods Config State
@@ -662,8 +794,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         updateOrderStatus,
         updateOrderAwb,
         categories,
+        addCategory,
+        updateCategory,
+        deleteCategory,
         addCategorySize,
         removeCategorySize,
+        homepageConfig,
+        updateHomepageConfig,
         paymentMethods,
         togglePaymentMethod,
         updatePaymentFee,

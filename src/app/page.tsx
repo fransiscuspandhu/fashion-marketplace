@@ -2,17 +2,17 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { Heart, Play, ArrowRight, ShieldCheck, RefreshCw, Sparkles, Check, X, Clock } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Heart, Play, ArrowRight, ShieldCheck, RefreshCw, Sparkles, Check, X, Clock, Star, Truck, Flame } from "lucide-react";
 import { CATEGORIES_DATA, PRODUCTS_DATA, ProductItem, RahayuCategory } from "@/data/mock-data";
 import Footer from "@/components/Footer";
 import HeaderNavbar from "@/components/HeaderNavbar";
 import { useStore } from "@/context/StoreContext";
 
 export default function HomePage() {
-  const { categories, addToCart } = useStore();
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [selectedSizeFilter, setSelectedSizeFilter] = useState<string>("all");
-  const [searchQuery, setSearchQuery] = useState<string>("");
+  const router = useRouter();
+  const { categories, addToCart, homepageConfig } = useStore();
   const [isLiveModalOpen, setIsLiveModalOpen] = useState<boolean>(false);
 
   // PDP Modal State
@@ -21,23 +21,9 @@ export default function HomePage() {
   const [selectedSize, setSelectedSize] = useState<string>("");
   const [selectedColor, setSelectedColor] = useState<string>("");
 
-  // Countdown timer mock
-  const [hours] = useState("06");
-  const [mins] = useState("42");
-  const [secs] = useState("19");
-
-  const currentCategoryConfig = categories.find((c) => c.id === selectedCategory);
-
-  const filteredProducts = PRODUCTS_DATA.filter((p) => {
-    const matchCat = selectedCategory === "all" || p.category === selectedCategory;
-    const matchSearch =
-      !searchQuery ||
-      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.category.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchCat && matchSearch;
-  });
-
   const promoHighlightProducts = PRODUCTS_DATA.filter((p) => p.isPromoHighlight);
+  const newArrivalsProducts = PRODUCTS_DATA.filter((p) => p.promoBadge.includes("NEW") || p.id <= 4);
+  const bestSellerProducts = PRODUCTS_DATA.filter((p) => p.promoBadge.includes("BEST") || p.rating >= 4.9);
 
   const openPdpModal = (product: ProductItem) => {
     setActiveModalProduct(product);
@@ -58,16 +44,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen flex flex-col bg-white">
       {/* Editorial Header Navbar */}
-      <HeaderNavbar
-        selectedCategory={selectedCategory}
-        onSelectCategory={(catId) => {
-          setSelectedCategory(catId);
-          setSelectedSizeFilter("all");
-        }}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        onOpenLiveModal={() => setIsLiveModalOpen(true)}
-      />
+      <HeaderNavbar onOpenLiveModal={() => setIsLiveModalOpen(true)} />
 
       {/* 3. Main Content Body */}
       <main className="flex-1">
@@ -161,30 +138,27 @@ export default function HomePage() {
           <div className="flex items-center justify-between mb-5">
             <div>
               <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 block">EXPLORE BY CATEGORY</span>
-              <h2 className="editorial-serif text-xl text-zinc-900">11 Kategori Pilihan Rahayu</h2>
+              <h2 className="editorial-serif text-xl text-zinc-900">{homepageConfig.categoriesSection.title}</h2>
             </div>
-            <span className="text-xs text-zinc-500 hidden sm:inline">
-              Klik kategori untuk melihat koleksi & ukuran spesifik
-            </span>
+            <Link
+              href="/products"
+              className="text-xs font-semibold text-purple-700 hover:text-purple-900 flex items-center gap-1 cursor-pointer"
+            >
+              <span>Buka Semua Katalog ({categories.length} Kategori)</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
           </div>
 
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-11 gap-4">
-            {CATEGORIES_DATA.map((c) => {
-              const isSelected = selectedCategory === c.id;
+            {categories.map((c) => {
               return (
                 <button
                   key={c.id}
-                  onClick={() => {
-                    setSelectedCategory(c.id);
-                    setSelectedSizeFilter("all");
-                  }}
+                  onClick={() => router.push(`/products?category=${encodeURIComponent(c.id)}`)}
                   className="group flex flex-col items-center text-center space-y-2 focus:outline-none cursor-pointer"
+                  title={`Buka Katalog ${c.nameId}`}
                 >
-                  <div
-                    className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full p-0.5 transition ${
-                      isSelected ? "ring-2 ring-zinc-900" : "ring-1 ring-zinc-200 group-hover:ring-zinc-900"
-                    }`}
-                  >
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full p-0.5 ring-1 ring-zinc-200 group-hover:ring-purple-700 transition">
                     <div
                       className="w-full h-full rounded-full flex items-center justify-center overflow-hidden"
                       style={{ background: c.iconBg }}
@@ -197,11 +171,7 @@ export default function HomePage() {
                       </div>
                     </div>
                   </div>
-                  <span
-                    className={`text-[10px] font-semibold uppercase tracking-wider leading-tight line-clamp-2 ${
-                      isSelected ? "text-zinc-950 underline" : "text-zinc-600 group-hover:text-zinc-950"
-                    }`}
-                  >
+                  <span className="text-[10px] font-semibold uppercase tracking-wider leading-tight line-clamp-2 text-zinc-600 group-hover:text-purple-700">
                     {c.nameId}
                   </span>
                 </button>
@@ -211,24 +181,33 @@ export default function HomePage() {
         </section>
 
         {/* 5. Promo Highlight Section */}
-        <section id="promo-highlight-section" className="bg-[#FAF8F5] border-b border-zinc-200 py-10 my-6">
-          <div className="max-w-[1320px] mx-auto px-4 space-y-6">
-            <div className="flex flex-wrap items-end justify-between gap-4 border-b border-zinc-200 pb-4">
-              <div>
-                <div className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-rose-600 mb-1">
-                  <span>🔥 HIGHLIGHTED PROMO CAMPAIGN</span>
+        {homepageConfig.promoHighlightSection.isActive && (
+          <section id="promo-highlight-section" className="bg-[#FAF8F5] border-b border-zinc-200 py-10 my-6">
+            <div className="max-w-[1320px] mx-auto px-4 space-y-6">
+              <div className="flex flex-wrap items-end justify-between gap-4 border-b border-zinc-200 pb-4">
+                <div>
+                  <div className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-rose-600 mb-1">
+                    <span>{homepageConfig.promoHighlightSection.badgeText}</span>
+                  </div>
+                  <h2 className="editorial-serif text-2xl sm:text-3xl text-zinc-900">
+                    {homepageConfig.promoHighlightSection.title}
+                  </h2>
                 </div>
-                <h2 className="editorial-serif text-2xl sm:text-3xl text-zinc-900">Special Promo Highlight</h2>
-              </div>
-              <div className="flex items-center gap-3 text-xs">
-                <span className="text-zinc-500 uppercase tracking-wider text-[11px]">Berakhir Dalam:</span>
-                <div className="flex items-center gap-1 font-mono font-bold text-white text-xs">
-                  <span className="bg-zinc-900 px-2.5 py-1">{hours}</span>:
-                  <span className="bg-zinc-900 px-2.5 py-1">{mins}</span>:
-                  <span className="bg-rose-600 px-2.5 py-1">{secs}</span>
+                <div className="flex items-center gap-3 text-xs">
+                  <span className="text-zinc-500 uppercase tracking-wider text-[11px]">Berakhir Dalam:</span>
+                  <div className="flex items-center gap-1 font-mono font-bold text-white text-xs">
+                    <span className="bg-zinc-900 px-2.5 py-1">
+                      {homepageConfig.promoHighlightSection.countdownHours}
+                    </span>:
+                    <span className="bg-zinc-900 px-2.5 py-1">
+                      {homepageConfig.promoHighlightSection.countdownMins}
+                    </span>:
+                    <span className="bg-rose-600 px-2.5 py-1">
+                      {homepageConfig.promoHighlightSection.countdownSecs}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
               {promoHighlightProducts.map((p) => {
@@ -288,121 +267,204 @@ export default function HomePage() {
             </div>
           </div>
         </section>
+        )}
 
-        {/* 6. Main Catalog & Dynamic Size Filters */}
-        <section id="catalog-anchor" className="max-w-[1320px] mx-auto px-4 py-8 space-y-6">
-          <div className="flex flex-wrap items-end justify-between gap-4 border-b border-zinc-200 pb-4">
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 block">OFFICIAL CATALOG</span>
-              <h2 className="editorial-serif text-2xl text-zinc-900">
-                {selectedCategory === "all" ? `Semua Koleksi (${filteredProducts.length} Produk)` : `${selectedCategory} (${filteredProducts.length} Produk)`}
-              </h2>
-              {currentCategoryConfig && (
-                <p className="text-xs text-zinc-500 mt-1">
-                  Standar Ukuran <strong>{currentCategoryConfig.nameId}</strong> ({currentCategoryConfig.measurementLabel}):{" "}
-                  <span className="text-[#7C3AED] font-semibold">{currentCategoryConfig.sizes.join(", ")}</span>
-                </p>
-              )}
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3 text-xs">
-              {currentCategoryConfig && (
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[11px] text-zinc-500 mr-1">Filter Ukuran:</span>
-                  <button
-                    onClick={() => setSelectedSizeFilter("all")}
-                    className={`px-2 py-1 border text-[11px] cursor-pointer ${
-                      selectedSizeFilter === "all" ? "bg-zinc-900 text-white border-zinc-900" : "bg-white border-zinc-300"
-                    }`}
-                  >
-                    Semua
-                  </button>
-                  {currentCategoryConfig.sizes.map((sz) => (
-                    <button
-                      key={sz}
-                      onClick={() => setSelectedSizeFilter(sz)}
-                      className={`px-2 py-1 border text-[11px] cursor-pointer ${
-                        selectedSizeFilter === sz ? "bg-zinc-900 text-white border-zinc-900" : "bg-white border-zinc-300"
-                      }`}
-                    >
-                      {sz}
-                    </button>
-                  ))}
+        {/* 6. Section Produk Terbaru (New Arrivals) */}
+        {homepageConfig.newArrivalsSection.isActive && (
+          <section id="produk-terbaru" className="max-w-[1320px] mx-auto px-4 py-8 space-y-6">
+            <div className="flex flex-wrap items-end justify-between gap-4 border-b border-zinc-200 pb-4">
+              <div>
+                <div className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-purple-700 mb-1">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>NEW SEASON RELEASES</span>
                 </div>
-              )}
+                <h2 className="editorial-serif text-2xl text-zinc-900">
+                  {homepageConfig.newArrivalsSection.title}
+                </h2>
+                <p className="text-xs text-zinc-500 mt-1">
+                  {homepageConfig.newArrivalsSection.subtitle}
+                </p>
+              </div>
+
+              <Link
+                href="/products?filter=new"
+                className="text-xs font-bold text-purple-700 hover:text-purple-900 flex items-center gap-1 cursor-pointer"
+              >
+                <span>Lihat Semua Produk Terbaru ({newArrivalsProducts.length})</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
             </div>
-          </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-5 gap-y-9">
-            {filteredProducts.map((p) => {
-              const catCfg = CATEGORIES_DATA.find((c) => c.id === p.category) || CATEGORIES_DATA[0];
-              return (
-                <article
-                  key={p.id}
-                  onClick={() => openPdpModal(p)}
-                  className="group cursor-pointer flex flex-col justify-between"
-                >
-                  <div>
-                    <div className="relative aspect-[3/4] bg-[#F6F4F0] border border-zinc-200/80 overflow-hidden mb-3 flex items-center justify-center">
-                      <div className="w-4/5 h-4/5 group-hover:scale-105 transition duration-300">
-                        <svg viewBox="0 0 180 240" className="w-full h-full">
-                          <path d="M25 230 V85 C25 45 55 20 90 20 C125 20 155 45 155 85 V230 Z" fill={catCfg.iconBg} opacity="0.75" />
-                          <path d="M56 75 L38 155 L55 158 L64 112 L60 218 L120 218 L116 112 L125 158 L142 155 L124 75 Z" fill={catCfg.colorHex} />
-                          <path d="M74 75 L90 105 L106 75 Z" fill="#FAF8F5" />
-                          <circle cx="90" cy="54" r="14" fill="#E6C2A6" />
-                        </svg>
-                      </div>
-                      {p.promoBadge && (
-                        <span className="absolute top-3 left-3 px-2.5 py-1 bg-rose-600 text-white text-[10px] font-bold uppercase tracking-widest">
-                          {p.promoBadge}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-x-5 gap-y-8">
+              {newArrivalsProducts.slice(0, homepageConfig.newArrivalsSection.maxDisplay).map((p) => {
+                const catCfg = categories.find((c) => c.id === p.category) || categories[0];
+                return (
+                  <article
+                    key={p.id}
+                    onClick={() => openPdpModal(p)}
+                    className="group cursor-pointer flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="relative aspect-3/4 bg-[#F6F4F0] border border-zinc-200/80 overflow-hidden mb-3 flex items-center justify-center">
+                        <img
+                          src={`https://images.unsplash.com/photo-${1584917865442 + p.id * 1000}?auto=format&fit=crop&w=600&q=80`}
+                          alt={p.name}
+                          className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                        />
+                        <span className="absolute top-2.5 left-2.5 px-2 py-0.5 bg-zinc-900 text-white text-[9px] font-bold uppercase tracking-widest">
+                          {p.promoBadge || "NEW"}
                         </span>
-                      )}
-                      <span className="absolute top-3 right-3 w-7 h-7 bg-white/90 text-zinc-700 flex items-center justify-center text-xs">
-                        <Heart className="w-3.5 h-3.5" />
-                      </span>
-                      {p.hasVideo && (
-                        <span className="absolute bottom-3 left-3 px-2 py-0.5 bg-zinc-900/90 text-white text-[9px] font-semibold uppercase tracking-widest flex items-center gap-1">
-                          <span className="text-[#E879F9]">▶</span> VIDEO
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-400">{p.category}</span>
-                        <div className="flex items-center gap-1">
-                          {catCfg.colors.map((col) => (
-                            <span key={col.name} className="w-2.5 h-2.5 rounded-full border border-zinc-300" style={{ background: col.hex }} />
-                          ))}
-                        </div>
-                      </div>
-                      <h3 className="text-xs sm:text-sm font-medium text-zinc-900 group-hover:underline line-clamp-1">{p.name}</h3>
-                      <div className="flex items-baseline gap-2 pt-0.5">
-                        <span className="text-xs sm:text-sm font-bold text-zinc-900">Rp {p.priceIdr.toLocaleString("id-ID")}</span>
-                        {p.discountPct > 0 && (
-                          <span className="text-[11px] text-zinc-400 line-through">Rp {p.origPriceIdr.toLocaleString("id-ID")}</span>
+                        {p.hasVideo && (
+                          <span className="absolute bottom-2.5 left-2.5 px-2 py-0.5 bg-rose-600 text-white text-[9px] font-semibold uppercase tracking-widest flex items-center gap-1 shadow">
+                            <Play className="w-2.5 h-2.5 fill-current" /> VIDEO 9:16
+                          </span>
                         )}
                       </div>
-                      <div className="text-[10px] text-zinc-500 pt-0.5 font-mono truncate">
-                        Ukuran: {catCfg.sizes.slice(0, 4).join(" · ")}
+
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block truncate">
+                          {p.category}
+                        </span>
+                        <h3 className="text-xs sm:text-sm font-semibold text-zinc-900 group-hover:text-purple-700 transition-colors line-clamp-1">
+                          {p.name}
+                        </h3>
+                        <div className="flex items-baseline gap-2 pt-0.5">
+                          <span className="text-sm font-extrabold text-zinc-900">
+                            Rp {p.priceIdr.toLocaleString("id-ID")}
+                          </span>
+                          {p.discountPct > 0 && (
+                            <span className="text-[10px] text-zinc-400 line-through">
+                              Rp {p.origPriceIdr.toLocaleString("id-ID")}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
+                  </article>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* 7. Section Produk Terlaris (Best Sellers) */}
+        {homepageConfig.bestSellersSection.isActive && (
+          <section id="produk-terlaris" className="bg-[#FAF8F5] border-t border-b border-zinc-200 py-10 my-4">
+            <div className="max-w-[1320px] mx-auto px-4 space-y-6">
+              <div className="flex flex-wrap items-end justify-between gap-4 border-b border-zinc-200 pb-4">
+                <div>
+                  <div className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-amber-600 mb-1">
+                    <Star className="w-3.5 h-3.5 fill-current" />
+                    <span>CUSTOMER FAVORITES</span>
                   </div>
-                </article>
-              );
-            })}
-          </div>
-        </section>
+                  <h2 className="editorial-serif text-2xl text-zinc-900">
+                    {homepageConfig.bestSellersSection.title}
+                  </h2>
+                  <p className="text-xs text-zinc-500 mt-1">
+                    {homepageConfig.bestSellersSection.subtitle}
+                  </p>
+                </div>
+
+                <Link
+                  href="/products?filter=bestseller"
+                  className="text-xs font-bold text-amber-700 hover:text-amber-900 flex items-center gap-1 cursor-pointer"
+                >
+                  <span>Lihat Semua Produk Terlaris ({bestSellerProducts.length})</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-x-5 gap-y-8">
+                {bestSellerProducts.slice(0, homepageConfig.bestSellersSection.maxDisplay).map((p) => {
+                  return (
+                    <article
+                      key={p.id}
+                      onClick={() => openPdpModal(p)}
+                      className="group cursor-pointer flex flex-col justify-between bg-white p-3 border border-zinc-200 rounded shadow-2xs hover:shadow-md transition"
+                    >
+                      <div>
+                        <div className="relative aspect-3/4 bg-zinc-100 overflow-hidden mb-3 rounded">
+                          <img
+                            src={`https://images.unsplash.com/photo-${1584917865442 + p.id * 1000}?auto=format&fit=crop&w=600&q=80`}
+                            alt={p.name}
+                            className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                          />
+                          <span className="absolute top-2 left-2 px-2 py-0.5 bg-amber-500 text-white text-[9px] font-bold uppercase tracking-widest rounded-xs">
+                            ★ BEST SELLER
+                          </span>
+                          {p.hasVideo && (
+                            <span className="absolute bottom-2 left-2 px-2 py-0.5 bg-zinc-900/90 text-white text-[9px] font-semibold uppercase tracking-widest flex items-center gap-1 rounded-xs">
+                              <Play className="w-2.5 h-2.5 fill-current" /> 9:16
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="space-y-1">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block truncate">
+                            {p.category}
+                          </span>
+                          <h3 className="text-xs sm:text-sm font-semibold text-zinc-900 group-hover:text-purple-700 transition-colors line-clamp-1">
+                            {p.name}
+                          </h3>
+                          <div className="flex items-baseline gap-2 pt-0.5">
+                            <span className="text-sm font-extrabold text-zinc-900">
+                              Rp {p.priceIdr.toLocaleString("id-ID")}
+                            </span>
+                            <span className="text-[10px] text-amber-600 font-bold flex items-center gap-0.5">
+                              ★ {p.rating}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* 8. Section Value Proposition / USP */}
+        {homepageConfig.uspSection.isActive && (
+          <section className="max-w-[1320px] mx-auto px-4 py-12">
+            <div className="text-center mb-8">
+              <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-purple-700 block mb-1">
+                STANDAR LAYANAN RAHAYU
+              </span>
+              <h2 className="editorial-serif text-2xl text-zinc-900">
+                {homepageConfig.uspSection.title}
+              </h2>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {homepageConfig.uspSection.items.map((item, idx) => (
+                <div
+                  key={idx}
+                  className="bg-zinc-50 border border-zinc-200 p-5 rounded-lg text-center space-y-2 hover:border-purple-300 transition"
+                >
+                  <div className="w-10 h-10 mx-auto rounded-full bg-purple-100 text-purple-700 flex items-center justify-center font-bold">
+                    {idx === 0 && <ShieldCheck className="w-5 h-5" />}
+                    {idx === 1 && <Truck className="w-5 h-5" />}
+                    {idx === 2 && <RefreshCw className="w-5 h-5" />}
+                    {idx === 3 && <Clock className="w-5 h-5" />}
+                  </div>
+                  <h3 className="text-xs font-bold text-zinc-900 uppercase tracking-wide">
+                    {item.title}
+                  </h3>
+                  <p className="text-[11px] text-zinc-500 leading-relaxed">
+                    {item.desc}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
       </main>
 
-      {/* 7. Footer Component (SEO-Friendly & Social Media Links) */}
+      {/* 9. Footer Component */}
       <Footer
-        onCategoryClick={(catId) => {
-          setSelectedCategory(catId);
-          const el = document.getElementById("catalog-anchor");
-          el?.scrollIntoView({ behavior: "smooth" });
-        }}
-        onProfileClick={() => alert("Halaman Akun & Profile Pelanggan terintegrasi.")}
+        onCategoryClick={(catId) => router.push(`/products?category=${encodeURIComponent(catId)}`)}
+        onProfileClick={() => router.push("/profile")}
       />
 
       {/* =================================================================== */}

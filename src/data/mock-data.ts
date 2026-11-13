@@ -16,6 +16,7 @@ export interface RahayuCategory {
   pillar: 1 | 2 | 3;
   iconBg: string;
   colorHex: string;
+  iconName?: string;
   measurementLabel: string;
   variantAttr: string;
   sizes: string[];
