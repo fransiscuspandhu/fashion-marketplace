@@ -51,6 +51,9 @@ export interface ProductItem {
   desc: string;
   rating: number;
   reviewCount: number;
+  stock: number;
+  imageUrl?: string;
+  promoType?: string;
 }
 
 export const CATEGORIES_DATA: RahayuCategory[] = [
@@ -279,6 +282,9 @@ export const PRODUCTS_DATA: ProductItem[] = [
     desc: 'Tunik berbahan Armani Silk premium yang jatuh anggun, adem, tidak menerawang, ramah wudhu dan busui.',
     rating: 4.9,
     reviewCount: 128,
+    stock: 45,
+    imageUrl: 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=600&q=80',
+    promoType: 'Flash Sale 31%',
   },
   {
     id: 2,
@@ -295,6 +301,9 @@ export const PRODUCTS_DATA: ProductItem[] = [
     desc: 'Hijab segiempat Voal Ultrafine laser-cut dengan monogram Rahayu, tegak paripurna di dahi dan lembut seharian.',
     rating: 5.0,
     reviewCount: 245,
+    stock: 14, // Low stock alert!
+    imageUrl: 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&w=600&q=80',
+    promoType: 'Live Deal Exclusive',
   },
   {
     id: 3,
@@ -311,6 +320,9 @@ export const PRODUCTS_DATA: ProductItem[] = [
     desc: 'Dress hamil & menyusui berbahan katun linen breathable dengan ritsleting tersembunyi ganda di dada.',
     rating: 4.8,
     reviewCount: 94,
+    stock: 8, // Low stock alert!
+    imageUrl: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=600&q=80',
+    promoType: 'Maternity Promo 22%',
   },
   {
     id: 4,
@@ -327,6 +339,9 @@ export const PRODUCTS_DATA: ProductItem[] = [
     desc: 'Celana panjang & legging wanita anti-begah dengan pinggang elastis premium yang menopang tubuh rapi.',
     rating: 4.9,
     reviewCount: 182,
+    stock: 62,
+    imageUrl: 'https://images.unsplash.com/photo-1509631179647-0177331693ae?auto=format&fit=crop&w=600&q=80',
+    promoType: 'Comfort Everyday Promo',
   },
   {
     id: 5,
@@ -343,6 +358,9 @@ export const PRODUCTS_DATA: ProductItem[] = [
     desc: 'Bawahan muslim wanita rok plisket lipit rapat berbahan heavy matte satin yang anggun dan flowy.',
     rating: 4.7,
     reviewCount: 65,
+    stock: 35,
+    imageUrl: 'https://images.unsplash.com/photo-1576995853123-5a10305d93c0?auto=format&fit=crop&w=600&q=80',
+    promoType: 'None',
   },
   {
     id: 6,
@@ -359,6 +377,9 @@ export const PRODUCTS_DATA: ProductItem[] = [
     desc: 'Atasan wanita kemeja kerja bergaya Minimal.id berbahan tencel sejuk dan anti-kusut.',
     rating: 4.8,
     reviewCount: 41,
+    stock: 19, // Low stock alert!
+    imageUrl: 'https://images.unsplash.com/photo-1485968579580-b6d095142e6e?auto=format&fit=crop&w=600&q=80',
+    promoType: 'New Arrival Special',
   },
   {
     id: 7,
@@ -375,6 +396,9 @@ export const PRODUCTS_DATA: ProductItem[] = [
     desc: 'Set bros monogram Rahayu berlapis emas 18k brass dengan jarum tajam anti-merusak serat voal.',
     rating: 4.9,
     reviewCount: 112,
+    stock: 50,
+    imageUrl: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=600&q=80',
+    promoType: 'Bundle Hemat 20%',
   },
   {
     id: 8,
@@ -391,6 +415,9 @@ export const PRODUCTS_DATA: ProductItem[] = [
     desc: 'Pakaian dalam manset & inner berbahan serat bambu antibakteri, dingin, dan menyerap keringat maksimal.',
     rating: 4.9,
     reviewCount: 310,
+    stock: 85,
+    imageUrl: 'https://images.unsplash.com/photo-1544441893-675973e31985?auto=format&fit=crop&w=600&q=80',
+    promoType: 'Daily Essentials Deal',
   },
   {
     id: 9,
@@ -407,6 +434,9 @@ export const PRODUCTS_DATA: ProductItem[] = [
     desc: 'Outerwear abaya kimono beraksen organza mewah untuk momen hari raya maupun formal.',
     rating: 5.0,
     reviewCount: 38,
+    stock: 11, // Low stock alert!
+    imageUrl: 'https://images.unsplash.com/photo-1567401893414-76b7b1e5a7a5?auto=format&fit=crop&w=600&q=80',
+    promoType: 'Ramadan Raya Collection',
   },
   {
     id: 10,
@@ -423,6 +453,9 @@ export const PRODUCTS_DATA: ProductItem[] = [
     desc: 'Pakaian anak perempuan bahan katun Jepang lembut lengkap dengan hijab instan anak.',
     rating: 4.9,
     reviewCount: 76,
+    stock: 28,
+    imageUrl: 'https://images.unsplash.com/photo-1518831959646-742c3a14ebf7?auto=format&fit=crop&w=600&q=80',
+    promoType: 'Kids Raya 20%',
   },
   {
     id: 11,
@@ -439,5 +472,8 @@ export const PRODUCTS_DATA: ProductItem[] = [
     desc: 'Pakaian bayi 100% katun organik berstandar OEKO-TEX, lembut untuk kulit bayi baru lahir.',
     rating: 5.0,
     reviewCount: 88,
+    stock: 32,
+    imageUrl: 'https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&w=600&q=80',
+    promoType: 'Newborn Care 19%',
   },
 ];

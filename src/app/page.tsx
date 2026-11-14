@@ -12,7 +12,7 @@ import { useStore } from "@/context/StoreContext";
 
 export default function HomePage() {
   const router = useRouter();
-  const { categories, addToCart, homepageConfig } = useStore();
+  const { categories, products, addToCart, homepageConfig } = useStore();
   const [isLiveModalOpen, setIsLiveModalOpen] = useState<boolean>(false);
 
   // PDP Modal State
@@ -21,9 +21,9 @@ export default function HomePage() {
   const [selectedSize, setSelectedSize] = useState<string>("");
   const [selectedColor, setSelectedColor] = useState<string>("");
 
-  const promoHighlightProducts = PRODUCTS_DATA.filter((p) => p.isPromoHighlight);
-  const newArrivalsProducts = PRODUCTS_DATA.filter((p) => p.promoBadge.includes("NEW") || p.id <= 4);
-  const bestSellerProducts = PRODUCTS_DATA.filter((p) => p.promoBadge.includes("BEST") || p.rating >= 4.9);
+  const promoHighlightProducts = products.filter((p) => p.isPromoHighlight);
+  const newArrivalsProducts = products.filter((p) => p.promoBadge.includes("NEW") || p.id <= 4);
+  const bestSellerProducts = products.filter((p) => p.promoBadge.includes("BEST") || p.rating >= 4.9);
 
   const openPdpModal = (product: ProductItem) => {
     setActiveModalProduct(product);
@@ -364,8 +364,9 @@ export default function HomePage() {
                   >
                     <div>
                       <div className="relative aspect-3/4 bg-[#F6F4F0] border border-zinc-200/80 overflow-hidden mb-3 flex items-center justify-center">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
-                          src={`https://images.unsplash.com/photo-${1584917865442 + p.id * 1000}?auto=format&fit=crop&w=600&q=80`}
+                          src={p.imageUrl || `https://images.unsplash.com/photo-${1584917865442 + p.id * 1000}?auto=format&fit=crop&w=600&q=80`}
                           alt={p.name}
                           className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
                         />
@@ -442,8 +443,9 @@ export default function HomePage() {
                     >
                       <div>
                         <div className="relative aspect-3/4 bg-zinc-100 overflow-hidden mb-3 rounded">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
-                            src={`https://images.unsplash.com/photo-${1584917865442 + p.id * 1000}?auto=format&fit=crop&w=600&q=80`}
+                            src={p.imageUrl || `https://images.unsplash.com/photo-${1584917865442 + p.id * 1000}?auto=format&fit=crop&w=600&q=80`}
                             alt={p.name}
                             className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
                           />

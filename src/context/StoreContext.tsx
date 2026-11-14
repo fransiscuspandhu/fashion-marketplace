@@ -1,11 +1,11 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState } from "react";
 import {
-  CATEGORIES_DATA,
-  PRODUCTS_DATA,
   ProductItem,
+  PRODUCTS_DATA,
   RahayuCategory,
+  CATEGORIES_DATA,
   MarketplacePillar,
   DEFAULT_PILLARS,
 } from "@/data/mock-data";
@@ -19,6 +19,8 @@ export interface CustomerAddress {
   city: string;
   postalCode: string;
   isDefault: boolean;
+  tagLocation?: "Rumah" | "Kantor" | "Apartemen" | "Toko" | string;
+  notes?: string;
 }
 
 export interface CustomerUser {
@@ -28,6 +30,8 @@ export interface CustomerUser {
   phone: string;
   tier: string;
   points: number;
+  avatarUrl?: string;
+  bio?: string;
   addresses: CustomerAddress[];
 }
 
@@ -71,6 +75,11 @@ export interface OrderRecord {
     category: string;
     fee: number;
   };
+  paymentInstructions?: string[];
+  accountNumber?: string;
+  accountName?: string;
+  qrImageUrl?: string;
+  paymentDueDate?: string;
   timeline: TrackingStep[];
 }
 
@@ -82,6 +91,10 @@ export interface PaymentConfig {
   fee: number;
   icon: string;
   description: string;
+  accountNumber?: string;
+  accountName?: string;
+  instructions?: string[];
+  qrImageUrl?: string;
 }
 
 export interface AiPhotoLog {
@@ -98,71 +111,6 @@ export interface AiPhotoLog {
   outputUrl: string;
 }
 
-interface StoreContextType {
-  // Auth
-  user: CustomerUser | null;
-  isLoggedIn: boolean;
-  login: (email: string, name?: string) => void;
-  logout: () => void;
-  updateUserAddresses: (addresses: CustomerAddress[]) => void;
-
-  // Cart
-  cart: CartItem[];
-  isCartDrawerOpen: boolean;
-  openCartDrawer: () => void;
-  closeCartDrawer: () => void;
-  addToCart: (product: ProductItem, size: string, color: string, qty?: number) => void;
-  removeFromCart: (itemId: string) => void;
-  updateCartQty: (itemId: string, qty: number) => void;
-  clearCart: () => void;
-  cartCount: number;
-  cartTotal: number;
-
-  // Orders
-  orders: OrderRecord[];
-  createOrder: (orderData: Omit<OrderRecord, "id" | "createdAt" | "status" | "timeline" | "awb">) => OrderRecord;
-  updateOrderStatus: (orderId: string, newStatus: OrderStatus) => void;
-  updateOrderAwb: (orderId: string, awb: string, courierName?: string) => void;
-
-  // Pillars (Admin control)
-  pillars: MarketplacePillar[];
-  addPillar: (newPillar: MarketplacePillar) => void;
-  updatePillar: (pillarId: string, updated: Partial<MarketplacePillar>) => void;
-  deletePillar: (pillarId: string) => void;
-
-  // Categories & Dynamic Sizes (Admin control)
-  categories: RahayuCategory[];
-  addCategory: (newCategory: RahayuCategory) => void;
-  updateCategory: (categoryId: string, updated: Partial<RahayuCategory>) => void;
-  deleteCategory: (categoryId: string) => void;
-  addCategorySize: (categoryId: string, newSize: string) => void;
-  removeCategorySize: (categoryId: string, sizeToRemove: string) => void;
-
-  // Homepage & Section Management (Admin control)
-  homepageConfig: HomepageSectionConfig;
-  updateHomepageConfig: (newConfig: Partial<HomepageSectionConfig>) => void;
-
-  // Payment Methods (Admin control)
-  paymentMethods: PaymentConfig[];
-  togglePaymentMethod: (methodId: string) => void;
-  updatePaymentFee: (methodId: string, fee: number) => void;
-
-  // Live Stream
-  isLiveActive: boolean;
-  liveViewers: number;
-  toggleLiveActive: () => void;
-
-  // AI Photos
-  aiLogs: AiPhotoLog[];
-  generateAiPhoto: (data: {
-    productName: string;
-    category: string;
-    modelType: string;
-    lighting: string;
-    background: string;
-  }) => AiPhotoLog;
-}
-
 export interface HomepageSectionConfig {
   hero: {
     badge: string;
@@ -170,8 +118,8 @@ export interface HomepageSectionConfig {
     description: string;
     ctaText: string;
     ctaLink: string;
-    backgroundImageUrl?: string; // Standar: 1920x640 px (3:1 Widescreen), min 1200x480 px, maks 1.5 MB
-    overlayOpacity?: number; // 0 - 100%
+    backgroundImageUrl?: string;
+    overlayOpacity?: number;
   };
   categoriesSection: {
     isActive: boolean;
@@ -205,6 +153,85 @@ export interface HomepageSectionConfig {
   };
 }
 
+interface StoreContextType {
+  // Auth & Profile
+  user: CustomerUser | null;
+  isLoggedIn: boolean;
+  login: (email: string, name?: string) => void;
+  logout: () => void;
+  updateUserProfile: (data: Partial<CustomerUser>) => void;
+  updateUserAddresses: (addresses: CustomerAddress[]) => void;
+  updateAddress: (addressId: string, updated: Partial<CustomerAddress>) => void;
+  setDefaultAddress: (addressId: string) => void;
+  deleteAddress: (addressId: string) => void;
+
+  // Cart
+  cart: CartItem[];
+  isCartDrawerOpen: boolean;
+  openCartDrawer: () => void;
+  closeCartDrawer: () => void;
+  addToCart: (product: ProductItem, size: string, color: string, qty?: number) => void;
+  removeFromCart: (itemId: string) => void;
+  updateCartQty: (itemId: string, qty: number) => void;
+  clearCart: () => void;
+  cartCount: number;
+  cartTotal: number;
+
+  // Products (CRUD & Stock)
+  products: ProductItem[];
+  addProduct: (newProduct: ProductItem) => void;
+  updateProduct: (productId: number, updated: Partial<ProductItem>) => void;
+  deleteProduct: (productId: number) => void;
+  updateProductStock: (productId: number, newStock: number) => void;
+
+  // Orders
+  orders: OrderRecord[];
+  createOrder: (orderData: Omit<OrderRecord, "id" | "createdAt" | "status" | "timeline" | "awb">) => OrderRecord;
+  updateOrderStatus: (orderId: string, newStatus: OrderStatus) => void;
+  updateOrderAwb: (orderId: string, awb: string, courierName?: string) => void;
+  completeOrder: (orderId: string) => void;
+  cancelOrder: (orderId: string) => void;
+
+  // Pillars (Admin control)
+  pillars: MarketplacePillar[];
+  addPillar: (newPillar: MarketplacePillar) => void;
+  updatePillar: (pillarId: string, updated: Partial<MarketplacePillar>) => void;
+  deletePillar: (pillarId: string) => void;
+
+  // Categories & Dynamic Sizes (Admin control)
+  categories: RahayuCategory[];
+  addCategory: (newCategory: RahayuCategory) => void;
+  updateCategory: (categoryId: string, updated: Partial<RahayuCategory>) => void;
+  deleteCategory: (categoryId: string) => void;
+  addCategorySize: (categoryId: string, newSize: string) => void;
+  removeCategorySize: (categoryId: string, sizeToRemove: string) => void;
+
+  // Homepage & Section Management (Admin control)
+  homepageConfig: HomepageSectionConfig;
+  updateHomepageConfig: (newConfig: Partial<HomepageSectionConfig>) => void;
+
+  // Payment Methods (Admin control)
+  paymentMethods: PaymentConfig[];
+  togglePaymentMethod: (methodId: string) => void;
+  updatePaymentFee: (methodId: string, fee: number) => void;
+  updatePaymentMethod: (methodId: string, updated: Partial<PaymentConfig>) => void;
+
+  // Live Stream
+  isLiveActive: boolean;
+  liveViewers: number;
+  toggleLiveActive: () => void;
+
+  // AI Photos
+  aiLogs: AiPhotoLog[];
+  generateAiPhoto: (data: {
+    productName: string;
+    category: string;
+    modelType: string;
+    lighting: string;
+    background: string;
+  }) => AiPhotoLog;
+}
+
 const DEFAULT_USER: CustomerUser = {
   id: "CUST-88192",
   name: "Siti Rahmawati",
@@ -212,6 +239,8 @@ const DEFAULT_USER: CustomerUser = {
   phone: "0812-8877-6655",
   tier: "Rahayu Gold Member",
   points: 1250,
+  avatarUrl: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=300&q=80",
+  bio: "Pecinta modest fashion dan hijab silk elegan bernuansa earthy pastel.",
   addresses: [
     {
       id: "ADDR-1",
@@ -222,6 +251,8 @@ const DEFAULT_USER: CustomerUser = {
       city: "Jakarta Selatan, DKI Jakarta",
       postalCode: "12110",
       isDefault: true,
+      tagLocation: "Rumah",
+      notes: "Pagar putih di samping pos satpam, titip sekuriti jika tidak di tempat.",
     },
     {
       id: "ADDR-2",
@@ -232,6 +263,8 @@ const DEFAULT_USER: CustomerUser = {
       city: "Jakarta Selatan, DKI Jakarta",
       postalCode: "12190",
       isDefault: false,
+      tagLocation: "Kantor",
+      notes: "Kirim saat jam kerja 09.00 - 17.00 WIB, drop di meja resepsionis lobi utama.",
     },
   ],
 };
@@ -245,6 +278,15 @@ const INITIAL_PAYMENT_METHODS: PaymentConfig[] = [
     fee: 0,
     icon: "QrCode",
     description: "Scan QR otomatis langsung diverifikasi dalam 5 detik via Midtrans/Xendit",
+    accountNumber: "ID1020088912301",
+    accountName: "NMID: RAHAYU FASHION STORE",
+    qrImageUrl: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&w=400&q=80",
+    instructions: [
+      "Buka aplikasi e-wallet atau mobile banking apa saja (BCA Mobile, GoPay, OVO, ShopeePay, Dana, LinkAja).",
+      "Pilih menu 'Scan / Bayar' lalu arahkan kamera ke kode QR di layar.",
+      "Periksa nama penerima: RAHAYU FASHION STORE dan total tagihan yang tertera.",
+      "Konfirmasi pembayaran dengan memasukkan PIN aplikasi Anda. Status otomatis lunas dalam hitungan detik.",
+    ],
   },
   {
     id: "va-bca",
@@ -253,7 +295,15 @@ const INITIAL_PAYMENT_METHODS: PaymentConfig[] = [
     isActive: true,
     fee: 2000,
     icon: "Building2",
-    description: "Nomor VA instan 8009-xxxx-xxxx otomatis dicek 24/7",
+    description: "Nomor VA instan 8801-xxxx-xxxx otomatis dicek 24/7 tanpa perlu upload bukti",
+    accountNumber: "88012081288776655",
+    accountName: "RAHAYU - SITI RAHMAWATI",
+    instructions: [
+      "Buka aplikasi BCA Mobile / myBCA / KlikBCA, lalu pilih menu 'Transfer' > 'BCA Virtual Account'.",
+      "Masukkan 16 digit Nomor Virtual Account: 88012081288776655.",
+      "Pastikan nama merchant tertera 'RAHAYU STORE' dengan nominal yang sesuai.",
+      "Masukkan PIN m-BCA Anda. Transaksi selesai dan sistem otomatis mengemas barang Anda.",
+    ],
   },
   {
     id: "va-mandiri",
@@ -262,7 +312,15 @@ const INITIAL_PAYMENT_METHODS: PaymentConfig[] = [
     isActive: true,
     fee: 2000,
     icon: "Building2",
-    description: "Pembayaran via Mandiri Livin atau ATM",
+    description: "Pembayaran via Mandiri Livin atau ATM dengan kode perusahaan 89123",
+    accountNumber: "89123081288776655",
+    accountName: "RAHAYU STORE - MANDIRI",
+    instructions: [
+      "Buka aplikasi Livin' by Mandiri, pilih menu 'Bayar' > 'Pembayaran Baru'.",
+      "Pilih 'Multi Payment', cari penyedia jasa 'RAHAYU STORE' atau kode perusahaan 89123.",
+      "Ketik nomor Virtual Account Mandiri Anda, lalu tekan 'Lanjutkan'.",
+      "Konfirmasi tagihan dan masukkan MPIN Livin' Anda.",
+    ],
   },
   {
     id: "va-bri",
@@ -271,7 +329,32 @@ const INITIAL_PAYMENT_METHODS: PaymentConfig[] = [
     isActive: true,
     fee: 2000,
     icon: "Building2",
-    description: "Pembayaran instan via BRImo",
+    description: "Pembayaran instan 24 jam via aplikasi BRImo atau ATM BRI",
+    accountNumber: "12844081288776655",
+    accountName: "BRIVA RAHAYU FASHION",
+    instructions: [
+      "Buka aplikasi BRImo, pilih menu 'BRIVA'.",
+      "Pilih 'Pembayaran Baru' dan masukkan nomor BRIVA: 12844081288776655.",
+      "Periksa nama pelanggan dan rincian nominal pembayaran.",
+      "Tekan 'Bayar' dan masukkan PIN BRImo Anda.",
+    ],
+  },
+  {
+    id: "transfer-manual-bca",
+    name: "Transfer Bank Manual (BCA Verifikasi CS)",
+    category: "TRANSFER_MANUAL",
+    isActive: true,
+    fee: 0,
+    icon: "Building2",
+    description: "Transfer langsung ke rekening utama PT Rahayu Busana Nusantara",
+    accountNumber: "731-098-7721",
+    accountName: "PT RAHAYU BUSANA NUSANTARA",
+    instructions: [
+      "Transfer jumlah tepat sesuai tagihan ke Rekening BCA: 731-098-7721 a/n PT RAHAYU BUSANA NUSANTARA.",
+      "Tuliskan Nomor Invoice pada berita transfer.",
+      "Simpan struk / bukti transfer m-banking.",
+      "Admin akan memverifikasi dalam waktu maksimal 15 menit pada jam kerja (08.00 - 21.00 WIB).",
+    ],
   },
   {
     id: "cc-visa-master",
@@ -280,7 +363,13 @@ const INITIAL_PAYMENT_METHODS: PaymentConfig[] = [
     isActive: true,
     fee: 2500,
     icon: "CreditCard",
-    description: "Aman dengan 3D Secure OTP & proteksi bank",
+    description: "Aman dengan 3D Secure OTP & proteksi enkripsi bank berstandar PCI-DSS",
+    instructions: [
+      "Masukkan 16 digit nomor kartu kredit/debit, tanggal kedaluwarsa (MM/YY), dan kode CVV di belakang kartu.",
+      "Sistem akan mengarahkan ke halaman verifikasi bank (3D Secure).",
+      "Masukkan kode OTP yang dikirim melalui SMS oleh bank penerbit kartu Anda.",
+      "Pembayaran selesai secara instan.",
+    ],
   },
   {
     id: "cod-cash",
@@ -289,11 +378,121 @@ const INITIAL_PAYMENT_METHODS: PaymentConfig[] = [
     isActive: true,
     fee: 5000,
     icon: "Banknote",
-    description: "Bayar tunai ke kurir SiCepat / J&T saat pesanan tiba di rumah",
+    description: "Bayar tunai ke kurir SiCepat / J&T saat paket pesanan tiba di depan pintu rumah",
+    instructions: [
+      "Pastikan nomor telepon WhatsApp Anda aktif untuk konfirmasi kurir sebelum pengantaran.",
+      "Siapkan uang tunai pas sesuai total belanja saat kurir tiba di alamat Anda.",
+      "Periksa kemasan segel paket Rahayu Store sebelum membuka paket.",
+      "Lakukan serah terima pembayaran kepada kurir resmi.",
+    ],
   },
 ];
 
 const INITIAL_ORDERS: OrderRecord[] = [
+  {
+    id: "INV/20261113/RAH/00995",
+    createdAt: "13 Nov 2026, 21:10 WIB",
+    status: "MENUNGGU_PEMBAYARAN",
+    items: [
+      {
+        id: "item-va-1",
+        product: PRODUCTS_DATA[0], // Amira Armani Silk Tunic
+        selectedSize: "M (LD 100)",
+        selectedColor: "Royal Plum",
+        quantity: 1,
+      },
+      {
+        id: "item-va-2",
+        product: PRODUCTS_DATA[1], // Signature Voal
+        selectedSize: "115x115 cm",
+        selectedColor: "Dusty Lilac",
+        quantity: 1,
+      },
+    ],
+    subtotal: 368000,
+    shippingCost: 10000,
+    discountAmount: 30000,
+    totalAmount: 350000,
+    courier: {
+      code: "JNE",
+      name: "JNE Express",
+      service: "Reguler (REG)",
+      etd: "1-2 Hari Kerja",
+    },
+    awb: null,
+    address: DEFAULT_USER.addresses[0],
+    paymentMethod: {
+      id: "va-bca",
+      name: "BCA Virtual Account",
+      category: "VIRTUAL_ACCOUNT",
+      fee: 2000,
+    },
+    accountNumber: "88012081288776655",
+    accountName: "RAHAYU - SITI RAHMAWATI",
+    paymentDueDate: "14 Nov 2026, 21:10 WIB (Sisa 23 Jam)",
+    paymentInstructions: [
+      "Buka aplikasi BCA Mobile / KlikBCA, lalu pilih menu 'Transfer' > 'BCA Virtual Account'.",
+      "Masukkan 16 digit Nomor Virtual Account: 88012081288776655.",
+      "Pastikan nama merchant tertera 'RAHAYU STORE' dengan nominal Rp 350.000.",
+      "Masukkan PIN m-BCA Anda. Transaksi selesai dan status pesanan otomatis berubah ke 'DIKEMAS'.",
+    ],
+    timeline: [
+      {
+        time: "13 Nov 2026, 21:10 WIB",
+        status: "MENUNGGU_PEMBAYARAN",
+        location: "Sistem Pembayaran Rahayu",
+        detail: "Pesanan berhasil dibuat. Menunggu transfer ke BCA Virtual Account: 88012081288776655 sebelum batas waktu.",
+      },
+    ],
+  },
+  {
+    id: "INV/20261113/RAH/00940",
+    createdAt: "13 Nov 2026, 11:20 WIB",
+    status: "DIKEMAS",
+    items: [
+      {
+        id: "item-pack-1",
+        product: PRODUCTS_DATA[2], // Nadine Nursing Maternity Dress
+        selectedSize: "L (LD 106)",
+        selectedColor: "Sage Green",
+        quantity: 1,
+      },
+    ],
+    subtotal: 265000,
+    shippingCost: 12000,
+    discountAmount: 25000,
+    totalAmount: 252000,
+    courier: {
+      code: "SICEPAT",
+      name: "SiCepat Ekspres",
+      service: "Reguler",
+      etd: "1-2 Hari Kerja",
+    },
+    awb: null,
+    address: DEFAULT_USER.addresses[1],
+    paymentMethod: {
+      id: "qris-dynamic",
+      name: "QRIS Instant",
+      category: "QRIS",
+      fee: 0,
+    },
+    accountNumber: "ID1020088912301",
+    accountName: "NMID: RAHAYU FASHION STORE",
+    timeline: [
+      {
+        time: "13 Nov 2026, 11:35 WIB",
+        status: "DIKEMAS",
+        location: "Warehouse Rahayu Bandung",
+        detail: "Pembayaran lunas diverifikasi. Pesanan sedang dipacking rapi dan menunggu penjemputan oleh kurir SiCepat.",
+      },
+      {
+        time: "13 Nov 2026, 11:20 WIB",
+        status: "ORDER_DIBUAT",
+        location: "Sistem Online",
+        detail: "Pesanan masuk dan pembayaran QRIS berhasil diverifikasi instan.",
+      },
+    ],
+  },
   {
     id: "INV/20261112/RAH/00912",
     createdAt: "12 Nov 2026, 14:30 WIB",
@@ -301,14 +500,14 @@ const INITIAL_ORDERS: OrderRecord[] = [
     items: [
       {
         id: "item-1",
-        product: PRODUCTS_DATA[0], // Hijab Voal
+        product: PRODUCTS_DATA[0],
         selectedSize: "115x115 cm",
         selectedColor: "Dusty Lilac",
         quantity: 2,
       },
       {
         id: "item-2",
-        product: PRODUCTS_DATA[1], // Tunik Silk
+        product: PRODUCTS_DATA[1],
         selectedSize: "M (LD 100)",
         selectedColor: "Royal Plum",
         quantity: 1,
@@ -334,22 +533,22 @@ const INITIAL_ORDERS: OrderRecord[] = [
     },
     timeline: [
       {
-        time: "13 Nov 2026, 08:30 WIB",
+        time: "13 Nov 2026, 14:30 WIB",
         status: "SEDANG_DIANTAR",
         location: "Kebayoran Baru Hub",
-        detail: "Paket dibawa kurir [Bpk. Agus] menuju alamat penerima.",
+        detail: "Paket dibawa kurir JNE [Bpk. Agus Salim] menuju alamat penerima.",
       },
       {
-        time: "12 Nov 2026, 21:15 WIB",
+        time: "13 Nov 2026, 08:15 WIB",
         status: "TRANSIT",
         location: "Jakarta Gateway DC",
         detail: "Paket telah tiba di pusat sortir transit Jakarta Selatan.",
       },
       {
-        time: "12 Nov 2026, 16:45 WIB",
+        time: "12 Nov 2026, 19:45 WIB",
         status: "MANIFEST",
         location: "Rahayu Fulfillment Center, Bandung",
-        detail: "Paket telah diserahkan kepada kurir JNE Express.",
+        detail: "Paket telah diserahkan kepada kurir JNE Express dengan nomor resi JNE-RAH88492019.",
       },
       {
         time: "12 Nov 2026, 14:35 WIB",
@@ -366,7 +565,7 @@ const INITIAL_ORDERS: OrderRecord[] = [
     items: [
       {
         id: "item-3",
-        product: PRODUCTS_DATA[3], // Kulot Plisket
+        product: PRODUCTS_DATA[3],
         selectedSize: "All Size Fit XL",
         selectedColor: "Cream Matte",
         quantity: 1,
@@ -496,7 +695,7 @@ const INITIAL_HOMEPAGE_CONFIG: HomepageSectionConfig = {
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
-  // 1. Auth State
+  // 1. Auth & Profile State
   const [user, setUser] = useState<CustomerUser | null>(DEFAULT_USER);
   const isLoggedIn = !!user;
 
@@ -512,13 +711,63 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   };
 
+  const updateUserProfile = (data: Partial<CustomerUser>) => {
+    if (user) {
+      setUser((prev) => (prev ? { ...prev, ...data } : null));
+    }
+  };
+
   const updateUserAddresses = (addresses: CustomerAddress[]) => {
     if (user) {
       setUser({ ...user, addresses });
     }
   };
 
-  // 2. Cart State
+  const updateAddress = (addressId: string, updated: Partial<CustomerAddress>) => {
+    if (!user) return;
+    const newAddresses = user.addresses.map((a) => (a.id === addressId ? { ...a, ...updated } : a));
+    setUser({ ...user, addresses: newAddresses });
+  };
+
+  const setDefaultAddress = (addressId: string) => {
+    if (!user) return;
+    const newAddresses = user.addresses.map((a) => ({
+      ...a,
+      isDefault: a.id === addressId,
+    }));
+    setUser({ ...user, addresses: newAddresses });
+  };
+
+  const deleteAddress = (addressId: string) => {
+    if (!user) return;
+    const newAddresses = user.addresses.filter((a) => a.id !== addressId);
+    setUser({ ...user, addresses: newAddresses });
+  };
+
+  // 2. Products State (CRUD & Stock)
+  const [products, setProducts] = useState<ProductItem[]>(PRODUCTS_DATA);
+
+  const addProduct = (newProduct: ProductItem) => {
+    setProducts((prev) => [newProduct, ...prev]);
+  };
+
+  const updateProduct = (productId: number, updated: Partial<ProductItem>) => {
+    setProducts((prev) =>
+      prev.map((p) => (p.id === productId ? { ...p, ...updated } : p))
+    );
+  };
+
+  const deleteProduct = (productId: number) => {
+    setProducts((prev) => prev.filter((p) => p.id !== productId));
+  };
+
+  const updateProductStock = (productId: number, newStock: number) => {
+    setProducts((prev) =>
+      prev.map((p) => (p.id === productId ? { ...p, stock: Math.max(0, newStock) } : p))
+    );
+  };
+
+  // 3. Cart State
   const [cart, setCart] = useState<CartItem[]>([
     {
       id: `${PRODUCTS_DATA[0].id}-115x115 cm-Dusty Lilac`,
@@ -582,7 +831,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const cartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
   const cartTotal = cart.reduce((acc, item) => acc + item.product.priceIdr * item.quantity, 0);
 
-  // 3. Orders State
+  // 4. Orders State & Flow
   const [orders, setOrders] = useState<OrderRecord[]>(INITIAL_ORDERS);
 
   const createOrder = (orderData: Omit<OrderRecord, "id" | "createdAt" | "status" | "timeline" | "awb">) => {
@@ -595,12 +844,20 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       minute: "2-digit",
     }) + " WIB";
 
+    // Grab payment method instructions
+    const matchedMethod = paymentMethods.find((p) => p.id === orderData.paymentMethod.id);
+
     const newOrder: OrderRecord = {
       ...orderData,
       id: newId,
       createdAt: nowStr,
       status: "MENUNGGU_PEMBAYARAN",
       awb: null,
+      accountNumber: matchedMethod?.accountNumber,
+      accountName: matchedMethod?.accountName,
+      paymentInstructions: matchedMethod?.instructions,
+      qrImageUrl: matchedMethod?.qrImageUrl,
+      paymentDueDate: "24 Jam dari sekarang",
       timeline: [
         {
           time: nowStr,
@@ -671,7 +928,15 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     );
   };
 
-  // 3b. Pillars State (Dynamic CRUD from Admin, without the word "Pilar")
+  const completeOrder = (orderId: string) => {
+    updateOrderStatus(orderId, "SELESAI");
+  };
+
+  const cancelOrder = (orderId: string) => {
+    updateOrderStatus(orderId, "DIBATALKAN");
+  };
+
+  // 5. Pillars State (Dynamic CRUD from Admin)
   const [pillars, setPillars] = useState<MarketplacePillar[]>(DEFAULT_PILLARS);
 
   const addPillar = (newPillar: MarketplacePillar) => {
@@ -688,7 +953,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setPillars((prev) => prev.filter((p) => p.id !== pillarId));
   };
 
-  // 4. Categories State (Dynamic CRUD & Sizes per Category)
+  // 6. Categories State
   const [categories, setCategories] = useState<RahayuCategory[]>(CATEGORIES_DATA);
 
   const addCategory = (newCat: RahayuCategory) => {
@@ -727,7 +992,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     );
   };
 
-  // 4b. Homepage & Section Layout Config State (Admin control)
+  // 7. Homepage Layout Config
   const [homepageConfig, setHomepageConfig] = useState<HomepageSectionConfig>(INITIAL_HOMEPAGE_CONFIG);
 
   const updateHomepageConfig = (newConfig: Partial<HomepageSectionConfig>) => {
@@ -737,7 +1002,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     }));
   };
 
-  // 5. Payment Methods Config State
+  // 8. Payment Methods Config State
   const [paymentMethods, setPaymentMethods] = useState<PaymentConfig[]>(INITIAL_PAYMENT_METHODS);
 
   const togglePaymentMethod = (methodId: string) => {
@@ -752,13 +1017,19 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     );
   };
 
-  // 6. Live Stream State
+  const updatePaymentMethod = (methodId: string, updated: Partial<PaymentConfig>) => {
+    setPaymentMethods((prev) =>
+      prev.map((m) => (m.id === methodId ? { ...m, ...updated } : m))
+    );
+  };
+
+  // 9. Live Stream State
   const [isLiveActive, setIsLiveActive] = useState<boolean>(true);
   const [liveViewers] = useState<number>(1420);
 
   const toggleLiveActive = () => setIsLiveActive((prev) => !prev);
 
-  // 7. AI Photo Studio Logs
+  // 10. AI Photo Studio Logs
   const [aiLogs, setAiLogs] = useState<AiPhotoLog[]>(INITIAL_AI_LOGS);
 
   const generateAiPhoto = (data: {
@@ -812,7 +1083,16 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         isLoggedIn,
         login,
         logout,
+        updateUserProfile,
         updateUserAddresses,
+        updateAddress,
+        setDefaultAddress,
+        deleteAddress,
+        products,
+        addProduct,
+        updateProduct,
+        deleteProduct,
+        updateProductStock,
         cart,
         isCartDrawerOpen,
         openCartDrawer,
@@ -827,6 +1107,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         createOrder,
         updateOrderStatus,
         updateOrderAwb,
+        completeOrder,
+        cancelOrder,
         pillars,
         addPillar,
         updatePillar,
@@ -842,6 +1124,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         paymentMethods,
         togglePaymentMethod,
         updatePaymentFee,
+        updatePaymentMethod,
         isLiveActive,
         liveViewers,
         toggleLiveActive,

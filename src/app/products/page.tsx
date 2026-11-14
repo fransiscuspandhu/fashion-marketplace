@@ -34,7 +34,7 @@ function ProductCatalogContent() {
   const querySearch = searchParams.get("search") || "";
   const queryFilter = searchParams.get("filter") || ""; // "new", "bestseller", "promo"
 
-  const { categories, addToCart } = useStore();
+  const { categories, products, addToCart } = useStore();
 
   const [selectedCategory, setSelectedCategory] = useState<string>(queryCategory);
   const [searchQuery, setSearchQuery] = useState<string>(querySearch);
@@ -65,7 +65,7 @@ function ProductCatalogContent() {
 
   // Filtered & Sorted Products
   const filteredProducts = useMemo(() => {
-    return PRODUCTS_DATA.filter((product) => {
+    return products.filter((product) => {
       // 1. Category Filter
       if (selectedCategory !== "all" && product.category !== selectedCategory) {
         return false;
@@ -284,11 +284,11 @@ function ProductCatalogContent() {
                 }`}
               >
                 <span>Semua Kategori</span>
-                <span className="text-[10px] text-zinc-400">{PRODUCTS_DATA.length}</span>
+                <span className="text-[10px] text-zinc-400">{products.length}</span>
               </button>
 
               {categories.map((cat) => {
-                const count = PRODUCTS_DATA.filter((p) => p.category === cat.id).length;
+                const count = products.filter((p) => p.category === cat.id).length;
                 return (
                   <button
                     key={cat.id}
@@ -454,8 +454,9 @@ function ProductCatalogContent() {
                     onClick={() => openPdpModal(product)}
                     className="aspect-3/4 relative bg-zinc-100 overflow-hidden cursor-pointer"
                   >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src={`https://images.unsplash.com/photo-${1584917865442 + product.id * 1000}?auto=format&fit=crop&w=600&q=80`}
+                      src={product.imageUrl || `https://images.unsplash.com/photo-${1584917865442 + product.id * 1000}?auto=format&fit=crop&w=600&q=80`}
                       alt={product.name}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
