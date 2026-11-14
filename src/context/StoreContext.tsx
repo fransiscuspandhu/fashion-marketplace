@@ -97,6 +97,22 @@ export interface PaymentConfig {
   qrImageUrl?: string;
 }
 
+export interface AiFeaturesConfig {
+  enableSmartSize: boolean;         // Rekomendasi Ukuran Cerdas (PDP/Frontstore)
+  enableAutoCopywriter: boolean;     // Asisten Copywriting & Tagging SEO (Admin Product CRUD)
+  enableVirtualStylist: boolean;     // Asisten Virtual Stylist Rahayu (Floating Chatbot Frontstore)
+  enableDemandForecast: boolean;     // Prediksi Kebutuhan Stok & Musiman (Admin Dashboard Analisa)
+  enableModelPhotoshoot: boolean;    // Studio Foto Model Fashion AI (Admin)
+}
+
+export const DEFAULT_AI_FEATURES_CONFIG: AiFeaturesConfig = {
+  enableSmartSize: true,
+  enableAutoCopywriter: true,
+  enableVirtualStylist: true,
+  enableDemandForecast: true,
+  enableModelPhotoshoot: true,
+};
+
 export interface AiPhotoLog {
   id: string;
   timestamp: string;
@@ -221,7 +237,9 @@ interface StoreContextType {
   liveViewers: number;
   toggleLiveActive: () => void;
 
-  // AI Photos
+  // AI Switchboard & Modular Features
+  aiFeaturesConfig: AiFeaturesConfig;
+  updateAiFeaturesConfig: (newConfig: Partial<AiFeaturesConfig>) => void;
   aiLogs: AiPhotoLog[];
   generateAiPhoto: (data: {
     productName: string;
@@ -1029,7 +1047,17 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const toggleLiveActive = () => setIsLiveActive((prev) => !prev);
 
-  // 10. AI Photo Studio Logs
+  // 10. AI Modular Features Switchboard State
+  const [aiFeaturesConfig, setAiFeaturesConfig] = useState<AiFeaturesConfig>(DEFAULT_AI_FEATURES_CONFIG);
+
+  const updateAiFeaturesConfig = (newConfig: Partial<AiFeaturesConfig>) => {
+    setAiFeaturesConfig((prev) => ({
+      ...prev,
+      ...newConfig,
+    }));
+  };
+
+  // 11. AI Photo Studio Logs
   const [aiLogs, setAiLogs] = useState<AiPhotoLog[]>(INITIAL_AI_LOGS);
 
   const generateAiPhoto = (data: {
@@ -1128,6 +1156,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         isLiveActive,
         liveViewers,
         toggleLiveActive,
+        aiFeaturesConfig,
+        updateAiFeaturesConfig,
         aiLogs,
         generateAiPhoto,
       }}

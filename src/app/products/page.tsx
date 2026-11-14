@@ -25,6 +25,8 @@ import HeaderNavbar from "@/components/HeaderNavbar";
 import Footer from "@/components/Footer";
 import { useStore } from "@/context/StoreContext";
 import { PRODUCTS_DATA, ProductItem } from "@/data/mock-data";
+import AiSmartSizeModal from "@/components/AiSmartSizeModal";
+import AiVirtualStylistChat from "@/components/AiVirtualStylistChat";
 
 function ProductCatalogContent() {
   const router = useRouter();
@@ -34,7 +36,7 @@ function ProductCatalogContent() {
   const querySearch = searchParams.get("search") || "";
   const queryFilter = searchParams.get("filter") || ""; // "new", "bestseller", "promo"
 
-  const { categories, products, addToCart } = useStore();
+  const { categories, products, addToCart, aiFeaturesConfig } = useStore();
 
   const [selectedCategory, setSelectedCategory] = useState<string>(queryCategory);
   const [searchQuery, setSearchQuery] = useState<string>(querySearch);
@@ -48,6 +50,7 @@ function ProductCatalogContent() {
   const [pdpMediaType, setPdpMediaType] = useState<"photo" | "video">("photo");
   const [pdpSelectedSize, setPdpSelectedSize] = useState<string>("");
   const [pdpSelectedColor, setPdpSelectedColor] = useState<string>("");
+  const [isSmartSizeOpen, setIsSmartSizeOpen] = useState<boolean>(false);
 
   // Keep state synced with URL params when they change
   React.useEffect(() => {
@@ -611,9 +614,21 @@ function ProductCatalogContent() {
                 <div className="mt-5 space-y-2">
                   <div className="flex justify-between items-center text-xs">
                     <span className="font-semibold text-zinc-800">Pilih Ukuran:</span>
-                    <span className="text-zinc-500 text-[11px]">
-                      {categories.find((c) => c.id === activeModalProduct.category)?.measurementLabel || "Ukuran Standar"}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      {aiFeaturesConfig.enableSmartSize && (
+                        <button
+                          type="button"
+                          onClick={() => setIsSmartSizeOpen(true)}
+                          className="text-[10px] font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 px-2 py-0.5 rounded border border-purple-200 flex items-center gap-1 cursor-pointer transition shadow-2xs"
+                        >
+                          <Sparkles className="w-3 h-3 fill-purple-700" />
+                          <span>Rekomendasi Ukuran AI</span>
+                        </button>
+                      )}
+                      <span className="text-zinc-500 text-[11px]">
+                        {categories.find((c) => c.id === activeModalProduct.category)?.measurementLabel || "Ukuran Standar"}
+                      </span>
+                    </div>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {(
@@ -690,6 +705,18 @@ function ProductCatalogContent() {
           </div>
         </div>
       )}
+      {/* AI Smart Size Modal */}
+      {isSmartSizeOpen && activeModalProduct && (
+        <AiSmartSizeModal
+          isOpen={isSmartSizeOpen}
+          onClose={() => setIsSmartSizeOpen(false)}
+          product={activeModalProduct}
+          onSelectSize={(sz) => setPdpSelectedSize(sz)}
+        />
+      )}
+
+      {/* AI Virtual Stylist Floating Chat */}
+      <AiVirtualStylistChat />
     </div>
   );
 }

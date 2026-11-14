@@ -51,6 +51,7 @@ import {
   Upload,
   Camera,
   Wand2,
+  Ruler,
 } from "lucide-react";
 import {
   useStore,
@@ -90,6 +91,8 @@ export default function AdminPage() {
     isLiveActive,
     liveViewers,
     toggleLiveActive,
+    aiFeaturesConfig,
+    updateAiFeaturesConfig,
     aiLogs,
     generateAiPhoto,
   } = useStore();
@@ -186,6 +189,7 @@ export default function AdminPage() {
   const [aiProductTone, setAiProductTone] = useState<string>("Warm Sunlight Golden Hour");
   const [aiProductResult, setAiProductResult] = useState<string>("");
   const [isProductAiGenerating, setIsProductAiGenerating] = useState(false);
+  const [isAiCopywriting, setIsAiCopywriting] = useState(false);
 
   // Payment Methods Step & Description Editor State
   const [editingPayment, setEditingPayment] = useState<PaymentConfig | null>(null);
@@ -340,6 +344,34 @@ export default function AdminPage() {
       setProductForm((prev) => ({ ...prev, imageUrl: aiProductResult }));
       alert("Foto hasil AI berhasil dipasang sebagai foto produk!");
     }
+  };
+
+  const handleAiAutoCopywriting = () => {
+    setIsAiCopywriting(true);
+    setTimeout(() => {
+      const name = productForm.name.trim() || "Busana Modest Syar'i Modern";
+      const cat = productForm.category || "Gamis";
+      const generatedDesc = `${name} dirancang khusus untuk wanita muslimah modern yang mengutamakan keanggunan, kenyamanan, dan nilai kesopanan syar'i. Dibuat dengan siluet jatuh (flowy) yang elegan dan tidak menjiplak lekuk tubuh.
+
+Keunggulan & Spesifikasi:
+• Material Utama: Premium High-Grade Fabric bertekstur halus, adem, menyerap keringat, dan tidak menerawang.
+• Akses Resleting: Resleting depan tersembunyi (Busui Friendly) yang praktis dan rapi.
+• Desain Lengan: Manset elastis manis (Wudhu Friendly) yang mudah dinaikkan saat berwudhu.
+• Fitur Tambahan: Saku samping fungsional kanan-kiri yang tersembunyi rapi.
+• Rekomendasi Pemakaian: Ideal untuk busana kondangan, pesta keluarga, pengajian formal, hingga daily modest look.
+
+Petunjuk Perawatan:
+Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pakaian, jemur di tempat teduh, dan setrika dengan suhu sedang untuk menjaga kelembutan serat kain.
+
+#RahayuFashion #${cat.replace(/\s+/g, "")} #BusanaMuslimah #ModestOOTD #BusuiFriendly #HijabChic`;
+
+      setProductForm((prev) => ({
+        ...prev,
+        desc: generatedDesc,
+        promoBadge: prev.promoBadge || "HOT REKOMENDASI",
+      }));
+      setIsAiCopywriting(false);
+    }, 600);
   };
 
   // Payment Method Handlers
@@ -983,6 +1015,94 @@ export default function AdminPage() {
                   </div>
                 </div>
               </div>
+
+              {/* AI DEMAND & SEASONAL INVENTORY FORECAST (Modular with Toggle) */}
+              {aiFeaturesConfig.enableDemandForecast && (
+                <div className="bg-gradient-to-br from-purple-900 via-indigo-900 to-zinc-900 text-white p-6 rounded-xl shadow-lg border border-purple-500/30 space-y-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-lg bg-amber-400/20 text-amber-300 flex items-center justify-center border border-amber-400/30">
+                        <Sparkles className="w-4 h-4 fill-amber-300" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-bold flex items-center gap-2 text-white">
+                          <span>AI Demand & Seasonal Inventory Forecast</span>
+                          <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded border border-emerald-400/30">
+                            🟢 AI Engine Aktif
+                          </span>
+                        </h3>
+                        <p className="text-xs text-purple-200">
+                          Prediksi lonjakan pesanan musiman & peringatan habisnya stok berbasis data tren belanja
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-[11px] text-purple-300 bg-white/5 px-3 py-1 rounded-full border border-white/10 font-mono">
+                      Analisis Periode: Menjelang Ramadhan & Gajian
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                    {/* Spike Prediction */}
+                    <div className="bg-white/10 rounded-xl p-4 border border-white/10 space-y-2">
+                      <div className="flex items-center gap-1.5 text-amber-300 font-bold text-xs uppercase tracking-wider">
+                        <TrendingUp className="w-4 h-4" />
+                        <span>Prediksi Lonjakan Musim Ramadhan</span>
+                      </div>
+                      <p className="text-purple-100 leading-relaxed">
+                        Diproyeksikan terjadi lonjakan pesanan <strong>+185%</strong> dalam 2–3 minggu ke depan. Kategori <strong>Gamis Silk</strong> dan <strong>Hijab Voal</strong> akan menjadi produk paling dicari.
+                      </p>
+                      <div className="pt-2 flex items-center justify-between text-[11px] text-purple-200 border-t border-white/10">
+                        <span>Rekomendasi Safety Stock:</span>
+                        <strong className="text-amber-300 font-bold">Naikkan 2.5× lipat</strong>
+                      </div>
+                    </div>
+
+                    {/* Stockout Alert */}
+                    <div className="bg-white/10 rounded-xl p-4 border border-white/10 space-y-2">
+                      <div className="flex items-center gap-1.5 text-rose-300 font-bold text-xs uppercase tracking-wider">
+                        <AlertTriangle className="w-4 h-4" />
+                        <span>Risiko Kehabisan Stok (&lt; 20 Pcs)</span>
+                      </div>
+                      <div className="space-y-1.5">
+                        {products
+                          .filter((p) => p.stock < 20)
+                          .slice(0, 2)
+                          .map((p) => (
+                            <div
+                              key={p.id}
+                              className="flex items-center justify-between bg-black/20 px-2.5 py-1.5 rounded"
+                            >
+                              <span className="font-medium text-white truncate max-w-[180px]">
+                                {p.name}
+                              </span>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <span className="text-rose-300 font-bold font-mono">
+                                  {p.stock} pcs
+                                </span>
+                                <span className="text-[10px] text-amber-300 bg-amber-400/20 px-1.5 py-0.5 rounded">
+                                  Habis dlm ~2 hari
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          products
+                            .filter((p) => p.stock < 20)
+                            .forEach((p) => updateProductStock(p.id, p.stock + 50));
+                          alert("Permintaan PO restock otomatis (+50 pcs untuk setiap SKU kritis) berhasil diajukan!");
+                        }}
+                        className="w-full mt-1 py-1.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-zinc-950 font-bold rounded text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-md transition"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        <span>Ajukan PO Restock Otomatis (+50 Semua SKU Kritis)</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* REALTIME STOCK MONITOR & LOW STOCK WARNINGS */}
               <div className="bg-white p-6 rounded-xl border border-zinc-200 shadow-2xs space-y-4">
@@ -2287,17 +2407,31 @@ export default function AdminPage() {
                         </div>
 
                         <div>
-                          <label className="block font-semibold text-zinc-700 mb-1">
-                            Deskripsi Produk
-                          </label>
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="block font-semibold text-zinc-700">
+                              Deskripsi Produk & Spesifikasi
+                            </label>
+                            {aiFeaturesConfig.enableAutoCopywriter && (
+                              <button
+                                type="button"
+                                onClick={handleAiAutoCopywriting}
+                                disabled={isAiCopywriting}
+                                className="flex items-center gap-1.5 px-2.5 py-1 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded text-[10.5px] font-bold shadow-2xs cursor-pointer transition disabled:opacity-50"
+                                title="Buat deskripsi persuasif, spesifikasi, dan hashtag SEO otomatis dengan AI"
+                              >
+                                <Sparkles className="w-3.5 h-3.5 fill-amber-300 text-amber-300" />
+                                <span>{isAiCopywriting ? "Menyusun Deskripsi AI..." : "✨ Buat Deskripsi & SEO dengan AI"}</span>
+                              </button>
+                            )}
+                          </div>
                           <textarea
-                            rows={2}
+                            rows={4}
                             value={productForm.desc}
                             onChange={(e) =>
                               setProductForm({ ...productForm, desc: e.target.value })
                             }
                             placeholder="Deskripsi bahan, keunggulan wudhu & busui friendly, serta panduan ukuran..."
-                            className="w-full px-3 py-2 border border-zinc-300 rounded-md text-xs bg-white focus:outline-none focus:border-purple-700"
+                            className="w-full px-3 py-2 border border-zinc-300 rounded-md text-xs bg-white focus:outline-none focus:border-purple-700 font-sans"
                           />
                         </div>
                       </div>
@@ -3246,9 +3380,224 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* MODULE 7: AI PRODUCT PHOTO GENERATOR STUDIO */}
+          {/* MODULE 7: AI PRODUCT PHOTO GENERATOR STUDIO & SWITCHBOARD */}
           {activeModule === "ai-studio" && (
             <div className="space-y-6">
+              {/* AI MODULAR SWITCHBOARD (LEPAS-PASANG FITUR AI) */}
+              <div className="bg-white p-6 rounded-xl border border-zinc-200 shadow-2xs space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-100 pb-3">
+                  <div>
+                    <h2 className="text-base font-bold text-zinc-900 flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-purple-700 fill-purple-700" />
+                      <span>Pusat Kontrol Lepas-Pasang Fitur AI (AI Switchboard)</span>
+                    </h2>
+                    <p className="text-xs text-zinc-500">
+                      Aktifkan atau nonaktifkan fitur AI secara modular kapan saja. Fitur bersifat opsional dan sistem inti toko tetap berjalan 100% normal tanpa hambatan saat dimatikan.
+                    </p>
+                  </div>
+                  <span className="text-[11px] font-bold text-purple-800 bg-purple-50 px-3 py-1 rounded-full border border-purple-200">
+                    Sistem Modular & Fleksibel
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 text-xs">
+                  {/* Switch 1: Smart Size */}
+                  <div className="p-3.5 bg-zinc-50 border border-zinc-200 rounded-lg flex flex-col justify-between space-y-3">
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-bold text-zinc-900 flex items-center gap-1.5">
+                          <Ruler className="w-3.5 h-3.5 text-purple-600" />
+                          <span>AI Smart Size & Fit</span>
+                        </span>
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                            aiFeaturesConfig.enableSmartSize
+                              ? "bg-emerald-100 text-emerald-800"
+                              : "bg-zinc-200 text-zinc-600"
+                          }`}
+                        >
+                          {aiFeaturesConfig.enableSmartSize ? "Aktif" : "Nonaktif"}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-zinc-500 leading-snug">
+                        Tombol rekomendasi ukuran otomatis di halaman produk (PDP) pembeli. Jika dinonaktifkan, tombol AI di PDP disembunyikan.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        updateAiFeaturesConfig({
+                          enableSmartSize: !aiFeaturesConfig.enableSmartSize,
+                        })
+                      }
+                      className={`w-full py-1.5 rounded font-bold text-xs cursor-pointer transition ${
+                        aiFeaturesConfig.enableSmartSize
+                          ? "bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200"
+                          : "bg-purple-700 hover:bg-purple-800 text-white"
+                      }`}
+                    >
+                      {aiFeaturesConfig.enableSmartSize ? "Matikan Fitur" : "Aktifkan Fitur"}
+                    </button>
+                  </div>
+
+                  {/* Switch 2: Virtual Stylist */}
+                  <div className="p-3.5 bg-zinc-50 border border-zinc-200 rounded-lg flex flex-col justify-between space-y-3">
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-bold text-zinc-900 flex items-center gap-1.5">
+                          <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                          <span>AI Virtual Stylist Chat</span>
+                        </span>
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                            aiFeaturesConfig.enableVirtualStylist
+                              ? "bg-emerald-100 text-emerald-800"
+                              : "bg-zinc-200 text-zinc-600"
+                          }`}
+                        >
+                          {aiFeaturesConfig.enableVirtualStylist ? "Aktif" : "Nonaktif"}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-zinc-500 leading-snug">
+                        Floating chatbot "Tanya Stylist Rahayu" di pojok kanan bawah frontstore. Jika dinonaktifkan, widget chat tidak ditampilkan sama sekali.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        updateAiFeaturesConfig({
+                          enableVirtualStylist: !aiFeaturesConfig.enableVirtualStylist,
+                        })
+                      }
+                      className={`w-full py-1.5 rounded font-bold text-xs cursor-pointer transition ${
+                        aiFeaturesConfig.enableVirtualStylist
+                          ? "bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200"
+                          : "bg-purple-700 hover:bg-purple-800 text-white"
+                      }`}
+                    >
+                      {aiFeaturesConfig.enableVirtualStylist ? "Matikan Fitur" : "Aktifkan Fitur"}
+                    </button>
+                  </div>
+
+                  {/* Switch 3: Auto Copywriter */}
+                  <div className="p-3.5 bg-zinc-50 border border-zinc-200 rounded-lg flex flex-col justify-between space-y-3">
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-bold text-zinc-900 flex items-center gap-1.5">
+                          <Edit3 className="w-3.5 h-3.5 text-amber-600" />
+                          <span>AI Auto-Copywriting</span>
+                        </span>
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                            aiFeaturesConfig.enableAutoCopywriter
+                              ? "bg-emerald-100 text-emerald-800"
+                              : "bg-zinc-200 text-zinc-600"
+                          }`}
+                        >
+                          {aiFeaturesConfig.enableAutoCopywriter ? "Aktif" : "Nonaktif"}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-zinc-500 leading-snug">
+                        Tombol generator deskripsi persuasif & hashtag SEO di form tambah/edit produk admin. Jika dimatikan, admin cukup ketik manual.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        updateAiFeaturesConfig({
+                          enableAutoCopywriter: !aiFeaturesConfig.enableAutoCopywriter,
+                        })
+                      }
+                      className={`w-full py-1.5 rounded font-bold text-xs cursor-pointer transition ${
+                        aiFeaturesConfig.enableAutoCopywriter
+                          ? "bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200"
+                          : "bg-purple-700 hover:bg-purple-800 text-white"
+                      }`}
+                    >
+                      {aiFeaturesConfig.enableAutoCopywriter ? "Matikan Fitur" : "Aktifkan Fitur"}
+                    </button>
+                  </div>
+
+                  {/* Switch 4: Demand Forecast */}
+                  <div className="p-3.5 bg-zinc-50 border border-zinc-200 rounded-lg flex flex-col justify-between space-y-3">
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-bold text-zinc-900 flex items-center gap-1.5">
+                          <TrendingUp className="w-3.5 h-3.5 text-blue-600" />
+                          <span>AI Demand Forecast</span>
+                        </span>
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                            aiFeaturesConfig.enableDemandForecast
+                              ? "bg-emerald-100 text-emerald-800"
+                              : "bg-zinc-200 text-zinc-600"
+                          }`}
+                        >
+                          {aiFeaturesConfig.enableDemandForecast ? "Aktif" : "Nonaktif"}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-zinc-500 leading-snug">
+                        Kartu prediksi lonjakan musiman dan peringatan habisnya stok di dashboard analisa. Jika dimatikan, modul forecast disembunyikan.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        updateAiFeaturesConfig({
+                          enableDemandForecast: !aiFeaturesConfig.enableDemandForecast,
+                        })
+                      }
+                      className={`w-full py-1.5 rounded font-bold text-xs cursor-pointer transition ${
+                        aiFeaturesConfig.enableDemandForecast
+                          ? "bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200"
+                          : "bg-purple-700 hover:bg-purple-800 text-white"
+                      }`}
+                    >
+                      {aiFeaturesConfig.enableDemandForecast ? "Matikan Fitur" : "Aktifkan Fitur"}
+                    </button>
+                  </div>
+
+                  {/* Switch 5: Model Photoshoot */}
+                  <div className="p-3.5 bg-zinc-50 border border-zinc-200 rounded-lg flex flex-col justify-between space-y-3">
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-bold text-zinc-900 flex items-center gap-1.5">
+                          <Camera className="w-3.5 h-3.5 text-pink-600" />
+                          <span>AI Model Photoshoot</span>
+                        </span>
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                            aiFeaturesConfig.enableModelPhotoshoot
+                              ? "bg-emerald-100 text-emerald-800"
+                              : "bg-zinc-200 text-zinc-600"
+                          }`}
+                        >
+                          {aiFeaturesConfig.enableModelPhotoshoot ? "Aktif" : "Nonaktif"}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-zinc-500 leading-snug">
+                        Generator foto model virtual 5-step untuk foto katalog busana muslimah dari pakaian flatlay / manekin.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        updateAiFeaturesConfig({
+                          enableModelPhotoshoot: !aiFeaturesConfig.enableModelPhotoshoot,
+                        })
+                      }
+                      className={`w-full py-1.5 rounded font-bold text-xs cursor-pointer transition ${
+                        aiFeaturesConfig.enableModelPhotoshoot
+                          ? "bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200"
+                          : "bg-purple-700 hover:bg-purple-800 text-white"
+                      }`}
+                    >
+                      {aiFeaturesConfig.enableModelPhotoshoot ? "Matikan Fitur" : "Aktifkan Fitur"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
               <div>
                 <div className="flex items-center gap-2">
                   <h1 className="text-xl font-bold text-zinc-900">

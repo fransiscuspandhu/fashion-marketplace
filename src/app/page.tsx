@@ -9,10 +9,12 @@ import { CATEGORIES_DATA, PRODUCTS_DATA, ProductItem, RahayuCategory } from "@/d
 import Footer from "@/components/Footer";
 import HeaderNavbar from "@/components/HeaderNavbar";
 import { useStore } from "@/context/StoreContext";
+import AiSmartSizeModal from "@/components/AiSmartSizeModal";
+import AiVirtualStylistChat from "@/components/AiVirtualStylistChat";
 
 export default function HomePage() {
   const router = useRouter();
-  const { categories, products, addToCart, homepageConfig } = useStore();
+  const { categories, products, addToCart, homepageConfig, aiFeaturesConfig } = useStore();
   const [isLiveModalOpen, setIsLiveModalOpen] = useState<boolean>(false);
 
   // PDP Modal State
@@ -20,6 +22,7 @@ export default function HomePage() {
   const [pdpMediaType, setPdpMediaType] = useState<"photo" | "video">("photo");
   const [selectedSize, setSelectedSize] = useState<string>("");
   const [selectedColor, setSelectedColor] = useState<string>("");
+  const [isSmartSizeOpen, setIsSmartSizeOpen] = useState<boolean>(false);
 
   const promoHighlightProducts = products.filter((p) => p.isPromoHighlight);
   const newArrivalsProducts = products.filter((p) => p.promoBadge.includes("NEW") || p.id <= 4);
@@ -637,9 +640,21 @@ export default function HomePage() {
                   const catCfg = CATEGORIES_DATA.find((c) => c.id === activeModalProduct.category) || CATEGORIES_DATA[0];
                   return (
                     <div className="space-y-2 text-xs">
-                      <span className="font-bold uppercase tracking-wider text-[11px] text-zinc-800 block">
-                        Pilih Ukuran ({catCfg.measurementLabel}):
-                      </span>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-bold uppercase tracking-wider text-[11px] text-zinc-800">
+                          Pilih Ukuran ({catCfg.measurementLabel}):
+                        </span>
+                        {aiFeaturesConfig.enableSmartSize && (
+                          <button
+                            type="button"
+                            onClick={() => setIsSmartSizeOpen(true)}
+                            className="text-[10px] font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 px-2 py-0.5 rounded border border-purple-200 flex items-center gap-1 cursor-pointer transition shadow-2xs"
+                          >
+                            <Sparkles className="w-3 h-3 fill-purple-700" />
+                            <span>Rekomendasi Ukuran AI</span>
+                          </button>
+                        )}
+                      </div>
                       <div className="flex flex-wrap gap-2">
                         {catCfg.sizes.map((s) => (
                           <button
@@ -755,6 +770,18 @@ export default function HomePage() {
           </div>
         </div>
       )}
+      {/* AI Smart Size Modal */}
+      {isSmartSizeOpen && activeModalProduct && (
+        <AiSmartSizeModal
+          isOpen={isSmartSizeOpen}
+          onClose={() => setIsSmartSizeOpen(false)}
+          product={activeModalProduct}
+          onSelectSize={(sz) => setSelectedSize(sz)}
+        />
+      )}
+
+      {/* AI Virtual Stylist Floating Chatbot */}
+      <AiVirtualStylistChat />
     </div>
   );
 }
