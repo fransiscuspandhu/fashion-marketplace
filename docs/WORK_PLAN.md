@@ -12,8 +12,8 @@ Dokumen resmi ini memuat roadmap pengerjaan 6-phase yang mendalam, rincian tekni
 | **Phase 2** | Minggu 2–3 | **Alur Belanja Tokopedia Standard, Halaman Profile & Admin Control Panel (9 Modul & RBAC)**<br>• **Pemisahan Akses & Auth Portal:** Login Pelanggan Toko (`/login`) vs Portal Internal Admin Khusus Karyawan & Gudang (`/admin/login`) dengan Role-Based Access Control (RBAC 5 Peran: Super Admin, Product Merchandiser, Gudang & Resi AWB, Marketing Live, Finance Ops), Quick Role Switcher, dan Lock Indicator modul sensitif.<br>• **Alur Pembeli:** Auth Gate Login/Register (`/login`), Keranjang Belanja interaktif (*Cart Drawer*), Stepper Checkout (`/checkout`) dengan pilihan alamat, kurir (JNE/SiCepat/J&T/AnterAja), metode bayar, dan voucher.<br>• **Halaman Profil Pelanggan (`/profile`):** Edit profil & upload foto avatar ke server lokal (`/public/uploads/`), Tag Lokasi Alamat (*Rumah, Kantor, Apartemen, Toko*), Tab Pesanan Fancy dengan 4 status (*Menunggu Pembayaran, Dikemas, Dikirim, Selesai*), serta **Modal Popup Detail Pesanan** (instruksi pembayaran step-by-step dinamis dari database, info packing gudang, resi AWB kurir dengan copy button & linimasa live tracking, dan konfirmasi selesaikan pesanan).<br>• **Admin Control Panel (`/admin` - 9 Modul Lengkap):**<br>  1. *Dashboard & Analisa Penjualan:* KPI Omzet, AOV, Grafik Tren 7 Hari (toggle Omzet vs Qty), dan Realtime Stock Monitor dengan alert stok menipis (&lt;20 pcs) & quick restock.<br>  2. *Master Kategori & Kelompok Dinamis:* CRUD kategori, icon foto upload server, preset ukuran, dan CRUD kelompok kategori tanpa kata "pilar".<br>  3. *Katalog Produk & Video PDP:* CRUD produk, SKU, stok, badge promo kustom, attach kampanye promo, dan video 9:16.<br>  4. *Pesanan & Nomor Resi Kurir (AWB):* Tab alur pesanan sinkron webfront (*Semua, Menunggu Pembayaran, Dikemas, Dikirim, Selesai*).<br>  5. *Payment Gateway Control Panel:* Biaya admin, no rekening/VA, upload QRIS, dan editor panduan instruksi pembayaran step-by-step dinamis.<br>  6. *Promo & Flash Sale Manager:* Kode voucher diskon & countdown timer promo highlight.<br>  7. *Pusat Fitur AI & Switchboard Lepas-Pasang:* 5 fitur AI modular non-mandatory (Smart Size Recommender, Virtual Stylist Chatbot, Auto-Copywriting SEO, Demand & Seasonal Forecast, Model Photoshoot Studio di form produk, serta arsip riwayat render).<br>  8. *SEO CMS & TikTok Live Schedule:* Konfigurasi meta SEO, silo keywords, Schema.org ClothingStore, dan tautan medsos resmi.<br>  9. *Tata Letak & Section Beranda:* Pengaturan teks hero banner, custom background uploader, slider opacity, kontrol visibilitas section beranda, dan 4 kartu USP.<br>• In-house Server Image Uploader (`/api/upload` ➔ `/public/uploads/` dengan batas 5 MB & preview thumbnail). | ✅ **Selesai** |
 | **Phase 3** | Minggu 4 | **Database Persistence, API Handlers & Mobile App Scaffolding**<br>• **Migrasi Database PostgreSQL & Prisma:** Menghubungkan skema Prisma ke database PostgreSQL fisik (Docker container / VPS Cloud), menjalankan migrasi skema resmi, dan membuat skrip seeding data (`prisma/seed.ts`) untuk 11 kategori, kelompok kategori, katalog produk awal, user admin & demo customer, serta metode pembayaran awal.<br>• **Prisma Client Data Access Layer (DAL):** Mengganti persistensi in-memory state dengan Prisma Client queries & database transactions.<br>• **REST API Endpoints & Server Actions:**<br>  - Route `/api/products`: GET filter/search, POST tambah produk, PUT edit produk, DELETE hapus.<br>  - Route `/api/orders`: GET order list/detail, POST create checkout, PATCH update resi AWB & status kurir.<br>  - Route `/api/categories`: Manajemen kategori & kelompok dinamis.<br>  - Route `/api/settings`: Simpan konfigurasi tata letak beranda & payment instructions.<br>  - Sanitasi endpoint `/api/upload` dengan validasi MIME-type (image/png, image/jpeg, image/webp) dan batas ukuran file.<br>• **Inisialisasi Mobile App (React Native Expo SDK 52):** Setup struktur folder project Expo, konfigurasi shared TypeScript types dengan web Next.js, dan bottom-tab navigation scaffolding (Beranda, Kategori, Keranjang, Transaksi, Profil). | ⏳ **Berikutnya** |
 | **Phase 4** | Minggu 5–6 | **Integrasi Payment Gateway Resmi, Pipeline AI Live & Integrasi Statistik TikTok Live**<br>• **Integrasi Payment Gateway Produksi:** Pemasangan SDK resmi Midtrans Snap / Xendit API (QRIS Dinamis otomatis terverifikasi, Virtual Account BCA/Mandiri/BRI/BNI dengan nomor VA unik, E-Wallet GoPay/ShopeePay, dan Kartu Kredit).<br>• **Webhook Payment Handler:** Endpoint `/api/webhooks/payment` dengan verifikasi signature cryptographic untuk otomatis mengubah status pesanan dari *Menunggu Pembayaran* menjadi *Sedang Dikemas* tanpa intervensi manual admin.<br>• **Pipeline Produksi AI Eksternal:** Menghubungkan OpenAI / Google Gemini API ke modul AI Auto-Copywriter, AI Virtual Stylist chatbot, dan integrasi pipeline AI Virtual Try-On on-model via `fal.ai` / `Replicate` (`BiRefNet` + `IDM-VTON`).<br>• **Integrasi Data Statistik TikTok Live:**<br>  - *Metode A (Real-Time Live Connector):* Menggunakan WebSocket client (`tiktok-live-connector`) untuk membaca metrik siaran langsung secara real-time (jumlah penonton live, likes, komentar produk, interaksi penonton) tanpa memerlukan approval resmi dari TikTok Developer Portal.<br>  - *Metode B (Official TikTok Shop Open API):* Menggunakan TikTok Shop Partner Open API (`/api/orders/search`, `/api/finance/settlements`, `/api/products/statistics`) untuk menarik data omzet kotor, GMV live stream, dan konversi keranjang kuning resmi.<br>  - *Metode C (Sinkronisasi CSV Report Otomatis / Fallback):* Fitur drag-and-drop import file laporan penjualan harian dari TikTok Shop Seller Center ke Dashboard Analisa Admin Rahayu.<br>  - Dashboard analitik live stream di admin yang menampilkan perbandingan omzet webfront vs omzet live TikTok. | ⏳ Pending |
-| **Phase 5** | Minggu 7–8 | **Quality Assurance, Hardening Keamanan, SEO Audit & Cloudflare CDN**<br>• **Testing & QA Menyeluruh:** End-to-End (E2E) testing alur belanja (Pilih Produk ➔ Keranjang ➔ Checkout ➔ Bayar VA/QRIS ➔ Webhook Verifikasi ➔ Gudang Kemas ➔ Input Resi AWB ➔ Tracking Kurir ➔ Selesai).<br>• **Penanganan Edge Cases:** Pencegahan race condition stok menipis saat flash sale, auto-cancel order kadaluarsa (24 jam), dan penanganan pengembalian dana (*refund*).<br>• **Cloudflare R2 Object Storage Setup:** Pemindahan penyimpanan video vertikal 9:16 dan aset foto produk ke Cloudflare R2 dengan **Rp 0 Egress Bandwidth** (bebas biaya kuota download video).<br>• **Audit Kecepatan & SEO Google:** Optimasi Next.js Image Component (WebP/AVIF), target skor Google PageSpeed Insights &gt;90 di mobile & desktop, serta validasi Rich Snippets Schema.org ClothingStore.<br>• **Security Hardening:** Rate limiting API routes, sanitasi input XSS/SQL Injection, CORS policy, dan secure cookie session storage. | ⏳ Pending |
-| **Phase 6** | Minggu 9–11 | **Peluncuran Web (Go-Live) & Build Aplikasi Mobile (Add-on +Rp 7 Juta)**<br>• **Deployment VPS Production:** Setup server Ubuntu 24.04 dengan Coolify PaaS / Docker Compose (Next.js container + PostgreSQL 16 + Redis untuk queue/caching).<br>• **Domain & SSL Setup:** Pemasangan domain resmi toko, konfigurasi DNS Cloudflare dengan SSL/TLS Full Strict, dan skrip automated database backup harian ke cloud storage.<br>• **Build & Distribusi Aplikasi Mobile iOS & Android:**<br>  - Build APK & Android App Bundle (AAB) siap rilis ke Google Play Store via Expo Application Services (EAS Build).<br>  - Build IPA iOS untuk pengujian TestFlight & submission ke Apple App Store.<br>  - Integrasi Push Notification pesanan real-time via Firebase Cloud Messaging (FCM) / Expo Push Notifications. | ⏳ Pending |
+| **Phase 5** | Minggu 7–8 | **Quality Assurance, Hardening Keamanan, Arsitektur Dual-Build & Cloudflare CDN**<br>• **Testing & QA Menyeluruh:** End-to-End (E2E) testing alur belanja (Pilih Produk ➔ Keranjang ➔ Checkout ➔ Bayar VA/QRIS ➔ Webhook Verifikasi ➔ Gudang Kemas ➔ Input Resi AWB ➔ Tracking Kurir ➔ Selesai).<br>• **Arsitektur Dual-Build & Isolasi Keamanan:** Pemisahan build independen antara Frontstore Publik (`apps/web`) vs Portal Admin Internal (`apps/admin`) agar pembeli 100% tidak mengetahui rute/bundle admin internal.<br>• **Demo Connector Switchboard:** Saklar `NEXT_PUBLIC_SHOW_DEMO_CONNECTOR=true` (untuk kemudahan evaluasi/demo) dan `false` (saat go-live untuk melenyapkan seluruh jejak admin dari webfront).<br>• **Cloudflare R2 Object Storage Setup:** Pemindahan penyimpanan video vertikal 9:16 dan aset foto produk ke Cloudflare R2 dengan **Rp 0 Egress Bandwidth** (bebas biaya kuota download video).<br>• **Audit Kecepatan & SEO Google:** Optimasi Next.js Image Component (WebP/AVIF), target skor Google PageSpeed Insights &gt;90 di mobile & desktop, serta validasi Rich Snippets Schema.org ClothingStore.<br>• **Security Hardening:** Rate limiting API routes, sanitasi input XSS/SQL Injection, CORS policy, dan secure cookie session storage. | ⏳ Pending |
+| **Phase 6** | Minggu 9–11 | **Peluncuran Web Dual-Build (Go-Live) & Build Aplikasi Mobile (Add-on +Rp 7 Juta)**<br>• **Deployment Dual-Build Produksi VPS:** Setup server Ubuntu 24.04 dengan Coolify PaaS / Docker Compose (Opsi A: Subdomain terpisah `www.rahayufashion.id` vs `ops.rahayufashion.id` dengan Cloudflare Zero Trust/IP Whitelist; Opsi B: Monorepo 2 container mandiri dengan PostgreSQL & Redis terpusat).<br>• **Domain & SSL Setup:** Pemasangan domain resmi toko, konfigurasi DNS Cloudflare dengan SSL/TLS Full Strict, dan skrip automated database backup harian ke cloud storage.<br>• **Build & Distribusi Aplikasi Mobile iOS & Android:**<br>  - Build APK & Android App Bundle (AAB) siap rilis ke Google Play Store via Expo Application Services (EAS Build).<br>  - Build IPA iOS untuk pengujian TestFlight & submission ke Apple App Store.<br>  - Integrasi Push Notification pesanan real-time via Firebase Cloud Messaging (FCM) / Expo Push Notifications. | ⏳ Pending |
 
 ---
 
@@ -93,19 +93,25 @@ Dokumen resmi ini memuat roadmap pengerjaan 6-phase yang mendalam, rincian tekni
    - *Pilihan B (Official TikTok Shop Open API):* Menarik metrik GMV resmi, produk etalase paling laris, dan konversi checkout live shopping.
    - *Pilihan C (CSV Report Importer):* Fallback import laporan harian dari TikTok Seller Center ke dashboard analisa admin.
 
-### Phase 5: Quality Assurance, Hardening Keamanan & Cloudflare CDN
-1. **Testing & QA:**
+### Phase 5: Quality Assurance, Hardening Keamanan, Arsitektur Dual-Build & Cloudflare CDN
+1. **Testing & QA Menyeluruh:**
    - Pengujian End-to-End (E2E) alur belanja dari checkout pembeli hingga resi kurir diterima.
    - Pengujian beban (*load testing*) untuk menangani lonjakan checkout saat siaran TikTok Live berlangsung.
-2. **Cloudflare R2 Object Storage:**
+2. **Arsitektur Dual-Build & Isolasi Akses:**
+   - Penyiapan opsi build terpisah antara Frontstore Web (`apps/web`) dan Admin Portal (`apps/admin`).
+   - Saklar konektor demo: `NEXT_PUBLIC_SHOW_DEMO_CONNECTOR=true` (mode demo aktif) vs `false` (mode produksi tersembunyi total).
+   - Pengujian middleware proteksi domain untuk me-return 404 pada URL admin di domain publik.
+3. **Cloudflare R2 Object Storage:**
    - Menghubungkan penyimpanan foto produk dan video 9:16 ke Cloudflare R2 dengan **Rp 0 Egress Bandwidth** (bebas biaya kuota unduh video).
-3. **Audit Kecepatan & SEO:**
+4. **Audit Kecepatan & SEO:**
    - Target skor Google PageSpeed Insights &gt;90 di mobile & desktop.
    - Validasi Google Rich Results untuk produk pakaian dan toko resmi.
 
-### Phase 6: Peluncuran Web (Go-Live) & Build Aplikasi Mobile (Add-on)
-1. **Deployment Web & Admin (Go-Live):**
-   - Setup VPS Ubuntu 24.04 dengan Coolify PaaS / Docker Compose (Next.js + PostgreSQL + Redis).
+### Phase 6: Peluncuran Web Dual-Build (Go-Live) & Build Aplikasi Mobile (Add-on)
+1. **Deployment Dual-Build Produksi (Go-Live):**
+   - Setup VPS Ubuntu 24.04 dengan Coolify PaaS / Docker Compose (Next.js multi-container / multi-subdomain + PostgreSQL + Redis).
+   - Opsi A: Subdomain terpisah (`www.rahayufashion.id` vs `internal.rahayufashion.id`) dengan proteksi Cloudflare Zero Trust / IP Whitelist kantor & gudang.
+   - Opsi B: Monorepo 2 container independen (`build:web` vs `build:admin`) terhubung ke PostgreSQL Prisma terpusat.
    - Pemasangan domain resmi toko, SSL HTTPS otomatis, dan backup database otomatis harian.
 2. **Build & Distribusi Mobile App (+Rp 7 Juta):**
    - Build file installer Android (APK / AAB) dan iOS (IPA / TestFlight) menggunakan EAS Build.
@@ -244,3 +250,53 @@ flowchart TD
   3. *Langkah 3 (Pilih Tone & Lighting):* Admin memilih nuansa *"Warm Sunlight Golden Hour"*.
   4. *Langkah 4 (Generate & Preview):* Sistem AI menghasilkan visual foto model muslimah mengenakan gamis tersebut dengan proporsi tubuh natural dan pencahayaan studio komersial.
   5. *Langkah 5 (Terapkan):* Tombol *"Gunakan Foto Hasil AI Ini"* langsung memasang foto tersebut ke katalog produk yang sedang diedit.
+
+---
+
+## 7. Arsitektur Dual-Build & Strategi Isolasi Akses Produksi (Frontstore vs Admin)
+
+Untuk menjamin keamanan tingkat tinggi dan kerahasiaan operasional toko, sistem Rahayu Fashion Store dirancang agar dapat **dibangun menjadi 2 aplikasi/build independen**. Hal ini mencegah pelanggan atau pihak luar mengetahui rute, struktur tabel internal, atau mengakses antarmuka internal admin.
+
+```mermaid
+flowchart LR
+    subgraph Publik ["🌐 Domain Publik (Pelanggan)"]
+        A["www.rahayufashion.id"] --> B["Front Webstore Build<br>(Katalog, Checkout, Tracking Resi)"]
+    end
+
+    subgraph Internal ["🔒 Subdomain / Server Privat (Karyawan & Gudang)"]
+        C["internal.rahayufashion.id<br>atau ops.rahayufashion.id"] --> D["Admin Portal Build (RBAC)<br>(9 Modul, Gudang, AI, Finansial)"]
+    end
+
+    B --> DB[("🗄️ PostgreSQL Database<br>(Prisma DAL Terpusat)")]
+    D --> DB
+```
+
+### A. 2 Pilihan Strategi Build & Deployment
+
+| Aspek | Opsi A: Subdomain Terpisah & Middleware Whitelisting | Opsi B: Monorepo Multi-Apps (Dual-Build Murni) |
+| :--- | :--- | :--- |
+| **Penyimpanan Kode** | Single Next.js Project (Monolith Cepat) | Monorepo (`apps/web` & `apps/admin`) |
+| **Output Build** | 1 Deployment dengan Domain Routing | 2 Build Artifact Independen (`build:web` & `build:admin`) |
+| **Domain Toko Publik** | `www.rahayufashion.id` (Akses `/admin` me-return 404) | `www.rahayufashion.id` (0 KB kode admin) |
+| **Domain Admin Internal**| `ops.rahayufashion.id` / `internal.rahayufashion.id` | Server internal terpisah / Cloudflare Zero Trust |
+| **Konektivitas Database**| Prisma Client DAL langsung | Shared package `@rahayu/database` |
+| **Tingkat Kompleksitas** | ⭐ Rendah (Rekomendasi Tahap Awal) | ⭐⭐⭐ Tinggi (Standar Enterprise Unicorn) |
+
+### B. Mekanisme Demo Connector Lepas-Pasang
+
+Untuk memfasilitasi fase peninjauan klien dan demo saat ini tanpa mengorbankan privasi produksi di masa depan, sistem telah dilengkapi dengan variabel lingkungan kontrol:
+
+```env
+# File: .env.production
+# Set "true" saat presentasi / demo klien: Tautan "Portal Admin" di topbar & /login aktif
+# Set "false" saat peluncuran toko resmi: Seluruh tautan & rute admin hilang total dari pandangan publik
+NEXT_PUBLIC_SHOW_DEMO_CONNECTOR=false
+```
+
+* **Ketika `NEXT_PUBLIC_SHOW_DEMO_CONNECTOR=true` (Default Demo Saat Ini):**
+  * Tautan shortcut *"Portal Admin"* tampil di bar pengumuman teratas.
+  * Kotak panduan login staf tampil di halaman `/login` pelanggan.
+  * Penguji dapat berpindah peran (Super Admin, Gudang, Merchandiser, Marketing, Finance) dengan 1 klik.
+* **Ketika `NEXT_PUBLIC_SHOW_DEMO_CONNECTOR=false` (Mode Produksi Go-Live):**
+  * Tautan dan banner admin **dihapus 100% dari DOM HTML** pelanggan.
+  * Rute publik tidak menyisakan petunjuk URL admin apapun kepada pembeli.
