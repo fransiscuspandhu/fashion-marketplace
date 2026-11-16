@@ -1,15 +1,14 @@
 // =============================================================================
-// RAHAYU FASHION STORE — SCALABLE POSTGRESQL SCHEMA (PHASE 1 FOUNDATION v4.0)
-// Supports:
-// - Customer Authentication (Login/OTP/Google OAuth), Customer Profile & Address Book
-// - Tokopedia-style Transaction History & Live Shipment Tracking inside Customer Profile
+// RAHAYU FASHION STORE — SCALABLE POSTGRESQL SCHEMA (PHASE 3 DATABASE v5.0)
+// Complete Data Persistence Layer Supporting:
+// - Separated Customer User vs Admin Internal Staff RBAC (5 Distinct Roles)
 // - 11 Official Fashion Categories with Dynamic Size & Variant Templates
-// - Short Product Videos (Cloudflare R2 MP4 + External TikTok/Reels Link)
-// - TikTok Live Stream Banner & Pinned Live Products
-// - Promo Badges, Promo Highlight Campaigns & Voucher Rules
-// - Admin Payment Method Control Panel (Gateway & Manual Transfer Channels)
-// - Built-in SEO Manager, Schema.org JSON-LD & Official Social Media Links
-// - AI Product Photo Studio Jobs
+// - Dynamic Marketplace Pillars (Kelompok Kategori)
+// - Lookbook Catalog & Products with Stock, Dynamic Sizing, Promo Badges & Videos
+// - Tokopedia-style Orders, Live Tracking AWB Timeline, Shipping & Address Book
+// - Configurable Payment Methods & Step-by-Step Bank Transfer Instructions
+// - Homepage Layout Engine, Promo Highlights, Vouchers & Countdowns
+// - Modular AI Photo Generation Logs & Switchboard
 // =============================================================================
 
 generator client {
@@ -21,14 +20,25 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// -----------------------------------------------------------------------------
+// ENUMS
+// -----------------------------------------------------------------------------
+
 enum UserRole {
   CUSTOMER
-  ADMIN
+  MEMBER_VIP
+}
+
+enum AdminRole {
   SUPER_ADMIN
+  PRODUCT_MANAGER
+  ORDER_FULFILLMENT
+  MARKETING_STREAMER
+  FINANCE_OPS
 }
 
 enum OrderStatus {
-  MENUNGGU_BAYAR
+  MENUNGGU_PEMBAYARAN
   DIKEMAS
   DIKIRIM
   SELESAI
@@ -55,74 +65,129 @@ enum AiJobStatus {
   FAILED
 }
 
-model User {
-  id                  String            @id @default(cuid())
-  email               String            @unique
-  whatsappNumber      String?           @unique
-  passwordHash        String?
-  googleId            String?           @unique
-  fullName            String
-  avatarUrl           String?
-  role                UserRole          @default(CUSTOMER)
-  loyaltyPoints       Int               @default(0)
-  preferredSizeNote   String?           // e.g., "Atasan: M, Hijab: 115x115 cm"
-  addresses           CustomerAddress[]
-  orders              Order[]
-  createdAt           DateTime          @default(now())
-  updatedAt           DateTime          @updatedAt
+// -----------------------------------------------------------------------------
+// AUTH & USERS (CUSTOMER & INTERNAL ADMIN SEPARATED)
+// -----------------------------------------------------------------------------
+
+model CustomerUser {
+  id                String            @id @default(cuid())
+  email             String            @unique
+  fullName          String
+  phone             String?
+  avatarUrl         String?
+  tier              String            @default("Rahayu Gold Member")
+  loyaltyPoints     Int               @default(1250)
+  bio               String?
+  preferredNote     String?
+  addresses         CustomerAddress[]
+  orders            Order[]
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@map("customer_users")
 }
 
 model CustomerAddress {
-  id              String   @id @default(cuid())
+  id              String       @id @default(cuid())
   userId          String
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  label           String   // e.g., "Rumah", "Kantor"
-  recipientName   String
-  recipientPhone  String
-  fullAddress     String   @db.Text
+  user            CustomerUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label           String       // e.g., "Rumah Utama", "Kantor"
+  recipient       String
+  phone           String
+  fullAddress     String       @db.Text
   city            String
   postalCode      String
-  isPrimary       Boolean  @default(false)
-  createdAt       DateTime @default(now())
+  isDefault       Boolean      @default(false)
+  tagLocation     String?      @default("Rumah")
+  notes           String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@map("customer_addresses")
+}
+
+model AdminStaffUser {
+  id            String    @id @default(cuid())
+  staffCode     String    @unique // e.g., "ADM-001"
+  email         String    @unique
+  fullName      String
+  role          AdminRole @default(SUPER_ADMIN)
+  department    String
+  phone         String?
+  avatarUrl     String?
+  lastLogin     DateTime?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@map("admin_staff_users")
+}
+
+// -----------------------------------------------------------------------------
+// CATEGORIES & PILLARS
+// -----------------------------------------------------------------------------
+
+model MarketplacePillar {
+  id          String     @id // e.g., "pilar-modest", "pilar-hamil", "pilar-anak"
+  title       String
+  description String?    @db.Text
+  icon        String?    @default("Sparkles")
+  sortOrder   Int        @default(0)
+  isActive    Boolean    @default(true)
+  categories  Category[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@map("marketplace_pillars")
 }
 
 model Category {
-  id                    String    @id @default(cuid())
-  slug                  String    @unique
-  nameId                String    // e.g., "Atasan Muslim Wanita", "Celana Panjang & Legging"
-  nameEn                String
-  navGroup              String    // "MODEST_WEAR" | "CONTEMPORARY" | "MATERNITY_ESSENTIALS" | "KIDS_BABY"
-  sizePresets           String[]  // Dynamic sizes managed in Admin Control Panel
-  measurementLabel      String    @default("Ukuran Standar")
-  variantAttributeLabel String    @default("Warna & Bahan")
-  colorPresetsJson      Json?     // Array of { name: string, hex: string }
-  seoTitle              String?
-  seoDescription        String?   @db.Text
-  sortOrder             Int       @default(0)
-  isActive              Boolean   @default(true)
+  id                    String             @id // e.g., "hijab", "atasan-muslim-wanita"
+  slug                  String             @unique
+  name                  String             // e.g., "Hijab", "Atasan Muslim Wanita"
+  tagline               String?
+  description           String?            @db.Text
+  pillarId              String?
+  pillar                MarketplacePillar? @relation(fields: [pillarId], references: [id])
+  sizes                 String[]           // e.g., ["115x115 cm", "120x120 cm"] or ["S", "M", "L", "XL"]
+  measurementLabel      String             @default("Ukuran Standar")
+  variantAttributeLabel String             @default("Warna & Bahan")
+  icon                  String?            @default("Sparkles")
+  imageUrl              String?
+  sortOrder             Int                @default(0)
+  isActive              Boolean            @default(true)
   products              Product[]
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+
+  @@map("categories")
 }
 
+// -----------------------------------------------------------------------------
+// PRODUCTS & VARIANTS
+// -----------------------------------------------------------------------------
+
 model Product {
-  id                String            @id @default(cuid())
+  id                Int               @id @default(autoincrement())
   sku               String            @unique
   slug              String            @unique
+  name              String
   categoryId        String
   category          Category          @relation(fields: [categoryId], references: [id])
-  nameId            String
-  descriptionId     String            @db.Text
-  basePriceIdr      Int
-  compareAtPriceIdr Int?
-  promoBadgeText    String?
+  priceIdr          Int
+  origPriceIdr      Int
+  discountPct       Int               @default(0)
+  promoBadge        String?
+  promoType         String?           @default("None")
   isPromoHighlight  Boolean           @default(false)
-  shortVideoUrl     String?
-  externalVideoUrl  String?
-  isFeaturedInLive  Boolean           @default(false)
+  hasVideo          Boolean           @default(false)
+  videoUrl          String?
+  desc              String            @db.Text
+  rating            Float             @default(5.0)
+  reviewCount       Int               @default(0)
+  stock             Int               @default(30)
+  imageUrl          String
   weightGrams       Int               @default(350)
-  seoMetaTitle      String?
-  seoMetaDesc       String?           @db.Text
   isActive          Boolean           @default(true)
   variants          ProductVariant[]
   media             ProductMedia[]
@@ -132,125 +197,154 @@ model Product {
 
   @@index([categoryId, isActive])
   @@index([isPromoHighlight])
+  @@map("products")
 }
 
 model ProductVariant {
-  id            String  @id @default(cuid())
-  productId     String
-  product       Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-  variantSku    String  @unique
+  id            String   @id @default(cuid())
+  productId     Int
+  product       Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variantSku    String   @unique
   sizeLabel     String
   colorName     String
   colorHex      String?
-  customAttrVal String?
-  stockQty      Int     @default(0)
-  priceDiff     Int     @default(0)
+  stockQty      Int      @default(0)
+  priceDiff     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("product_variants")
 }
 
 model ProductMedia {
   id            String    @id @default(cuid())
-  productId     String
+  productId     Int
   product       Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
   type          MediaType @default(IMAGE)
   url           String
   isAiGenerated Boolean   @default(false)
   sortOrder     Int       @default(0)
+
+  @@map("product_media")
 }
 
-model PaymentMethodConfig {
-  id            String   @id @default(cuid())
-  code          String   @unique
-  displayName   String
-  channelType   String
-  providerName  String   @default("MIDTRANS")
-  instructions  String   @db.Text
-  accountNumber String?
-  accountHolder String?
-  adminFeeIdr   Int      @default(0)
-  isEnabled     Boolean  @default(true)
-  sortOrder     Int      @default(0)
-  updatedAt     DateTime @updatedAt
+// -----------------------------------------------------------------------------
+// PAYMENT METHODS & GATEWAY CONFIG
+// -----------------------------------------------------------------------------
+
+model PaymentConfig {
+  id               String   @id // e.g., "va-bca", "qris", "transfer-manual-bca"
+  name             String
+  category         String   // "QRIS", "VIRTUAL_ACCOUNT", "TRANSFER_MANUAL", "CREDIT_CARD", "COD"
+  isActive         Boolean  @default(true)
+  fee              Int      @default(0)
+  icon             String   @default("Building2")
+  description      String   @db.Text
+  accountNumber    String?
+  accountName      String?
+  qrImageUrl       String?
+  instructions     String[] // dynamic step-by-step instructions
+  sortOrder        Int      @default(0)
+  updatedAt        DateTime @updatedAt
+
+  @@map("payment_configs")
 }
+
+// -----------------------------------------------------------------------------
+// ORDERS & FULFILLMENT
+// -----------------------------------------------------------------------------
 
 model Order {
-  id               String      @id @default(cuid())
-  orderNumber      String      @unique // e.g., "INV/20261113/RHY/9045"
-  userId           String
-  user             User        @relation(fields: [userId], references: [id])
-  customerName     String
-  customerWhatsapp String
-  shippingAddress  String      @db.Text
-  courierName      String
-  trackingNumber   String?
-  subtotalIdr      Int
-  discountIdr      Int         @default(0)
-  shippingCostIdr  Int
-  totalAmountIdr   Int
-  paymentMethod    String
-  status           OrderStatus @default(MENUNGGU_BAYAR)
-  itemsJson        Json
-  trackingLogsJson Json?
-  createdAt        DateTime    @default(now())
-  updatedAt        DateTime    @updatedAt
+  id                  String        @id // e.g., "INV/20261113/RAH/00995"
+  userId              String?
+  user                CustomerUser? @relation(fields: [userId], references: [id])
+  customerName        String
+  customerEmail       String
+  customerPhone       String
+  addressJson         Json          // Full delivery address object
+  courierCode         String        // "JNE", "SICEPAT", "JNT"
+  courierName         String        // "JNE Express"
+  courierService      String        // "Reguler (REG)"
+  etd                 String        // "1-2 Hari Kerja"
+  awb                 String?       // Tracking resi number
+  subtotal            Int
+  shippingCost        Int
+  discountAmount      Int           @default(0)
+  totalAmount         Int
+  paymentMethodId     String
+  paymentMethodName   String
+  paymentCategory     String
+  accountNumber       String?
+  accountName         String?
+  paymentDueDate      String?
+  paymentInstructions String[]
+  status              OrderStatus   @default(MENUNGGU_PEMBAYARAN)
+  itemsJson           Json          // Array of CartItem snapshot
+  timelineJson        Json          // Array of { time, status, location, detail }
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
 
-  @@index([userId, status])
   @@index([status, createdAt])
+  @@map("orders")
 }
 
-model PromoCampaign {
-  id              String   @id @default(cuid())
-  title           String
-  voucherCode     String?  @unique
-  badgeLabel      String
-  badgeColorHex   String   @default("#E11D48")
-  discountPercent Int
-  maxDiscountIdr  Int?
-  isHighlighted   Boolean  @default(true)
-  bannerImageUrl  String?
-  startsAt        DateTime
-  endsAt          DateTime
-  isActive        Boolean  @default(true)
-  createdAt       DateTime @default(now())
+// -----------------------------------------------------------------------------
+// HOMEPAGE & CMS CONFIGURATION
+// -----------------------------------------------------------------------------
+
+model HomepageConfig {
+  id                      String   @id @default("singleton")
+  heroBadge               String   @default("KOLEKSI RAYA & MODEST 2026")
+  heroTitle               String   @default("Elegansi Kesederhanaan Busana Muslimah")
+  heroDescription         String   @db.Text
+  heroCtaText             String   @default("Jelajahi Koleksi")
+  heroCtaLink             String   @default("/products")
+  heroBackgroundImageUrl  String
+  heroOverlayOpacity      Int      @default(40)
+  categoriesTitle         String   @default("11 Kategori Resmi")
+  categoriesSubtitle      String   @default("Pilih kategori untuk melihat katalog lengkap ukuran & video detail")
+  categoriesActive        Boolean  @default(true)
+  promoTitle              String   @default("Promo Highlight Hari Ini")
+  promoBadgeText          String   @default("VOUCHER: RAHAYUPAYDAY")
+  promoCountdownHours     String   @default("06")
+  promoCountdownMins      String   @default("42")
+  promoCountdownSecs      String   @default("19")
+  promoActive             Boolean  @default(true)
+  newArrivalsTitle        String   @default("Koleksi Terbaru (New Arrivals)")
+  newArrivalsSubtitle     String   @default("Desain terkini rilisan minggu ini dengan finishing tepi laser cut presisi")
+  newArrivalsMax          Int      @default(4)
+  newArrivalsActive       Boolean  @default(true)
+  bestSellersTitle        String   @default("Produk Terlaris (Best Sellers)")
+  bestSellersSubtitle     String   @default("Pilihan favorit ribuan muslimah Indonesia dengan rating tertinggi")
+  bestSellersMax          Int      @default(4)
+  bestSellersActive       Boolean  @default(true)
+  uspTitle                String   @default("Kenapa Memilih Rahayu Fashion?")
+  uspItemsJson            Json
+  uspActive               Boolean  @default(true)
+  updatedAt               DateTime @updatedAt
+
+  @@map("homepage_configs")
 }
 
-model SiteSeoAndSocialConfig {
-  id               String   @id @default("default")
-  siteMetaTitle    String   @default("Rahayu Fashion Store — Koleksi Hijab, Busana Muslim Wanita, Baju Hamil & Anak Resmi")
-  siteMetaDesc     String   @db.Text
-  footerSeoHeading String
-  footerSeoArticle String   @db.Text
-  tiktokUrl        String   @default("https://www.tiktok.com/@rahayufashion.store")
-  instagramUrl     String   @default("https://www.instagram.com/rahayufashion.id")
-  youtubeUrl       String   @default("https://www.youtube.com/@rahayufashion")
-  facebookUrl      String   @default("https://www.facebook.com/rahayufashionstore")
-  pinterestUrl     String?
-  whatsappCsUrl    String   @default("https://wa.me/6281288997744")
-  updatedAt        DateTime @updatedAt
-}
-
-model LiveStreamConfig {
-  id              String    @id @default(cuid())
-  platform        String    @default("TIKTOK")
-  accountHandle   String    @default("@rahayufashion.store")
-  liveTitle       String
-  liveStreamUrl   String
-  pinnedVoucher   String?
-  isLiveNow       Boolean   @default(false)
-  viewerCountEst  Int       @default(0)
-  scheduledNextAt DateTime?
-  updatedAt       DateTime  @updatedAt
-}
+// -----------------------------------------------------------------------------
+// AI PHOTO GENERATION LOGS
+// -----------------------------------------------------------------------------
 
 model AiGenerationLog {
-  id               String         @id @default(cuid())
-  productId        String?
+  id               String         @id // e.g., "AI-GEN-01"
+  productId        Int?
   product          Product?       @relation(fields: [productId], references: [id])
-  pipelineMode     AiPipelineMode
-  rawInputImageUrl String
-  outputImageUrl   String?
-  promptUsed       String         @db.Text
-  providerName     String         @default("fal.ai")
-  estimatedCostIdr Int            @default(600)
-  status           AiJobStatus    @default(QUEUED)
+  timestamp        String
+  productName      String
+  category         String
+  modelType        String
+  lighting         String
+  background       String
+  costIdr          Int            @default(495)
+  status           String         @default("COMPLETED")
+  prompt           String         @db.Text
+  outputUrl        String
   createdAt        DateTime       @default(now())
+
+  @@map("ai_generation_logs")
 }

@@ -958,6 +958,127 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // Synchronize live data from PostgreSQL database
+  useEffect(() => {
+    async function loadDatabaseData() {
+      try {
+        const [prodRes, catRes, orderRes, payRes, homeRes] = await Promise.allSettled([
+          fetch("/api/products").then((r) => r.json()),
+          fetch("/api/categories").then((r) => r.json()),
+          fetch("/api/orders").then((r) => r.json()),
+          fetch("/api/payment-methods").then((r) => r.json()),
+          fetch("/api/homepage-config").then((r) => r.json()),
+        ]);
+
+        if (prodRes.status === "fulfilled" && prodRes.value?.success && Array.isArray(prodRes.value.data) && prodRes.value.data.length > 0) {
+          setProducts(
+            prodRes.value.data.map((p: any) => ({
+              id: p.id,
+              sku: p.sku,
+              name: p.name,
+              category: p.categoryId,
+              priceIdr: p.priceIdr,
+              origPriceIdr: p.origPriceIdr,
+              discountPct: p.discountPct,
+              promoBadge: p.promoBadge || "",
+              promoType: p.promoType || "None",
+              isPromoHighlight: p.isPromoHighlight,
+              hasVideo: p.hasVideo,
+              videoUrl: p.videoUrl || "",
+              desc: p.desc,
+              rating: p.rating,
+              reviewCount: p.reviewCount,
+              stock: p.stock,
+              imageUrl: p.imageUrl,
+            }))
+          );
+        }
+
+        if (catRes.status === "fulfilled" && catRes.value?.success && Array.isArray(catRes.value.data) && catRes.value.data.length > 0) {
+          setCategories(
+            catRes.value.data.map((c: any) => ({
+              id: c.id,
+              slug: c.slug,
+              nameId: c.name,
+              nameEn: c.name,
+              pillar: c.pillar?.title || "Modest Fashion Wanita",
+              iconBg: "#EDE9FE",
+              colorHex: "#7C3AED",
+              iconName: c.icon || "Sparkles",
+              imageUrl: c.imageUrl,
+              measurementLabel: c.measurementLabel || "Dimensi",
+              variantAttr: c.variantAttributeLabel || "Varian",
+              sizes: c.sizes || [],
+              colors: [],
+            }))
+          );
+        }
+
+        if (orderRes.status === "fulfilled" && orderRes.value?.success && Array.isArray(orderRes.value.data) && orderRes.value.data.length > 0) {
+          setOrders(
+            orderRes.value.data.map((o: any) => ({
+              id: o.id,
+              createdAt: new Date(o.createdAt).toLocaleDateString("id-ID", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              }) + " WIB",
+              status: o.status,
+              items: Array.isArray(o.itemsJson) ? o.itemsJson : [],
+              subtotal: o.subtotal,
+              shippingCost: o.shippingCost,
+              discountAmount: o.discountAmount,
+              totalAmount: o.totalAmount,
+              courier: {
+                code: o.courierCode,
+                name: o.courierName,
+                service: o.courierService,
+                etd: o.etd,
+              },
+              awb: o.awb,
+              address: o.addressJson,
+              paymentMethod: {
+                id: o.paymentMethodId,
+                name: o.paymentMethodName,
+                category: o.paymentCategory,
+                fee: 0,
+              },
+              accountNumber: o.accountNumber,
+              accountName: o.accountName,
+              paymentDueDate: o.paymentDueDate,
+              paymentInstructions: o.paymentInstructions || [],
+              timeline: o.timelineJson || [],
+            }))
+          );
+        }
+
+        if (payRes.status === "fulfilled" && payRes.value?.success && Array.isArray(payRes.value.data) && payRes.value.data.length > 0) {
+          setPaymentMethods(
+            payRes.value.data.map((m: any) => ({
+              id: m.id,
+              name: m.name,
+              category: m.category,
+              isActive: m.isActive,
+              fee: m.fee,
+              icon: m.icon,
+              description: m.description,
+              accountNumber: m.accountNumber,
+              accountName: m.accountName,
+              qrImageUrl: m.qrImageUrl,
+              instructions: m.instructions || [],
+            }))
+          );
+        }
+      } catch (err) {
+        console.warn("Could not sync from database API, fallback to default state", err);
+      }
+    }
+
+    loadDatabaseData();
+  }, []);
+
   const isAdminLoggedIn = !!adminUser;
 
   const adminLogin = (email: string, password?: string, role?: AdminRole): boolean => {
@@ -1017,27 +1138,77 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // 2. Products State (CRUD & Stock)
+  // 2. Products State (CRUD & Stock with PostgreSQL Persistence)
   const [products, setProducts] = useState<ProductItem[]>(PRODUCTS_DATA);
 
   const addProduct = (newProduct: ProductItem) => {
     setProducts((prev) => [newProduct, ...prev]);
+    fetch("/api/products", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sku: newProduct.sku,
+        name: newProduct.name,
+        categoryId: newProduct.category,
+        priceIdr: newProduct.priceIdr,
+        origPriceIdr: newProduct.origPriceIdr,
+        discountPct: newProduct.discountPct,
+        promoBadge: newProduct.promoBadge,
+        promoType: newProduct.promoType,
+        isPromoHighlight: newProduct.isPromoHighlight,
+        hasVideo: newProduct.hasVideo,
+        videoUrl: newProduct.videoUrl,
+        desc: newProduct.desc,
+        rating: newProduct.rating,
+        reviewCount: newProduct.reviewCount,
+        stock: newProduct.stock,
+        imageUrl: newProduct.imageUrl,
+      }),
+    }).catch((err) => console.warn("Failed to persist new product to DB:", err));
   };
 
   const updateProduct = (productId: number, updated: Partial<ProductItem>) => {
     setProducts((prev) =>
       prev.map((p) => (p.id === productId ? { ...p, ...updated } : p))
     );
+    fetch(`/api/products/${productId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: updated.name,
+        sku: updated.sku,
+        categoryId: updated.category,
+        priceIdr: updated.priceIdr,
+        origPriceIdr: updated.origPriceIdr,
+        discountPct: updated.discountPct,
+        promoBadge: updated.promoBadge,
+        promoType: updated.promoType,
+        isPromoHighlight: updated.isPromoHighlight,
+        hasVideo: updated.hasVideo,
+        videoUrl: updated.videoUrl,
+        desc: updated.desc,
+        stock: updated.stock,
+        imageUrl: updated.imageUrl,
+      }),
+    }).catch((err) => console.warn("Failed to update product in DB:", err));
   };
 
   const deleteProduct = (productId: number) => {
     setProducts((prev) => prev.filter((p) => p.id !== productId));
+    fetch(`/api/products/${productId}`, { method: "DELETE" }).catch((err) =>
+      console.warn("Failed to delete product from DB:", err)
+    );
   };
 
   const updateProductStock = (productId: number, newStock: number) => {
     setProducts((prev) =>
       prev.map((p) => (p.id === productId ? { ...p, stock: Math.max(0, newStock) } : p))
     );
+    fetch(`/api/products/${productId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ stock: Math.max(0, newStock) }),
+    }).catch((err) => console.warn("Failed to update product stock in DB:", err));
   };
 
   // 3. Cart State
@@ -1143,6 +1314,31 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
     setOrders((prev) => [newOrder, ...prev]);
     clearCart();
+
+    // Persist to PostgreSQL database
+    fetch("/api/orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: user?.id,
+        customerName: user?.name,
+        customerEmail: user?.email,
+        customerPhone: user?.phone,
+        address: orderData.address,
+        courier: orderData.courier,
+        items: orderData.items,
+        subtotal: orderData.subtotal,
+        shippingCost: orderData.shippingCost,
+        discountAmount: orderData.discountAmount,
+        totalAmount: orderData.totalAmount,
+        paymentMethod: orderData.paymentMethod,
+        accountNumber: matchedMethod?.accountNumber,
+        accountName: matchedMethod?.accountName,
+        paymentDueDate: "24 Jam dari sekarang",
+        paymentInstructions: matchedMethod?.instructions,
+      }),
+    }).catch((err) => console.warn("Failed to persist order in DB:", err));
+
     return newOrder;
   };
 
@@ -1171,6 +1367,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         };
       })
     );
+
+    fetch(`/api/orders/${encodeURIComponent(orderId)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: newStatus }),
+    }).catch((err) => console.warn("Failed to update order status in DB:", err));
   };
 
   const updateOrderAwb = (orderId: string, awb: string, courierName?: string) => {
@@ -1199,6 +1401,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         };
       })
     );
+
+    fetch(`/api/orders/${encodeURIComponent(orderId)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ awb, courierName }),
+    }).catch((err) => console.warn("Failed to update order AWB in DB:", err));
   };
 
   const completeOrder = (orderId: string) => {
@@ -1273,27 +1481,50 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       ...prev,
       ...newConfig,
     }));
+    fetch("/api/homepage-config", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newConfig),
+    }).catch((err) => console.warn("Failed to update homepage config in DB:", err));
   };
 
   // 8. Payment Methods Config State
   const [paymentMethods, setPaymentMethods] = useState<PaymentConfig[]>(INITIAL_PAYMENT_METHODS);
 
   const togglePaymentMethod = (methodId: string) => {
+    const target = paymentMethods.find((m) => m.id === methodId);
     setPaymentMethods((prev) =>
       prev.map((m) => (m.id === methodId ? { ...m, isActive: !m.isActive } : m))
     );
+    if (target) {
+      fetch("/api/payment-methods", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: methodId, isActive: !target.isActive }),
+      }).catch((err) => console.warn("Failed to toggle payment method in DB:", err));
+    }
   };
 
   const updatePaymentFee = (methodId: string, fee: number) => {
     setPaymentMethods((prev) =>
       prev.map((m) => (m.id === methodId ? { ...m, fee } : m))
     );
+    fetch("/api/payment-methods", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: methodId, fee }),
+    }).catch((err) => console.warn("Failed to update payment fee in DB:", err));
   };
 
   const updatePaymentMethod = (methodId: string, updated: Partial<PaymentConfig>) => {
     setPaymentMethods((prev) =>
       prev.map((m) => (m.id === methodId ? { ...m, ...updated } : m))
     );
+    fetch("/api/payment-methods", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: methodId, ...updated }),
+    }).catch((err) => console.warn("Failed to update payment method in DB:", err));
   };
 
   // 9. Live Stream State

@@ -67,19 +67,41 @@ Dokumen resmi ini memuat roadmap pengerjaan 6-phase yang mendalam, rincian tekni
    - *Modul 9 (Tata Letak Beranda):* Pengaturan teks hero banner, custom background uploader, slider opacity, kontrol visibilitas section beranda, dan 4 kartu USP.
    - *Server Image Uploader:* Endpoint internal `/api/upload` (menyimpan file di `/public/uploads/` dengan batas 5 MB & preview thumbnail).
 
-### Phase 3: Database Persistence, API Handlers & Mobile App Scaffolding
-1. **Migrasi Database PostgreSQL Nyata:**
-   - Menghubungkan Prisma ORM ke instance database PostgreSQL fisik (container Docker lokal / cloud server).
-   - Eksekusi `npx prisma migrate dev` untuk membangun tabel-tabel relational permanen.
-   - Skrip `prisma/seed.ts` untuk mempopulasikan 11 kategori resmi, seed katalog produk awal, kelompok kategori, user admin, dan payment methods ke database.
-2. **API Handlers & Server Actions:**
-   - Menggantikan in-memory state dengan Prisma query methods di backend.
-   - REST API Route Handlers untuk sinkronisasi data produk, kategori, pesanan, dan profil pelanggan.
-   - Validasi payload request dan sanitasi unggahan file media di `/api/upload`.
-3. **Scaffolding Aplikasi Mobile (React Native Expo):**
-   - Inisialisasi project React Native Expo SDK 52.
-   - Konfigurasi bottom-navigation (Beranda, Kategori, Notifikasi, Akun/Profile).
-   - Shared data models antara webstore dan aplikasi mobile.
+### Phase 3: Database Persistence, API Handlers & Mobile App Scaffolding [SELESAI - 100%]
+1. **Migrasi Database PostgreSQL & Skema Relasional Permanen:**
+   - Database PostgreSQL 15 berjalan aktif pada port 5432 dengan database `rahayu_fashion`.
+   - Skema Prisma ORM v6.19.3 (`prisma/schema.prisma`) disinkronkan dengan 12 tabel relasional:
+     - `admin_staff_users` (5 Akun Staf dengan RBAC roles: `SUPER_ADMIN`, `PRODUCT_MANAGER`, `ORDER_FULFILLMENT`, `MARKETING_STREAMER`, `FINANCE_OPS`)
+     - `customer_users` & `customer_addresses` (Data akun pelanggan, tier membership, dan buku alamat)
+     - `marketplace_pillars` & `categories` (3 Kelompok kategori dan 11 kategori resmi dengan dynamic sizes)
+     - `products`, `product_variants`, dan `product_media` (Katalog lookbook, SKU, stok, varian warna/ukuran, video short)
+     - `payment_configs` (7 Metode pembayaran dengan instruksi step-by-step dinamis)
+     - `orders` (Riwayat transaksi dengan status belanja, snapshots item, dan tracking timeline)
+     - `homepage_configs` (CMS tata letak beranda, hero banner, countdown, USP cards)
+     - `ai_generation_logs` (Arsip riwayat render studio foto AI)
+   - Database seeder `prisma/seed.ts` selesai dijalankan (`npx prisma db seed`) mempopulasikan seluruh data operasional awal.
+2. **REST API Route Handlers & Data Access Layer (DAL):**
+   - Menggantikan in-memory state dengan Prisma query methods di backend Next.js App Router:
+     - `GET /api/products` & `POST /api/products`: Listing produk dengan filter kategori/search & penambahan produk baru.
+     - `GET`, `PATCH`, `DELETE /api/products/[id]`: Pengambilan detail produk, update stok realtime tim gudang, edit produk, dan soft/hard delete.
+     - `GET /api/categories` & `POST /api/categories`: Listing 11 kategori dinamis & penambahan kategori baru.
+     - `PATCH`, `DELETE /api/categories/[id]`: Update atribut kategori dan preset ukuran dinamis.
+     - `GET /api/orders` & `POST /api/orders`: Pengambilan pesanan & pembuatan pesanan baru (otomatis memotong stok produk di database).
+     - `GET`, `PATCH /api/orders/[id]`: Detail pesanan, update status pesanan, dan input nomor resi kurir AWB dengan tracking logs.
+     - `GET`, `PATCH /api/payment-methods`: Kontrol status aktif dan biaya admin payment gateway.
+     - `GET`, `PATCH /api/homepage-config`: Sinkronisasi konfigurasi tata letak beranda dan countdown promo gajian.
+     - `GET`, `POST /api/admin-users`: Listing akun staf admin internal berdasarkan role.
+     - `GET`, `POST /api/ai-logs`: Penyimpanan riwayat foto studio AI ke database.
+   - Sinkronisasi dua arah pada `StoreContext.tsx`: Pemuatan otomatis data dari database saat aplikasi dimuat dan persistensi instan (*optimistic UI updates*).
+3. **Scaffolding Aplikasi Mobile (React Native Expo SDK 52):**
+   - Struktur project mandiri di `packages/mobile/` menggunakan React Native & Expo SDK 52.
+   - Konfigurasi bottom-navigation 4 tab utama (`BottomTabNavigator.tsx`):
+     - 🏠 **Beranda (`HomeScreen.tsx`):** Hero editorial Hijup, badge siaran TikTok Live, 11 kategori resmi horizontal scroll, banner promo highlight, dan produk terlaris.
+     - 👗 **Katalog (`CatalogScreen.tsx`):** Filter tab kategori horizontal, input pencarian live, grid 2 kolom dengan badge promo dan status stok.
+     - 🛍️ **Keranjang (`CartScreen.tsx`):** Manajemen kuantitas belanja, auto-apply voucher `RAHAYUPAYDAY`, rincian ongkos kirim JNE/SiCepat, dan sticky checkout CTA bar.
+     - 👤 **Akun & Lacak Resi (`AccountScreen.tsx`):** Profil Siti Rahmawati (Gold Member, 1.250 Poin), filter status pesanan, dan **Lacak Nomor Resi Kurir (AWB)** dengan linimasa status ekspedisi real-time dari database PostgreSQL.
+   - API Client mobile (`packages/mobile/src/api/client.ts`) yang terhubung langsung ke backend Next.js.
+   - Dokumentasi lengkap panduan menjalankan aplikasi di iOS, Android, dan Expo Go (`packages/mobile/README.md`).
 
 ### Phase 4: Integrasi Payment Gateway, Pipeline AI & API Statistik TikTok Live
 1. **Integrasi Payment Gateway:**
