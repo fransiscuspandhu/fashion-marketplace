@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, Suspense } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Lock, Mail, User as UserIcon, Phone, ArrowRight, ShieldCheck, Sparkles, CheckCircle2 } from "lucide-react";
@@ -14,6 +14,7 @@ function LoginForm() {
   const redirectTarget = searchParams.get("redirect") || "/profile";
   const { login, isLoggedIn, user } = useStore();
 
+  const [isMounted, setIsMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
   const [email, setEmail] = useState("siti.rahmawati@gmail.com");
   const [password, setPassword] = useState("rahayu2026");
@@ -21,8 +22,12 @@ function LoginForm() {
   const [phone, setPhone] = useState("0812-8877-6655");
   const [isLoading, setIsLoading] = useState(false);
 
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   // If already logged in, show user info and redirect button
-  if (isLoggedIn && user) {
+  if (isMounted && isLoggedIn && user) {
     return (
       <div className="max-w-md mx-auto my-16 p-8 bg-white border border-zinc-200 rounded-lg shadow-sm text-center">
         <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center">

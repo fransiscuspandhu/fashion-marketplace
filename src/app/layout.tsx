@@ -43,7 +43,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="id">
+    <html lang="id" suppressHydrationWarning>
       <head>
         <script
           type="application/ld+json"
@@ -65,7 +65,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="antialiased bg-white text-[#18181B] selection:bg-[#18181B] selection:text-white">
+      <body className="antialiased bg-white text-[#18181B] selection:bg-[#18181B] selection:text-white" suppressHydrationWarning>
         <StoreProvider>
           {children}
           <CartDrawer />

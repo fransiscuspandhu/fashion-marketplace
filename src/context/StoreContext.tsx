@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useState, useEffect } from "react";
 import {
   ProductItem,
   PRODUCTS_DATA,
@@ -944,19 +944,19 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   };
 
   // 1b. Admin Internal Auth & RBAC State (Admin Portal - Separated from Customer)
-  const [adminUser, setAdminUser] = useState<AdminUser | null>(() => {
-    if (typeof window !== "undefined") {
+  const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
+
+  // Synchronize admin session from localStorage after initial client mount to prevent SSR hydration mismatch
+  useEffect(() => {
+    try {
       const saved = localStorage.getItem("rahayu_admin_session");
       if (saved) {
-        try {
-          return JSON.parse(saved);
-        } catch (e) {
-          console.error("Failed to parse admin session", e);
-        }
+        setAdminUser(JSON.parse(saved));
       }
+    } catch (e) {
+      console.error("Failed to parse admin session", e);
     }
-    return null;
-  });
+  }, []);
 
   const isAdminLoggedIn = !!adminUser;
 

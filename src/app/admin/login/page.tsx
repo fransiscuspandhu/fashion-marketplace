@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, Suspense } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -39,6 +39,7 @@ function AdminLoginContent() {
 
   const { adminUser, isAdminLoggedIn, adminLogin, adminLogout, adminSwitchRole } = useStore();
 
+  const [isMounted, setIsMounted] = useState(false);
   const [selectedRole, setSelectedRole] = useState<AdminRole>("SUPER_ADMIN");
   const [email, setEmail] = useState("owner@rahayufashion.id");
   const [password, setPassword] = useState("Rahayu#Admin2026");
@@ -47,8 +48,12 @@ function AdminLoginContent() {
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<"quick_roles" | "custom_form">("quick_roles");
 
-  // If already logged in, show session state with options
-  if (isAdminLoggedIn && adminUser) {
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // If already logged in, show session state with options (gated by isMounted to avoid SSR hydration mismatch)
+  if (isMounted && isAdminLoggedIn && adminUser) {
     const roleConfig = ADMIN_ROLES_CONFIG[adminUser.role];
     return (
       <div className="max-w-xl mx-auto my-12 p-8 bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl text-white">

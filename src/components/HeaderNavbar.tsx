@@ -53,9 +53,14 @@ export default function HeaderNavbar({
     orders,
   } = useStore();
 
+  const [isMounted, setIsMounted] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isMegaMenuOpen, setIsMegaMenuOpen] = useState(false);
   const [localSearch, setLocalSearch] = useState(searchQuery);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     setLocalSearch(searchQuery);
@@ -117,7 +122,7 @@ export default function HeaderNavbar({
             {process.env.NEXT_PUBLIC_SHOW_DEMO_CONNECTOR !== "false" && (
               <>
                 <span className="text-zinc-700">|</span>
-                {isAdminLoggedIn && adminUser ? (
+                {isMounted && isAdminLoggedIn && adminUser ? (
                   <Link
                     href="/admin"
                     className="inline-flex items-center gap-1.5 text-amber-300 hover:text-amber-200 font-semibold transition-colors"
