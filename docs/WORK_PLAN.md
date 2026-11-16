@@ -150,3 +150,85 @@ flowchart TD
 7. **Pusat Fitur AI & Switchboard Lepas-Pasang**: 5 fitur AI modular non-mandatory (Smart Size Recommender, Virtual Stylist Chatbot, Auto-Copywriting SEO, Demand & Seasonal Forecast, Model Photoshoot Studio di form produk, serta arsip riwayat render).
 8. **SEO CMS & Live TikTok**: Konfigurasi meta SEO, silo keywords, Schema.org ClothingStore, tautan medsos resmi, dan jadwal live TikTok.
 9. **Tata Letak & Section Beranda**: Pengaturan teks hero banner, custom background uploader, slider opacity, kontrol visibilitas section beranda, dan 4 kartu USP.
+
+---
+
+## 6. Spesifikasi 5 Fitur AI Modular & Contoh Kasus Nyata
+
+```mermaid
+flowchart TD
+    SW["🎛️ AI Modular Switchboard (Admin Panel)"]
+    SW --> |enableSmartSize| F1["1. AI Smart Size & Fit (Frontstore PDP)"]
+    SW --> |enableVirtualStylist| F2["2. AI Virtual Stylist Chat (Frontstore Widget)"]
+    SW --> |enableAutoCopywriter| F3["3. AI Auto-Copywriting & SEO (Admin CRUD Produk)"]
+    SW --> |enableDemandForecast| F4["4. AI Demand & Inventory Forecast (Admin Dashboard)"]
+    SW --> |enableModelPhotoshoot| F5["5. AI Fashion Model Photoshoot Studio (Admin)"]
+```
+
+### 1. AI Smart Size & Fit Recommender
+* **Lokasi Fitur:** Halaman Detail Produk (PDP Modal di Webfront & Mobile).
+* **Tujuan & Manfaat:** Mengatasi keraguan pembeli dalam memilih ukuran baju online, meningkatkan konversi penjualan (*checkout conversion*), dan menekan angka retur baju hingga 40%.
+* **Mekanisme Lepas-Pasang:** Saklar `enableSmartSize` di admin. Jika dimatikan, tombol AI disembunyikan sepenuhnya.
+* **Contoh Kasus Nyata:**
+  * **Input Pelanggan:** Tinggi Badan: `162 cm`, Berat Badan: `58 kg`, Gaya: `Loose / Syar'i`.
+  * **Output AI ke Pelanggan:**
+    > **Rekomendasi AI: Ukuran L (Tingkat Kecocokan 94%)**  
+    > *"Proporsi lingkar dada longgar dan panjang baju jatuh tepat di atas mata kaki, memberikan ruang gerak syar'i yang anggun dan tidak menjiplak bentuk tubuh."*  
+    > *(Tersedia tombol satu-klik "Pilih Ukuran L" yang langsung memilih ukuran tersebut).*
+
+### 2. AI Virtual Stylist & Outfit Matcher ("Tanya Stylist Rahayu")
+* **Lokasi Fitur:** *Floating Action Button* di pojok kanan bawah seluruh halaman publik Webfront.
+* **Tujuan & Manfaat:** Menjadi asisten belanja personal ramah muslimah yang memberikan saran padu padan warna jilbab, gamis, dan aksesoris, sehingga meningkatkan nilai transaksi belanja (*cross-selling*).
+* **Mekanisme Lepas-Pasang:** Saklar `enableVirtualStylist` di admin. Jika dimatikan, widget tidak dimuat di browser.
+* **Contoh Kasus Nyata:**
+  * **Input Pelanggan:** *"Sis, aku mau beli Gamis Silk Lilac, bagusnya dipadukan sama jilbab warna apa ya untuk kondangan siang?"*
+  * **Output AI ke Pelanggan:**
+    > *"Assalamu'alaikum Sis! ✨ Untuk nuansa **Gamis Silk Lilac**, padanan terbaik adalah jilbab warna **Muted Khaki, Dusty Rose, atau Broken White**. Warna-warna ini memberikan kontras lembut yang anggun tanpa membuat tampilan terlihat mencolok di siang hari. Ini koleksi jilbab silk dan voal yang sangat serasi:"*  
+    > *(Menampilkan 2 kartu produk jilbab terkait lengkap dengan foto, harga, dan tombol `+ Beli` langsung ke keranjang).*
+
+### 3. AI Auto-Copywriting & Tagging SEO
+* **Lokasi Fitur:** Formulir Tambah & Edit Produk Admin (`src/app/admin/page.tsx`).
+* **Tujuan & Manfaat:** Membantu admin menyusun deskripsi produk yang puitis, persuasif, memiliki spesifikasi standar butik, serta ramah mesin pencari Google dan algoritma media sosial (TikTok/Instagram) dalam hitungan 3 detik.
+* **Mekanisme Lepas-Pasang:** Saklar `enableAutoCopywriter` di admin. Jika dimatikan, admin mengetik deskripsi secara manual.
+* **Contoh Kasus Nyata:**
+  * **Input Data Produk:** Nama Produk: `Amira Armani Silk Pleated Tunic`, Kategori: `Atasan Muslim Wanita`.
+  * **Output AI ke Formulir Admin:**
+    ```text
+    Amira Armani Silk Pleated Tunic dirancang khusus untuk wanita muslimah modern yang mengutamakan keanggunan, kenyamanan, dan nilai kesopanan syar'i. Dibuat dengan siluet jatuh (flowy) yang elegan dan tidak menjiplak lekuk tubuh.
+
+    Keunggulan & Spesifikasi:
+    • Material Utama: Premium High-Grade Fabric bertekstur halus, adem, menyerap keringat, dan tidak menerawang.
+    • Akses Resleting: Resleting depan tersembunyi (Busui Friendly) yang praktis dan rapi.
+    • Desain Lengan: Manset elastis manis (Wudhu Friendly) yang mudah dinaikkan saat berwudhu.
+    • Fitur Tambahan: Saku samping fungsional kanan-kiri yang tersembunyi rapi.
+    • Rekomendasi Pemakaian: Ideal untuk busana kondangan, pesta keluarga, pengajian formal, hingga daily modest look.
+
+    Petunjuk Perawatan:
+    Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pakaian, jemur di tempat teduh, dan setrika dengan suhu sedang untuk menjaga kelembutan serat kain.
+
+    #RahayuFashion #AtasanMuslimWanita #BusanaMuslimah #ModestOOTD #BusuiFriendly #HijabChic
+    ```
+
+### 4. AI Demand & Seasonal Inventory Forecast
+* **Lokasi Fitur:** Dashboard Analisa Admin (`/admin` ➔ Modul Analisa).
+* **Tujuan & Manfaat:** Mencegah terjadinya *stockout* (kehabisan stok produk laris saat live/promo) dan *overstock* (modal tertahan pada produk lambat laku) dengan analisis prediksi musiman.
+* **Mekanisme Lepas-Pasang:** Saklar `enableDemandForecast` di admin.
+* **Contoh Kasus Nyata:**
+  * **Analisis Data Penjualan:** Data historis mendeteksi kecepatan checkout rata-rata 12 pcs/hari pada SKU Gamis, sementara stok tersisa hanya 14 pcs. Periode berada di H-20 menjelang musim Ramadhan.
+  * **Output AI di Dashboard Admin:**
+    > **Prediksi Lonjakan Musim Ramadhan:** Diproyeksikan terjadi lonjakan pesanan **+185%** dalam 2–3 minggu ke depan. Disarankan menaikkan *safety stock* minimal **2.5× lipat**.  
+    > **Risiko Kehabisan Stok (< 20 Pcs):**  
+    > • *Gamis Silk Lilac* — Sisa 14 pcs: **Diprediksi habis dalam 24–36 jam!**  
+    > • *Tunik Royal Plum* — Sisa 8 pcs: **Diprediksi habis dalam 8 jam!**  
+    > *(Tersedia tombol satu-klik "Ajukan PO Restock Otomatis (+50 Semua SKU Kritis)" untuk menambah kuota stok).*
+
+### 5. AI Fashion Model Photoshoot Studio
+* **Lokasi Fitur:** Terintegrasi langsung di Formulir Tambah & Edit Produk (CRUD Produk) pada tab *"✨ Buat dengan AI"* serta arsip riwayat render di menu *"Pusat Fitur AI & Switchboard"*.
+* **Tujuan & Manfaat:** Menghasilkan foto katalog *on-model* berkualitas editorial profesional langsung dari foto pakaian mentah (*flatlay* lantai atau manekin gantung), menghemat 90% biaya sewa studio dan model foto jutaan rupiah.
+* **Mekanisme Lepas-Pasang:** Saklar `enableModelPhotoshoot` di admin. Jika dimatikan, admin mengunggah foto manual ke server lokal.
+* **Contoh Kasus Nyata (5-Step Wizard):**
+  1. *Langkah 1 (Upload Raw):* Admin mengunggah foto baju gamis di atas hanger.
+  2. *Langkah 2 (Pilih Persona):* Admin memilih model *"Wanita Hijabi Modest Editorial"*.
+  3. *Langkah 3 (Pilih Tone & Lighting):* Admin memilih nuansa *"Warm Sunlight Golden Hour"*.
+  4. *Langkah 4 (Generate & Preview):* Sistem AI menghasilkan visual foto model muslimah mengenakan gamis tersebut dengan proporsi tubuh natural dan pencahayaan studio komersial.
+  5. *Langkah 5 (Terapkan):* Tombol *"Gunakan Foto Hasil AI Ini"* langsung memasang foto tersebut ke katalog produk yang sedang diedit.
