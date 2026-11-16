@@ -252,22 +252,24 @@ function LoginForm() {
         </button>
       </form>
 
-      {/* Distinction banner: Internal Staff Admin Portal */}
-      <div className="mt-6 p-4 rounded-xl bg-purple-50/80 border border-purple-200 text-center">
-        <p className="text-xs text-zinc-700 font-semibold mb-1">
-          🔐 Anda Karyawan, Staf Gudang, atau Mitra Internal?
-        </p>
-        <p className="text-[11px] text-zinc-500 mb-2.5">
-          Halaman ini khusus akun pelanggan webfront. Untuk mengelola pesanan, stok, atau input resi kurir, silakan masuk ke Portal Internal.
-        </p>
-        <Link
-          href="/admin/login"
-          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-zinc-900 hover:bg-purple-900 text-white text-xs font-bold transition shadow-xs"
-        >
-          <span>Masuk ke Portal Internal Admin & Gudang</span>
-          <ArrowRight className="w-3.5 h-3.5" />
-        </Link>
-      </div>
+      {/* Distinction banner: Internal Staff Admin Portal (Demo Connector Toggle) */}
+      {process.env.NEXT_PUBLIC_SHOW_DEMO_CONNECTOR !== "false" && (
+        <div className="mt-6 p-4 rounded-xl bg-purple-50/80 border border-purple-200 text-center">
+          <p className="text-xs text-zinc-700 font-semibold mb-1">
+            🔐 Anda Karyawan, Staf Gudang, atau Mitra Internal?
+          </p>
+          <p className="text-[11px] text-zinc-500 mb-2.5">
+            Halaman ini khusus akun pelanggan webfront. Untuk mengelola pesanan, stok, atau input resi kurir, silakan masuk ke Portal Internal.
+          </p>
+          <Link
+            href="/admin/login"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-zinc-900 hover:bg-purple-900 text-white text-xs font-bold transition shadow-xs"
+          >
+            <span>Masuk ke Portal Internal Admin & Gudang</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+      )}
 
       {/* Security Guarantee */}
       <div className="mt-6 pt-5 border-t border-zinc-200 flex items-center justify-center gap-2 text-zinc-400 text-[11px]">
