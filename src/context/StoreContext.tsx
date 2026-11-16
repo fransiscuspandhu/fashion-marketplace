@@ -169,8 +169,182 @@ export interface HomepageSectionConfig {
   };
 }
 
+export type AdminRole =
+  | "SUPER_ADMIN"
+  | "PRODUCT_MANAGER"
+  | "ORDER_FULFILLMENT"
+  | "MARKETING_STREAMER"
+  | "FINANCE_OPS";
+
+export type AdminModuleId =
+  | "analytics"
+  | "categories"
+  | "products"
+  | "orders"
+  | "payments"
+  | "promos"
+  | "ai-studio"
+  | "cms-seo"
+  | "layout";
+
+export interface AdminRoleConfig {
+  role: AdminRole;
+  label: string;
+  badgeColor: string;
+  badgeBg: string;
+  badgeBorder: string;
+  department: string;
+  description: string;
+  allowedModules: AdminModuleId[];
+  defaultEmail: string;
+  defaultName: string;
+  defaultPhone: string;
+}
+
+export interface AdminUser {
+  id: string;
+  name: string;
+  email: string;
+  role: AdminRole;
+  avatarUrl?: string;
+  department: string;
+  lastLogin: string;
+  phone?: string;
+}
+
+export const ADMIN_ROLES_CONFIG: Record<AdminRole, AdminRoleConfig> = {
+  SUPER_ADMIN: {
+    role: "SUPER_ADMIN",
+    label: "Super Admin (Owner)",
+    badgeColor: "text-purple-800",
+    badgeBg: "bg-purple-100",
+    badgeBorder: "border-purple-300",
+    department: "Executive & Ownership",
+    description: "Akses penuh tanpa batas ke seluruh 9 modul sistem, switchboard AI, finansial, dan audit log.",
+    allowedModules: [
+      "analytics",
+      "categories",
+      "products",
+      "orders",
+      "payments",
+      "promos",
+      "ai-studio",
+      "cms-seo",
+      "layout",
+    ],
+    defaultEmail: "owner@rahayufashion.id",
+    defaultName: "Hj. Rahayu Kusuma (Owner)",
+    defaultPhone: "0811-9988-7766",
+  },
+  PRODUCT_MANAGER: {
+    role: "PRODUCT_MANAGER",
+    label: "Product & Merchandiser",
+    badgeColor: "text-blue-800",
+    badgeBg: "bg-blue-100",
+    badgeBorder: "border-blue-300",
+    department: "Merchandising & Katalog",
+    description: "Manajemen katalog produk, upload foto studio AI, asisten copywriting, kategori dinamis, dan promo flash sale.",
+    allowedModules: ["analytics", "categories", "products", "promos", "ai-studio"],
+    defaultEmail: "merchandiser@rahayufashion.id",
+    defaultName: "Dewi Lestari (Product Lead)",
+    defaultPhone: "0812-3344-5566",
+  },
+  ORDER_FULFILLMENT: {
+    role: "ORDER_FULFILLMENT",
+    label: "Gudang & Fulfillment (Resi AWB)",
+    badgeColor: "text-emerald-800",
+    badgeBg: "bg-emerald-100",
+    badgeBorder: "border-emerald-300",
+    department: "Logistik & Ekspedisi",
+    description: "Pemrosesan pesanan masuk, cetak label pengiriman, input nomor resi kurir (AWB), dan monitor stok gudang.",
+    allowedModules: ["analytics", "products", "orders"],
+    defaultEmail: "gudang@rahayufashion.id",
+    defaultName: "Budi Santoso (Kepala Gudang)",
+    defaultPhone: "0813-7788-9900",
+  },
+  MARKETING_STREAMER: {
+    role: "MARKETING_STREAMER",
+    label: "Marketing & TikTok Live",
+    badgeColor: "text-pink-800",
+    badgeBg: "bg-pink-100",
+    badgeBorder: "border-pink-300",
+    department: "Digital Marketing & Live Show",
+    description: "Penjadwalan siaran TikTok Live, pengaturan banner hero beranda, SEO keywords, dan kode voucher promo.",
+    allowedModules: ["analytics", "promos", "cms-seo", "layout"],
+    defaultEmail: "marketing@rahayufashion.id",
+    defaultName: "Annisa Putri (Host & Marketing)",
+    defaultPhone: "0815-1122-3344",
+  },
+  FINANCE_OPS: {
+    role: "FINANCE_OPS",
+    label: "Finance & Accounting",
+    badgeColor: "text-amber-800",
+    badgeBg: "bg-amber-100",
+    badgeBorder: "border-amber-300",
+    department: "Keuangan & Rekonsiliasi",
+    description: "Pengaturan payment gateway, rekening/VA/QRIS, analisa omzet, dan verifikasi manual transaksi.",
+    allowedModules: ["analytics", "orders", "payments"],
+    defaultEmail: "finance@rahayufashion.id",
+    defaultName: "Hendra Wijaya (Finance Ops)",
+    defaultPhone: "0819-5566-7788",
+  },
+};
+
+export const DEMO_ADMIN_ACCOUNTS: AdminUser[] = [
+  {
+    id: "ADM-001",
+    name: "Hj. Rahayu Kusuma",
+    email: "owner@rahayufashion.id",
+    role: "SUPER_ADMIN",
+    department: "Executive & Ownership",
+    lastLogin: "Hari ini, 09:15 WIB",
+    phone: "0811-9988-7766",
+    avatarUrl: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80",
+  },
+  {
+    id: "ADM-002",
+    name: "Dewi Lestari",
+    email: "merchandiser@rahayufashion.id",
+    role: "PRODUCT_MANAGER",
+    department: "Merchandising & Katalog",
+    lastLogin: "Hari ini, 08:40 WIB",
+    phone: "0812-3344-5566",
+    avatarUrl: "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=200&q=80",
+  },
+  {
+    id: "ADM-003",
+    name: "Budi Santoso",
+    email: "gudang@rahayufashion.id",
+    role: "ORDER_FULFILLMENT",
+    department: "Logistik & Ekspedisi",
+    lastLogin: "Hari ini, 07:30 WIB",
+    phone: "0813-7788-9900",
+    avatarUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80",
+  },
+  {
+    id: "ADM-004",
+    name: "Annisa Putri",
+    email: "marketing@rahayufashion.id",
+    role: "MARKETING_STREAMER",
+    department: "Digital Marketing & Live Show",
+    lastLogin: "Kemarin, 19:45 WIB",
+    phone: "0815-1122-3344",
+    avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80",
+  },
+  {
+    id: "ADM-005",
+    name: "Hendra Wijaya",
+    email: "finance@rahayufashion.id",
+    role: "FINANCE_OPS",
+    department: "Keuangan & Rekonsiliasi",
+    lastLogin: "Kemarin, 17:10 WIB",
+    phone: "0819-5566-7788",
+    avatarUrl: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80",
+  },
+];
+
 interface StoreContextType {
-  // Auth & Profile
+  // Customer Auth & Profile (Frontweb Store)
   user: CustomerUser | null;
   isLoggedIn: boolean;
   login: (email: string, name?: string) => void;
@@ -180,6 +354,13 @@ interface StoreContextType {
   updateAddress: (addressId: string, updated: Partial<CustomerAddress>) => void;
   setDefaultAddress: (addressId: string) => void;
   deleteAddress: (addressId: string) => void;
+
+  // Admin Internal Auth & RBAC Roles (Admin Portal)
+  adminUser: AdminUser | null;
+  isAdminLoggedIn: boolean;
+  adminLogin: (email: string, password?: string, role?: AdminRole) => boolean;
+  adminSwitchRole: (newRole: AdminRole) => void;
+  adminLogout: () => void;
 
   // Cart
   cart: CartItem[];
@@ -713,7 +894,7 @@ const INITIAL_HOMEPAGE_CONFIG: HomepageSectionConfig = {
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
-  // 1. Auth & Profile State
+  // 1. Customer Auth & Profile State (Frontstore)
   const [user, setUser] = useState<CustomerUser | null>(DEFAULT_USER);
   const isLoggedIn = !!user;
 
@@ -760,6 +941,80 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     if (!user) return;
     const newAddresses = user.addresses.filter((a) => a.id !== addressId);
     setUser({ ...user, addresses: newAddresses });
+  };
+
+  // 1b. Admin Internal Auth & RBAC State (Admin Portal - Separated from Customer)
+  const [adminUser, setAdminUser] = useState<AdminUser | null>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("rahayu_admin_session");
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) {
+          console.error("Failed to parse admin session", e);
+        }
+      }
+    }
+    return null;
+  });
+
+  const isAdminLoggedIn = !!adminUser;
+
+  const adminLogin = (email: string, password?: string, role?: AdminRole): boolean => {
+    // Check if email matches any demo account
+    const matched = DEMO_ADMIN_ACCOUNTS.find(
+      (acc) =>
+        acc.email.toLowerCase() === email.toLowerCase() ||
+        (role && acc.role === role)
+    );
+    const selectedRole: AdminRole = role || (matched ? matched.role : "SUPER_ADMIN");
+    const roleConfig = ADMIN_ROLES_CONFIG[selectedRole];
+
+    const loggedUser: AdminUser = matched
+      ? { ...matched, lastLogin: "Baru saja" }
+      : {
+          id: `ADM-${Date.now().toString().slice(-4)}`,
+          name: email.split("@")[0].toUpperCase(),
+          email,
+          role: selectedRole,
+          department: roleConfig.department,
+          lastLogin: "Baru saja",
+          avatarUrl: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80",
+          phone: "0812-3456-7890",
+        };
+
+    setAdminUser(loggedUser);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("rahayu_admin_session", JSON.stringify(loggedUser));
+    }
+    return true;
+  };
+
+  const adminSwitchRole = (newRole: AdminRole) => {
+    const demo = DEMO_ADMIN_ACCOUNTS.find((d) => d.role === newRole);
+    const roleConfig = ADMIN_ROLES_CONFIG[newRole];
+    const updated: AdminUser = demo
+      ? { ...demo, lastLogin: "Baru saja (Switch Role)" }
+      : {
+          id: adminUser?.id || "ADM-SW",
+          name: adminUser?.name || "Admin Staff",
+          email: adminUser?.email || roleConfig.defaultEmail,
+          role: newRole,
+          department: roleConfig.department,
+          lastLogin: "Baru saja (Switch Role)",
+          avatarUrl: adminUser?.avatarUrl,
+        };
+    setAdminUser(updated);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("rahayu_admin_session", JSON.stringify(updated));
+    }
+  };
+
+  const adminLogout = () => {
+    setAdminUser(null);
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("rahayu_admin_session");
+    }
   };
 
   // 2. Products State (CRUD & Stock)
@@ -1116,6 +1371,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         updateAddress,
         setDefaultAddress,
         deleteAddress,
+        adminUser,
+        isAdminLoggedIn,
+        adminLogin,
+        adminSwitchRole,
+        adminLogout,
         products,
         addProduct,
         updateProduct,

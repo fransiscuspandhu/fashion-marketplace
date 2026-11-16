@@ -19,7 +19,7 @@ import {
   Star,
   Grid,
 } from "lucide-react";
-import { useStore } from "@/context/StoreContext";
+import { useStore, ADMIN_ROLES_CONFIG } from "@/context/StoreContext";
 
 interface HeaderNavbarProps {
   selectedCategory?: string;
@@ -42,6 +42,8 @@ export default function HeaderNavbar({
     user,
     isLoggedIn,
     logout,
+    adminUser,
+    isAdminLoggedIn,
     cartCount,
     openCartDrawer,
     isLiveActive,
@@ -113,14 +115,28 @@ export default function HeaderNavbar({
 
             <span className="text-zinc-700">|</span>
 
-            {/* Quick Link to Control Panel Admin */}
-            <Link
-              href="/admin"
-              className="inline-flex items-center gap-1.5 text-amber-300 hover:text-amber-200 font-semibold transition-colors"
-            >
-              <LayoutDashboard className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Control Panel</span> Admin
-            </Link>
+            {/* Separate Admin Access Link */}
+            {isAdminLoggedIn && adminUser ? (
+              <Link
+                href="/admin"
+                className="inline-flex items-center gap-1.5 text-amber-300 hover:text-amber-200 font-semibold transition-colors"
+              >
+                <LayoutDashboard className="w-3.5 h-3.5 text-amber-400" />
+                <span>Portal Admin</span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-400/20 text-amber-300 font-bold border border-amber-400/40 hidden sm:inline">
+                  {ADMIN_ROLES_CONFIG[adminUser.role]?.label.split(" ")[0] || "Staff"}
+                </span>
+              </Link>
+            ) : (
+              <Link
+                href="/admin/login"
+                className="inline-flex items-center gap-1.5 text-zinc-400 hover:text-amber-300 font-medium transition-colors"
+                title="Akses Portal Khusus Karyawan & Gudang"
+              >
+                <LayoutDashboard className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Portal</span> Admin
+              </Link>
+            )}
           </div>
         </div>
       </div>

@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   TrendingUp,
   DollarSign,
@@ -52,18 +53,32 @@ import {
   Camera,
   Wand2,
   Ruler,
+  Lock,
+  LogOut,
+  UserCheck,
+  ShieldAlert,
+  ArrowLeft,
 } from "lucide-react";
 import {
   useStore,
   OrderStatus,
   PaymentConfig,
   HomepageSectionConfig,
+  AdminRole,
+  AdminModuleId,
+  ADMIN_ROLES_CONFIG,
+  DEMO_ADMIN_ACCOUNTS,
 } from "@/context/StoreContext";
 import { ProductItem, RahayuCategory, MarketplacePillar } from "@/data/mock-data";
 import ImageUploader from "@/components/ImageUploader";
 
 export default function AdminPage() {
+  const router = useRouter();
   const {
+    adminUser,
+    isAdminLoggedIn,
+    adminLogout,
+    adminSwitchRole,
     products,
     addProduct,
     updateProduct,
@@ -97,17 +112,36 @@ export default function AdminPage() {
     generateAiPhoto,
   } = useStore();
 
-  const [activeModule, setActiveModule] = useState<
-    | "analytics"
-    | "categories"
-    | "products"
-    | "orders"
-    | "payments"
-    | "promos"
-    | "ai-studio"
-    | "cms-seo"
-    | "layout"
-  >("analytics");
+  const [isMounted, setIsMounted] = useState(false);
+  const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
+  const [lockedModuleNotice, setLockedModuleNotice] = useState<{
+    moduleId: AdminModuleId;
+    moduleName: string;
+    requiredRole: string;
+  } | null>(null);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Auth gate: redirect to /admin/login if not authenticated
+  useEffect(() => {
+    if (isMounted && !isAdminLoggedIn) {
+      router.push("/admin/login");
+    }
+  }, [isMounted, isAdminLoggedIn, router]);
+
+  const [activeModule, setActiveModule] = useState<AdminModuleId>("analytics");
+
+  // Adjust activeModule if switching to a role that does not have access
+  useEffect(() => {
+    if (adminUser) {
+      const allowed = ADMIN_ROLES_CONFIG[adminUser.role]?.allowedModules || [];
+      if (!allowed.includes(activeModule) && allowed.length > 0) {
+        setActiveModule(allowed[0]);
+      }
+    }
+  }, [adminUser, activeModule]);
 
   // Pillar Management State (Kelompok Kategori Dinamis tanpa kata "Pilar")
   const [isPillarModalOpen, setIsPillarModalOpen] = useState(false);
@@ -560,6 +594,42 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
     }
   };
 
+  // Auth gate check
+  if (!isMounted || !isAdminLoggedIn || !adminUser) {
+    return (
+      <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center p-6 text-white text-center">
+        <div className="w-14 h-14 rounded-2xl bg-purple-900/50 border border-purple-500/50 flex items-center justify-center mb-4 animate-pulse">
+          <Lock className="w-7 h-7 text-purple-400" />
+        </div>
+        <h2 className="text-xl font-bold mb-2">Memeriksa Izin Akses Admin Internal...</h2>
+        <p className="text-xs text-zinc-400 mb-6 max-w-sm">
+          Akses portal ini khusus untuk staf internal Rahayu Fashion Store. Jika Anda belum masuk, silakan login melalui portal internal.
+        </p>
+        <Link
+          href="/admin/login"
+          className="px-5 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 rounded-xl text-xs font-bold text-white transition shadow-lg shadow-purple-900/40"
+        >
+          Buka Halaman Login Admin Internal
+        </Link>
+      </div>
+    );
+  }
+
+  const currentRoleConfig = ADMIN_ROLES_CONFIG[adminUser.role] || ADMIN_ROLES_CONFIG.SUPER_ADMIN;
+  const isModuleAllowed = (mod: AdminModuleId) => currentRoleConfig.allowedModules.includes(mod);
+
+  const handleModuleClick = (mod: AdminModuleId, moduleName: string) => {
+    if (!isModuleAllowed(mod)) {
+      setLockedModuleNotice({
+        moduleId: mod,
+        moduleName,
+        requiredRole: mod === "payments" ? "Super Admin atau Finance" : "Super Admin",
+      });
+      return;
+    }
+    setActiveModule(mod);
+  };
+
   return (
     <div className="min-h-screen bg-zinc-100 flex flex-col text-zinc-900">
       {/* 1. Admin Topbar */}
@@ -574,12 +644,12 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
                 Rahayu Control Panel
               </span>
               <span className="text-[10px] text-zinc-400 block">
-                Internal Marketplace & Store Management (v4.0)
+                Internal Marketplace & Store Management (v4.2 RBAC)
               </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-4 text-xs">
+          <div className="flex items-center gap-3 sm:gap-4 text-xs">
             {/* Live TikTok Indicator */}
             <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-zinc-800 rounded-full border border-zinc-700">
               <span
@@ -604,13 +674,49 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
               <ExternalLink className="w-3.5 h-3.5" />
             </Link>
 
-            <div className="flex items-center gap-2 pl-2 border-l border-zinc-700">
-              <div className="w-7 h-7 rounded-full bg-zinc-700 flex items-center justify-center font-bold text-xs text-zinc-300">
-                O
+            {/* Staff profile with Role Badge, Switch Role button, and Logout button */}
+            <div className="flex items-center gap-2 pl-3 border-l border-zinc-700">
+              <div className="w-7 h-7 rounded-full overflow-hidden bg-purple-900 border border-purple-500 shrink-0">
+                {adminUser.avatarUrl ? (
+                  <img src={adminUser.avatarUrl} alt={adminUser.name} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center font-bold text-xs text-purple-200">
+                    {adminUser.name.charAt(0)}
+                  </div>
+                )}
               </div>
-              <span className="hidden md:inline text-xs font-medium text-zinc-300">
-                Owner Rahayu
-              </span>
+              <div className="hidden lg:block text-left">
+                <span className="text-xs font-bold text-white block leading-tight truncate max-w-[130px]">
+                  {adminUser.name}
+                </span>
+                <span className={`text-[10px] font-semibold px-1.5 py-0.2 rounded ${currentRoleConfig.badgeBg} ${currentRoleConfig.badgeColor}`}>
+                  {currentRoleConfig.label.split(" ")[0]}
+                </span>
+              </div>
+
+              {/* Role Switcher Button */}
+              <button
+                onClick={() => setIsRoleModalOpen(true)}
+                className="px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white border border-zinc-700 text-[11px] font-semibold flex items-center gap-1.5 transition cursor-pointer"
+                title="Ganti Peran / Role Akses Admin"
+              >
+                <UserCheck className="w-3.5 h-3.5 text-purple-400" />
+                <span className="hidden sm:inline">Ganti Role</span>
+              </button>
+
+              {/* Logout Button */}
+              <button
+                onClick={() => {
+                  if (confirm("Keluar dari Portal Admin Internal?")) {
+                    adminLogout();
+                    router.push("/admin/login");
+                  }
+                }}
+                className="p-1.5 rounded bg-zinc-800 hover:bg-rose-950/70 text-zinc-400 hover:text-rose-400 border border-zinc-700 hover:border-rose-800 transition cursor-pointer"
+                title="Keluar dari Akun Admin"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
             </div>
           </div>
         </div>
@@ -618,131 +724,236 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
 
       {/* 2. Admin Workspace Layout */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left Sidebar (8 Internal Modules) */}
+        {/* Left Sidebar (9 Internal Modules with RBAC) */}
         <aside className="w-64 bg-white border-r border-zinc-200 p-4 shrink-0 flex flex-col justify-between overflow-y-auto">
           <div className="space-y-1">
+            {/* Active Staff Role Card in Sidebar */}
+            <div className="p-3 mb-3 rounded-xl bg-purple-50/70 border border-purple-100">
+              <div className="flex items-center justify-between gap-1 mb-1">
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${currentRoleConfig.badgeBg} ${currentRoleConfig.badgeColor} ${currentRoleConfig.badgeBorder}`}>
+                  {currentRoleConfig.label}
+                </span>
+                <span className="text-[10px] text-zinc-500 font-mono font-semibold">
+                  {currentRoleConfig.allowedModules.length}/9 Modul
+                </span>
+              </div>
+              <p className="text-[11px] text-zinc-600 font-medium truncate">{adminUser.department}</p>
+            </div>
+
             <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 px-3 block mb-2">
               Menu Kontrol Marketplace
             </span>
 
+            {/* 1. Analytics & Dashboard */}
             <button
-              onClick={() => setActiveModule("analytics")}
-              className={`w-full text-left px-3 py-2.5 rounded-md text-xs font-semibold flex items-center gap-2.5 transition cursor-pointer ${
+              onClick={() => handleModuleClick("analytics", "Analisa & Dashboard")}
+              className={`w-full text-left px-3 py-2.5 rounded-md text-xs font-semibold flex items-center justify-between transition cursor-pointer ${
                 activeModule === "analytics"
                   ? "bg-purple-50 text-purple-800 border-l-4 border-purple-700 font-bold"
-                  : "text-zinc-600 hover:bg-zinc-100"
-              }`}
-            >
-              <TrendingUp className="w-4 h-4 text-purple-600" />
-              <span>Analisa & Dashboard</span>
-            </button>
-
-            <button
-              onClick={() => setActiveModule("categories")}
-              className={`w-full text-left px-3 py-2.5 rounded-md text-xs font-semibold flex items-center gap-2.5 transition cursor-pointer ${
-                activeModule === "categories"
-                  ? "bg-purple-50 text-purple-800 border-l-4 border-purple-700 font-bold"
-                  : "text-zinc-600 hover:bg-zinc-100"
-              }`}
-            >
-              <Layers className="w-4 h-4 text-purple-600" />
-              <span>Kategori & Ukuran Dinamis</span>
-            </button>
-
-            <button
-              onClick={() => setActiveModule("products")}
-              className={`w-full text-left px-3 py-2.5 rounded-md text-xs font-semibold flex items-center gap-2.5 transition cursor-pointer ${
-                activeModule === "products"
-                  ? "bg-purple-50 text-purple-800 border-l-4 border-purple-700 font-bold"
-                  : "text-zinc-600 hover:bg-zinc-100"
-              }`}
-            >
-              <Package className="w-4 h-4 text-purple-600" />
-              <span>Katalog & Video Singkat</span>
-            </button>
-
-            <button
-              onClick={() => setActiveModule("orders")}
-              className={`w-full text-left px-3 py-2.5 rounded-md text-xs font-semibold flex items-center justify-between transition cursor-pointer ${
-                activeModule === "orders"
-                  ? "bg-purple-50 text-purple-800 border-l-4 border-purple-700 font-bold"
-                  : "text-zinc-600 hover:bg-zinc-100"
+                  : isModuleAllowed("analytics")
+                  ? "text-zinc-600 hover:bg-zinc-100"
+                  : "text-zinc-400 bg-zinc-50/60 opacity-60"
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <Truck className="w-4 h-4 text-purple-600" />
-                <span>Pesanan & No. Resi</span>
+                <TrendingUp className={`w-4 h-4 ${isModuleAllowed("analytics") ? "text-purple-600" : "text-zinc-400"}`} />
+                <span>Analisa & Dashboard</span>
               </div>
-              {orders.length > 0 && (
-                <span className="px-1.5 py-0.2 rounded-full bg-purple-100 text-purple-800 text-[10px] font-bold">
-                  {orders.length}
+              {!isModuleAllowed("analytics") && <Lock className="w-3 h-3 text-zinc-400" />}
+            </button>
+
+            {/* 2. Categories */}
+            <button
+              onClick={() => handleModuleClick("categories", "Kategori & Ukuran Dinamis")}
+              className={`w-full text-left px-3 py-2.5 rounded-md text-xs font-semibold flex items-center justify-between transition cursor-pointer ${
+                activeModule === "categories"
+                  ? "bg-purple-50 text-purple-800 border-l-4 border-purple-700 font-bold"
+                  : isModuleAllowed("categories")
+                  ? "text-zinc-600 hover:bg-zinc-100"
+                  : "text-zinc-400 bg-zinc-50/60 opacity-60"
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <Layers className={`w-4 h-4 ${isModuleAllowed("categories") ? "text-purple-600" : "text-zinc-400"}`} />
+                <span>Kategori & Ukuran</span>
+              </div>
+              {!isModuleAllowed("categories") && (
+                <span className="flex items-center gap-1 text-[10px] text-zinc-400">
+                  <Lock className="w-2.5 h-2.5" />
+                  <span>Kunci</span>
                 </span>
               )}
             </button>
 
+            {/* 3. Products */}
             <button
-              onClick={() => setActiveModule("payments")}
-              className={`w-full text-left px-3 py-2.5 rounded-md text-xs font-semibold flex items-center gap-2.5 transition cursor-pointer ${
-                activeModule === "payments"
-                  ? "bg-purple-50 text-purple-800 border-l-4 border-purple-700 font-bold"
-                  : "text-zinc-600 hover:bg-zinc-100"
-              }`}
-            >
-              <CreditCard className="w-4 h-4 text-purple-600" />
-              <span>Payment Gateway</span>
-            </button>
-
-            <button
-              onClick={() => setActiveModule("promos")}
-              className={`w-full text-left px-3 py-2.5 rounded-md text-xs font-semibold flex items-center gap-2.5 transition cursor-pointer ${
-                activeModule === "promos"
-                  ? "bg-purple-50 text-purple-800 border-l-4 border-purple-700 font-bold"
-                  : "text-zinc-600 hover:bg-zinc-100"
-              }`}
-            >
-              <Percent className="w-4 h-4 text-purple-600" />
-              <span>Promo & Highlight Badges</span>
-            </button>
-
-            <button
-              onClick={() => setActiveModule("ai-studio")}
+              onClick={() => handleModuleClick("products", "Katalog & Video Singkat")}
               className={`w-full text-left px-3 py-2.5 rounded-md text-xs font-semibold flex items-center justify-between transition cursor-pointer ${
-                activeModule === "ai-studio"
+                activeModule === "products"
                   ? "bg-purple-50 text-purple-800 border-l-4 border-purple-700 font-bold"
-                  : "text-zinc-600 hover:bg-zinc-100"
+                  : isModuleAllowed("products")
+                  ? "text-zinc-600 hover:bg-zinc-100"
+                  : "text-zinc-400 bg-zinc-50/60 opacity-60"
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <Sparkles className="w-4 h-4 text-purple-600" />
-                <span>Pusat Fitur AI & Switchboard</span>
+                <Package className={`w-4 h-4 ${isModuleAllowed("products") ? "text-purple-600" : "text-zinc-400"}`} />
+                <span>Katalog & Video PDP</span>
               </div>
-              <span className="text-[10px] text-purple-700 font-bold bg-purple-100 px-1.5 py-0.5 rounded">
-                Modular
-              </span>
+              {!isModuleAllowed("products") && (
+                <span className="flex items-center gap-1 text-[10px] text-zinc-400">
+                  <Lock className="w-2.5 h-2.5" />
+                  <span>Kunci</span>
+                </span>
+              )}
             </button>
 
+            {/* 4. Orders */}
             <button
-              onClick={() => setActiveModule("cms-seo")}
-              className={`w-full text-left px-3 py-2.5 rounded-md text-xs font-semibold flex items-center gap-2.5 transition cursor-pointer ${
+              onClick={() => handleModuleClick("orders", "Pesanan & No. Resi (AWB)")}
+              className={`w-full text-left px-3 py-2.5 rounded-md text-xs font-semibold flex items-center justify-between transition cursor-pointer ${
+                activeModule === "orders"
+                  ? "bg-purple-50 text-purple-800 border-l-4 border-purple-700 font-bold"
+                  : isModuleAllowed("orders")
+                  ? "text-zinc-600 hover:bg-zinc-100"
+                  : "text-zinc-400 bg-zinc-50/60 opacity-60"
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <Truck className={`w-4 h-4 ${isModuleAllowed("orders") ? "text-purple-600" : "text-zinc-400"}`} />
+                <span>Pesanan & No. Resi</span>
+              </div>
+              {isModuleAllowed("orders") ? (
+                orders.length > 0 && (
+                  <span className="px-1.5 py-0.2 rounded-full bg-purple-100 text-purple-800 text-[10px] font-bold">
+                    {orders.length}
+                  </span>
+                )
+              ) : (
+                <span className="flex items-center gap-1 text-[10px] text-zinc-400">
+                  <Lock className="w-2.5 h-2.5" />
+                  <span>Kunci</span>
+                </span>
+              )}
+            </button>
+
+            {/* 5. Payments */}
+            <button
+              onClick={() => handleModuleClick("payments", "Payment Gateway Control Panel")}
+              className={`w-full text-left px-3 py-2.5 rounded-md text-xs font-semibold flex items-center justify-between transition cursor-pointer ${
+                activeModule === "payments"
+                  ? "bg-purple-50 text-purple-800 border-l-4 border-purple-700 font-bold"
+                  : isModuleAllowed("payments")
+                  ? "text-zinc-600 hover:bg-zinc-100"
+                  : "text-zinc-400 bg-zinc-50/60 opacity-60"
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <CreditCard className={`w-4 h-4 ${isModuleAllowed("payments") ? "text-purple-600" : "text-zinc-400"}`} />
+                <span>Payment Gateway</span>
+              </div>
+              {!isModuleAllowed("payments") && (
+                <span className="flex items-center gap-1 text-[10px] text-zinc-400">
+                  <Lock className="w-2.5 h-2.5" />
+                  <span>Kunci</span>
+                </span>
+              )}
+            </button>
+
+            {/* 6. Promos */}
+            <button
+              onClick={() => handleModuleClick("promos", "Promo & Highlight Badges")}
+              className={`w-full text-left px-3 py-2.5 rounded-md text-xs font-semibold flex items-center justify-between transition cursor-pointer ${
+                activeModule === "promos"
+                  ? "bg-purple-50 text-purple-800 border-l-4 border-purple-700 font-bold"
+                  : isModuleAllowed("promos")
+                  ? "text-zinc-600 hover:bg-zinc-100"
+                  : "text-zinc-400 bg-zinc-50/60 opacity-60"
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <Percent className={`w-4 h-4 ${isModuleAllowed("promos") ? "text-purple-600" : "text-zinc-400"}`} />
+                <span>Promo & Flash Sale</span>
+              </div>
+              {!isModuleAllowed("promos") && (
+                <span className="flex items-center gap-1 text-[10px] text-zinc-400">
+                  <Lock className="w-2.5 h-2.5" />
+                  <span>Kunci</span>
+                </span>
+              )}
+            </button>
+
+            {/* 7. AI Studio */}
+            <button
+              onClick={() => handleModuleClick("ai-studio", "Pusat Fitur AI & Switchboard")}
+              className={`w-full text-left px-3 py-2.5 rounded-md text-xs font-semibold flex items-center justify-between transition cursor-pointer ${
+                activeModule === "ai-studio"
+                  ? "bg-purple-50 text-purple-800 border-l-4 border-purple-700 font-bold"
+                  : isModuleAllowed("ai-studio")
+                  ? "text-zinc-600 hover:bg-zinc-100"
+                  : "text-zinc-400 bg-zinc-50/60 opacity-60"
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <Sparkles className={`w-4 h-4 ${isModuleAllowed("ai-studio") ? "text-purple-600" : "text-zinc-400"}`} />
+                <span>Pusat Fitur AI</span>
+              </div>
+              {isModuleAllowed("ai-studio") ? (
+                <span className="text-[10px] text-purple-700 font-bold bg-purple-100 px-1.5 py-0.5 rounded">
+                  Modular
+                </span>
+              ) : (
+                <span className="flex items-center gap-1 text-[10px] text-zinc-400">
+                  <Lock className="w-2.5 h-2.5" />
+                  <span>Kunci</span>
+                </span>
+              )}
+            </button>
+
+            {/* 8. SEO CMS & TikTok Live */}
+            <button
+              onClick={() => handleModuleClick("cms-seo", "SEO CMS & TikTok Live")}
+              className={`w-full text-left px-3 py-2.5 rounded-md text-xs font-semibold flex items-center justify-between transition cursor-pointer ${
                 activeModule === "cms-seo"
                   ? "bg-purple-50 text-purple-800 border-l-4 border-purple-700 font-bold"
-                  : "text-zinc-600 hover:bg-zinc-100"
+                  : isModuleAllowed("cms-seo")
+                  ? "text-zinc-600 hover:bg-zinc-100"
+                  : "text-zinc-400 bg-zinc-50/60 opacity-60"
               }`}
             >
-              <Share2 className="w-4 h-4 text-purple-600" />
-              <span>SEO CMS & TikTok Live</span>
+              <div className="flex items-center gap-2.5">
+                <Share2 className={`w-4 h-4 ${isModuleAllowed("cms-seo") ? "text-purple-600" : "text-zinc-400"}`} />
+                <span>SEO & TikTok Live</span>
+              </div>
+              {!isModuleAllowed("cms-seo") && (
+                <span className="flex items-center gap-1 text-[10px] text-zinc-400">
+                  <Lock className="w-2.5 h-2.5" />
+                  <span>Kunci</span>
+                </span>
+              )}
             </button>
 
+            {/* 9. Layout Beranda */}
             <button
-              onClick={() => setActiveModule("layout")}
-              className={`w-full text-left px-3 py-2.5 rounded-md text-xs font-semibold flex items-center gap-2.5 transition cursor-pointer ${
+              onClick={() => handleModuleClick("layout", "Tata Letak & Section Beranda")}
+              className={`w-full text-left px-3 py-2.5 rounded-md text-xs font-semibold flex items-center justify-between transition cursor-pointer ${
                 activeModule === "layout"
                   ? "bg-purple-50 text-purple-800 border-l-4 border-purple-700 font-bold"
-                  : "text-zinc-600 hover:bg-zinc-100"
+                  : isModuleAllowed("layout")
+                  ? "text-zinc-600 hover:bg-zinc-100"
+                  : "text-zinc-400 bg-zinc-50/60 opacity-60"
               }`}
             >
-              <LayoutTemplate className="w-4 h-4 text-purple-600" />
-              <span>Tata Letak & Section Beranda</span>
+              <div className="flex items-center gap-2.5">
+                <LayoutTemplate className={`w-4 h-4 ${isModuleAllowed("layout") ? "text-purple-600" : "text-zinc-400"}`} />
+                <span>Tata Letak Beranda</span>
+              </div>
+              {!isModuleAllowed("layout") && (
+                <span className="flex items-center gap-1 text-[10px] text-zinc-400">
+                  <Lock className="w-2.5 h-2.5" />
+                  <span>Kunci</span>
+                </span>
+              )}
             </button>
           </div>
 
@@ -4410,6 +4621,130 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
           )}
         </main>
       </div>
+
+      {/* MODAL 1: Role Switcher Modal */}
+      {isRoleModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-lg w-full p-6 text-white shadow-2xl">
+            <div className="flex items-center justify-between pb-4 border-b border-zinc-800 mb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-purple-900/60 border border-purple-500/60 flex items-center justify-center text-purple-300">
+                  <UserCheck className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-white">Ganti Peran Akses Internal (RBAC)</h3>
+                  <p className="text-[11px] text-zinc-400">Pilih peran staf untuk menguji batasan hak akses modul</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsRoleModalOpen(false)}
+                className="p-1 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-2.5 max-h-[60vh] overflow-y-auto pr-1">
+              {(["SUPER_ADMIN", "PRODUCT_MANAGER", "ORDER_FULFILLMENT", "MARKETING_STREAMER", "FINANCE_OPS"] as AdminRole[]).map((r) => {
+                const cfg = ADMIN_ROLES_CONFIG[r];
+                const isActive = adminUser?.role === r;
+                return (
+                  <button
+                    key={r}
+                    onClick={() => {
+                      adminSwitchRole(r);
+                      setIsRoleModalOpen(false);
+                    }}
+                    className={`w-full text-left p-3.5 rounded-xl border transition flex items-start justify-between gap-3 cursor-pointer ${
+                      isActive
+                        ? "bg-purple-950/60 border-purple-600 ring-1 ring-purple-600"
+                        : "bg-zinc-800/60 border-zinc-750 hover:bg-zinc-800 hover:border-zinc-600"
+                    }`}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-bold text-xs text-white">{cfg.label}</span>
+                        <span className={`text-[10px] font-semibold px-2 py-0.2 rounded-full border ${cfg.badgeBg} ${cfg.badgeColor} ${cfg.badgeBorder}`}>
+                          {cfg.allowedModules.length} Modul
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-zinc-400 leading-relaxed mb-2">{cfg.description}</p>
+                      <div className="flex flex-wrap gap-1">
+                        {cfg.allowedModules.map((m) => (
+                          <span key={m} className="text-[9px] uppercase px-1.5 py-0.2 rounded bg-zinc-900 text-zinc-400">
+                            {m}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    {isActive ? (
+                      <span className="w-6 h-6 rounded-full bg-purple-600 text-white flex items-center justify-center shrink-0">
+                        <Check className="w-3.5 h-3.5" />
+                      </span>
+                    ) : (
+                      <span className="text-xs text-zinc-500 font-semibold shrink-0 pt-0.5">Pilih</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="mt-5 pt-4 border-t border-zinc-800 flex justify-between items-center text-xs text-zinc-500">
+              <span>Peran aktif: <strong className="text-purple-300">{currentRoleConfig.label}</strong></span>
+              <button
+                onClick={() => setIsRoleModalOpen(false)}
+                className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg text-xs font-semibold cursor-pointer"
+              >
+                Selesai
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: Locked Module Access Notice */}
+      {lockedModuleNotice && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-md w-full p-6 text-white shadow-2xl text-center">
+            <div className="w-12 h-12 rounded-2xl bg-amber-950 border border-amber-600/60 flex items-center justify-center mx-auto mb-4 text-amber-400">
+              <ShieldAlert className="w-6 h-6" />
+            </div>
+
+            <h3 className="font-bold text-base text-white mb-1.5">
+              Akses Dibatasi: {lockedModuleNotice.moduleName}
+            </h3>
+
+            <p className="text-xs text-zinc-400 mb-4 leading-relaxed">
+              Peran Anda saat ini (<strong className="text-white">{currentRoleConfig.label}</strong>) tidak memiliki izin akses untuk membuka modul ini. Modul ini memerlukan peran <strong className="text-purple-300">{lockedModuleNotice.requiredRole}</strong>.
+            </p>
+
+            <div className="p-3 rounded-xl bg-zinc-800/80 border border-zinc-700 text-[11px] text-zinc-300 text-left mb-5">
+              <span className="font-bold text-zinc-200 block mb-1">Kenapa modul ini dikunci?</span>
+              Sistem membatasi modul sensitif (seperti konfigurasi rekening payment gateway atau pengaturan toko) khusus untuk peran yang berwenang demi keamanan operasional toko.
+            </div>
+
+            <div className="space-y-2">
+              <button
+                onClick={() => {
+                  adminSwitchRole("SUPER_ADMIN");
+                  setActiveModule(lockedModuleNotice.moduleId);
+                  setLockedModuleNotice(null);
+                }}
+                className="w-full py-2.5 px-4 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-purple-900/30"
+              >
+                <UserCheck className="w-4 h-4" />
+                <span>Ganti ke Super Admin & Buka Modul Ini</span>
+              </button>
+              <button
+                onClick={() => setLockedModuleNotice(null)}
+                className="w-full py-2 px-4 rounded-xl border border-zinc-700 hover:bg-zinc-800 text-zinc-400 hover:text-white text-xs font-semibold cursor-pointer"
+              >
+                Tutup Notifikasi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
