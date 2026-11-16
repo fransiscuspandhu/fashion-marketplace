@@ -210,13 +210,7 @@ export default function AdminPage() {
   });
   const [newInstructionText, setNewInstructionText] = useState("");
 
-  // AI Studio Form State
-  const [aiProduct, setAiProduct] = useState("Koleksi Baru Gamis Silk Lilac");
-  const [aiCategory, setAiCategory] = useState("Atasan Muslim Wanita");
-  const [aiModel, setAiModel] = useState("Wanita Indonesia Modest Elegance (Usia 26)");
-  const [aiLighting, setAiLighting] = useState("Soft Golden Hour Natural Sunlight");
-  const [aiBackground, setAiBackground] = useState("Scandinavian Arch with Warm Travertine");
-  const [isAiGenerating, setIsAiGenerating] = useState(false);
+
 
   // Analytics Metrics Calculation
   const totalRevenue = orders.reduce((sum, o) => sum + o.totalAmount, 0);
@@ -418,21 +412,7 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
     }));
   };
 
-  const handleTriggerAiPhoto = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsAiGenerating(true);
-    setTimeout(() => {
-      generateAiPhoto({
-        productName: aiProduct,
-        category: aiCategory,
-        modelType: aiModel,
-        lighting: aiLighting,
-        background: aiBackground,
-      });
-      setIsAiGenerating(false);
-      alert("Foto model AI berhasil dibuat (~Rp 500 terpotong dari saldo API)!");
-    }, 1200);
-  };
+
 
   const handleSavePillar = (e: React.FormEvent) => {
     e.preventDefault();
@@ -734,10 +714,10 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
             >
               <div className="flex items-center gap-2.5">
                 <Sparkles className="w-4 h-4 text-purple-600" />
-                <span>Studio Foto AI</span>
+                <span>Pusat Fitur AI & Switchboard</span>
               </div>
               <span className="text-[10px] text-purple-700 font-bold bg-purple-100 px-1.5 py-0.5 rounded">
-                ~Rp 500
+                Modular
               </span>
             </button>
 
@@ -3598,174 +3578,101 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
                 </div>
               </div>
 
-              <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="text-xl font-bold text-zinc-900">
-                    Studio Foto Produk AI (On-Model Photoshoot)
-                  </h1>
-                  <span className="bg-purple-100 text-purple-800 text-[10px] font-bold px-2 py-0.5 rounded">
-                    Cost Estimasi: ~Rp 480 – Rp 600 / foto
-                  </span>
+              {/* Integration Banner Notice */}
+              <div className="bg-gradient-to-r from-purple-50 via-indigo-50 to-zinc-50 p-5 rounded-xl border border-purple-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-2xs">
+                <div className="flex items-start gap-3.5">
+                  <div className="w-10 h-10 rounded-xl bg-purple-700 text-white flex items-center justify-center shrink-0 shadow-xs">
+                    <Wand2 className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-zinc-900 flex items-center gap-2">
+                      <span>Generator Foto Model AI Terintegrasi di Input Produk</span>
+                      <span className="text-[10px] font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded">
+                        Lebih Praktis & Cepat
+                      </span>
+                    </h3>
+                    <p className="text-xs text-zinc-600 mt-1 leading-relaxed max-w-2xl">
+                      Fitur photoshoot model AI kini telah disatukan langsung ke dalam formulir input produk. Anda dapat mengunggah foto mentah baju, memilih persona model muslimah, memilih tone pencahayaan, dan langsung memasangnya ke katalog hanya dalam 1 alur kerja.
+                    </p>
+                  </div>
                 </div>
-                <p className="text-xs text-zinc-500 mt-1">
-                  Hasilkan foto katalog model profesional tanpa biaya sewa studio jutaan rupiah.
-                  Hemat hingga 90% budget foto produk brand Rahayu.
-                </p>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveModule("products");
+                      handleOpenAddProduct();
+                    }}
+                    className="px-4 py-2.5 bg-purple-700 hover:bg-purple-800 text-white rounded-lg text-xs font-bold flex items-center gap-2 shadow-xs cursor-pointer transition"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>+ Tambah Produk & Buat Foto AI</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveModule("products")}
+                    className="px-3.5 py-2.5 bg-white border border-zinc-300 hover:bg-zinc-100 text-zinc-700 rounded-lg text-xs font-semibold cursor-pointer transition"
+                  >
+                    Buka Katalog
+                  </button>
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                {/* Generation Form */}
-                <form
-                  onSubmit={handleTriggerAiPhoto}
-                  className="lg:col-span-6 bg-white p-6 rounded-lg border border-zinc-200 shadow-2xs space-y-4 text-xs"
-                >
-                  <h3 className="font-bold text-xs uppercase tracking-wider text-zinc-800 border-b border-zinc-100 pb-2">
-                    Parameter Photoshoot AI
-                  </h3>
-
+              {/* AI History & Gallery */}
+              <div className="bg-white p-6 rounded-xl border border-zinc-200 shadow-2xs space-y-4">
+                <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
                   <div>
-                    <label className="block font-semibold text-zinc-700 mb-1">Nama Produk</label>
-                    <input
-                      type="text"
-                      required
-                      value={aiProduct}
-                      onChange={(e) => setAiProduct(e.target.value)}
-                      className="w-full px-3 py-2 border border-zinc-300 rounded text-xs"
-                    />
+                    <h3 className="text-sm font-bold text-zinc-900 flex items-center gap-2">
+                      <Camera className="w-4 h-4 text-purple-700" />
+                      <span>Riwayat & Arsip Foto Model AI Terbaru</span>
+                    </h3>
+                    <p className="text-xs text-zinc-500">
+                      Daftar foto katalog lookbook yang telah dibuat melalui generator AI pada input produk
+                    </p>
                   </div>
+                  <span className="text-xs font-semibold text-zinc-500">
+                    Total: {aiLogs.length} Foto
+                  </span>
+                </div>
 
-                  <div>
-                    <label className="block font-semibold text-zinc-700 mb-1">Kategori</label>
-                    <select
-                      value={aiCategory}
-                      onChange={(e) => setAiCategory(e.target.value)}
-                      className="w-full px-3 py-2 border border-zinc-300 rounded text-xs"
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {aiLogs.map((log) => (
+                    <div
+                      key={log.id}
+                      className="bg-zinc-50/70 p-4 rounded-xl border border-zinc-200 flex gap-4 text-xs hover:border-purple-300 transition"
                     >
-                      {categories.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.nameId}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block font-semibold text-zinc-700 mb-1">Tipe Model</label>
-                    <select
-                      value={aiModel}
-                      onChange={(e) => setAiModel(e.target.value)}
-                      className="w-full px-3 py-2 border border-zinc-300 rounded text-xs"
-                    >
-                      <option value="Wanita Indonesia Modest Elegance (Usia 26)">
-                        Wanita Indonesia Modest Elegance (Usia 26)
-                      </option>
-                      <option value="Ibu Hamil Anggun & Bersahaja (Usia 30)">
-                        Ibu Hamil Anggun & Bersahaja (Usia 30)
-                      </option>
-                      <option value="Model Remaja Ceria Muslimah (Usia 21)">
-                        Model Remaja Ceria Muslimah (Usia 21)
-                      </option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block font-semibold text-zinc-700 mb-1">Pencahayaan Studio</label>
-                    <select
-                      value={aiLighting}
-                      onChange={(e) => setAiLighting(e.target.value)}
-                      className="w-full px-3 py-2 border border-zinc-300 rounded text-xs"
-                    >
-                      <option value="Soft Golden Hour Natural Sunlight">
-                        Soft Golden Hour Natural Sunlight
-                      </option>
-                      <option value="High-End Studio Softbox Lighting">
-                        High-End Studio Softbox Lighting
-                      </option>
-                      <option value="Warm Mediterranean Diffused Light">
-                        Warm Mediterranean Diffused Light
-                      </option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block font-semibold text-zinc-700 mb-1">Latar Belakang / Setting</label>
-                    <select
-                      value={aiBackground}
-                      onChange={(e) => setAiBackground(e.target.value)}
-                      className="w-full px-3 py-2 border border-zinc-300 rounded text-xs"
-                    >
-                      <option value="Scandinavian Arch with Warm Travertine">
-                        Scandinavian Arch with Warm Travertine
-                      </option>
-                      <option value="Monochrome Concrete & Olive Shadow">
-                        Monochrome Concrete & Olive Shadow
-                      </option>
-                      <option value="Minimalist Luxury Living Room">
-                        Minimalist Luxury Living Room
-                      </option>
-                    </select>
-                  </div>
-
-                  <div className="pt-2">
-                    <button
-                      type="submit"
-                      disabled={isAiGenerating}
-                      className="w-full py-3 bg-purple-700 hover:bg-purple-800 text-white rounded text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer shadow-md"
-                    >
-                      {isAiGenerating ? (
-                        <span>Sedang Memproses AI (~5 detik)...</span>
-                      ) : (
-                        <>
-                          <Sparkles className="w-4 h-4" />
-                          <span>Generate Foto Model AI (~Rp 500)</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </form>
-
-                {/* AI History & Gallery */}
-                <div className="lg:col-span-6 space-y-4">
-                  <h3 className="font-bold text-xs uppercase tracking-wider text-zinc-800">
-                    Hasil Render AI Terakhir
-                  </h3>
-                  <div className="space-y-3">
-                    {aiLogs.map((log) => (
-                      <div
-                        key={log.id}
-                        className="bg-white p-4 rounded-lg border border-zinc-200 shadow-2xs flex gap-4 text-xs"
-                      >
-                        <div className="w-20 h-26 bg-zinc-100 rounded overflow-hidden shrink-0 border border-zinc-200">
-                          <img
-                            src={log.outputUrl}
-                            alt={log.productName}
-                            className="w-full h-full object-cover"
-                          />
+                      <div className="w-20 h-28 bg-zinc-200 rounded-lg overflow-hidden shrink-0 border border-zinc-300 shadow-2xs">
+                        <img
+                          src={log.outputUrl}
+                          alt={log.productName}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="flex-1 flex flex-col justify-between min-w-0">
+                        <div>
+                          <div className="flex justify-between items-start gap-2">
+                            <h4 className="font-bold text-zinc-900 truncate">{log.productName}</h4>
+                            <span className="font-mono text-[10px] text-purple-700 font-bold bg-purple-100 px-1.5 py-0.5 rounded shrink-0">
+                              ~Rp {log.costIdr}
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-zinc-400 block mt-0.5 font-medium">
+                            {log.timestamp} • {log.category}
+                          </span>
+                          <p className="text-zinc-600 text-[11px] mt-1.5 line-clamp-2 leading-relaxed">
+                            Prompt: {log.prompt}
+                          </p>
                         </div>
-                        <div className="flex-1 flex flex-col justify-between">
-                          <div>
-                            <div className="flex justify-between items-start">
-                              <h4 className="font-bold text-zinc-900">{log.productName}</h4>
-                              <span className="font-mono text-[10px] text-purple-700 font-bold bg-purple-50 px-1.5 py-0.5 rounded">
-                                Biaya: Rp {log.costIdr}
-                              </span>
-                            </div>
-                            <span className="text-[10px] text-zinc-400 block mt-0.5">
-                              {log.timestamp} • {log.category}
-                            </span>
-                            <p className="text-zinc-600 text-[11px] mt-1.5 line-clamp-2">
-                              Prompt: {log.prompt}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-2 pt-2 border-t border-zinc-50">
-                            <span className="text-[10px] text-emerald-600 font-semibold">
-                              ✓ Siap Dipasang di Katalog
-                            </span>
-                          </div>
+                        <div className="flex items-center justify-between pt-2 border-t border-zinc-200/60 text-[10px]">
+                          <span className="text-emerald-700 font-semibold flex items-center gap-1">
+                            <Check className="w-3 h-3" /> Siap Dipakai di Produk
+                          </span>
+                          <span className="text-zinc-400 font-mono">{log.id}</span>
                         </div>
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
