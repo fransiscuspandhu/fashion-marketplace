@@ -10,7 +10,7 @@ export async function PATCH(
     const decodedId = decodeURIComponent(id);
     const body = await request.json();
 
-    const updateData: any = {};
+    const updateData: Record<string, unknown> = {};
     if (body.name !== undefined) updateData.name = body.name;
     if (body.tagline !== undefined) updateData.tagline = body.tagline;
     if (body.description !== undefined) updateData.description = body.description;
@@ -22,12 +22,44 @@ export async function PATCH(
     if (body.pillarId !== undefined) updateData.pillarId = body.pillarId;
     if (body.isActive !== undefined) updateData.isActive = Boolean(body.isActive);
 
-    const updated = await prisma.category.update({
-      where: { id: decodedId },
-      data: updateData,
+    const existing = await prisma.category.findFirst({
+      where: {
+        OR: [
+          { id: decodedId },
+          { slug: decodedId.toLowerCase() },
+        ],
+      },
     });
 
-    return NextResponse.json({ success: true, data: updated });
+    if (existing) {
+      const updated = await prisma.category.update({
+        where: { id: existing.id },
+        data: updateData,
+      });
+      return NextResponse.json({ success: true, data: updated });
+    }
+
+    // Fallback create if category wasn't in DB yet
+    const slug = decodedId
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
+
+    const created = await prisma.category.create({
+      data: {
+        id: decodedId,
+        slug: slug || decodedId.toLowerCase(),
+        name: (body.name as string) || decodedId,
+        tagline: (body.tagline as string) || decodedId,
+        sizes: Array.isArray(body.sizes) ? body.sizes : ["All Size"],
+        measurementLabel: (body.measurementLabel as string) || "Ukuran Standar",
+        variantAttributeLabel: (body.variantAttributeLabel as string) || "Varian",
+        imageUrl: typeof body.imageUrl === "string" ? body.imageUrl : "",
+        icon: (body.icon as string) || "Sparkles",
+      },
+    });
+
+    return NextResponse.json({ success: true, data: created });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }

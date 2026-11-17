@@ -33,7 +33,8 @@ export async function POST(req: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        url: `/uploads/${filename}`,
+        url: `/api/uploads/${filename}`,
+        staticUrl: `/uploads/${filename}`,
         filename,
         size: file.size,
       });
@@ -65,7 +66,8 @@ export async function POST(req: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        url: `/uploads/${filename}`,
+        url: `/api/uploads/${filename}`,
+        staticUrl: `/uploads/${filename}`,
         filename,
         size: buffer.length,
       });

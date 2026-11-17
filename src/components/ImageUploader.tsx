@@ -36,9 +36,9 @@ export default function ImageUploader({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      setErrorMessage("Ukuran file terlalu besar (maksimal 5 MB).");
+    // Validate size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      setErrorMessage("Ukuran file terlalu besar (maksimal 10 MB).");
       return;
     }
 
@@ -113,7 +113,9 @@ export default function ImageUploader({
             <div className="flex items-center gap-1.5 min-w-0">
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
               <span className="font-mono text-[10px] text-zinc-600 truncate" title={value}>
-                {value.startsWith("/uploads/") ? `Server: ${value}` : value}
+                {value.startsWith("/uploads/") || value.startsWith("/api/uploads/")
+                  ? `Tersimpan di Server: ${value.replace("/api/uploads/", "/uploads/")}`
+                  : value}
               </span>
             </div>
 

@@ -1960,12 +1960,22 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
                         {/* Custom Image / Photo Icon URL */}
                         <div className="sm:col-span-2">
                           <ImageUploader
-                            label="Foto / Icon Kategori (Upload ke Server)"
+                            label="Foto / Icon Kategori (Upload Otomatis Tersimpan ke Database)"
                             value={editCatForm.imageUrl || ""}
-                            onChange={(url) =>
-                              setEditCatForm({ ...editCatForm, imageUrl: url })
-                            }
-                            hint="Standar: Rasio 1:1, 200×200 px (Maks 5 MB). Format: PNG transparan, WebP, atau JPG. Gambar disimpan di server local /public/uploads."
+                            onChange={(url) => {
+                              setEditCatForm((prev) => ({ ...prev, imageUrl: url }));
+                              if (activeCategory) {
+                                updateCategory(activeCategory.id, { imageUrl: url });
+                                showAdminToast(
+                                  url ? "Foto Kategori Diperbarui" : "Foto Kategori Dihapus",
+                                  url
+                                    ? `Foto kategori "${activeCategory.nameId}" berhasil disimpan ke database & tampil di Frontstore.`
+                                    : `Foto kategori "${activeCategory.nameId}" dihapus (menggunakan ikon vektor).`,
+                                  url ? "success" : "info"
+                                );
+                              }
+                            }}
+                            hint="Standar: Rasio 1:1, 200×200 px (Maks 10 MB). Format: PNG, WebP, atau JPG. Tersimpan otomatis ke PostgreSQL begitu diunggah."
                           />
                         </div>
 
@@ -2069,7 +2079,7 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
                     </form>
                   ) : (
                     /* VIEW OVERVIEW KATEGORI AKTIF */
-                    <div>
+                    <div className="space-y-4">
                       <div className="flex items-center justify-between border-b border-zinc-100 pb-4">
                         <div className="flex items-center gap-3">
                           <div
@@ -2107,11 +2117,36 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
                           className="px-3 py-1.5 border border-purple-300 bg-purple-50 hover:bg-purple-100 text-purple-800 rounded-md text-xs font-semibold flex items-center gap-1 cursor-pointer transition"
                         >
                           <Edit3 className="w-3.5 h-3.5" />
-                          <span>Ubah Kategori</span>
+                          <span>Ubah Detail Kategori</span>
                         </button>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-3 py-3 text-xs text-zinc-600 bg-zinc-50/70 p-3 rounded-lg border border-zinc-100 mt-4">
+                      {/* Quick Direct Category Photo Uploader */}
+                      {activeCategory && (
+                        <div className="bg-purple-50/40 border border-purple-100 rounded-xl p-3.5">
+                          <ImageUploader
+                            label={`Foto Sampul Kategori "${activeCategory.nameId}" (Langsung Aktif di Beranda)`}
+                            badgeStandard="Auto-Save ke Database"
+                            previewHeight="h-32"
+                            compact
+                            value={activeCategory.imageUrl || ""}
+                            onChange={(url) => {
+                              updateCategory(activeCategory.id, { imageUrl: url });
+                              setEditCatForm((prev) => ({ ...prev, imageUrl: url }));
+                              showAdminToast(
+                                url ? "Foto Kategori Diperbarui" : "Foto Kategori Dihapus",
+                                url
+                                  ? `Foto kategori "${activeCategory.nameId}" berhasil diganti & tersimpan di PostgreSQL.`
+                                  : `Foto kategori "${activeCategory.nameId}" dihapus (kembali ke ikon vektor).`,
+                                url ? "success" : "info"
+                              );
+                            }}
+                            hint="Unggah foto baru atau tempel URL gambar untuk langsung mengganti foto kategori tanpa perlu membuka form edit."
+                          />
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-2 gap-3 py-3 text-xs text-zinc-600 bg-zinc-50/70 p-3 rounded-lg border border-zinc-100">
                         <div>
                           <span className="text-[10px] uppercase font-bold text-zinc-400 block">Label Pengukuran:</span>
                           <span className="font-semibold text-zinc-800">{activeCategory?.measurementLabel}</span>

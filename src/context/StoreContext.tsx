@@ -1062,7 +1062,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
                 iconBg: fallbackCat?.iconBg || "#EDE9FE",
                 colorHex: fallbackCat?.colorHex || "#7C3AED",
                 iconName: c.icon || fallbackCat?.iconName || "Sparkles",
-                imageUrl: c.imageUrl || fallbackCat?.imageUrl || "",
+                imageUrl:
+                  typeof c.imageUrl === "string"
+                    ? c.imageUrl
+                    : fallbackCat?.imageUrl || "",
                 measurementLabel: c.measurementLabel || fallbackCat?.measurementLabel || "Dimensi",
                 variantAttr: c.variantAttributeLabel || fallbackCat?.variantAttr || "Varian",
                 sizes: Array.isArray(c.sizes) && c.sizes.length > 0 ? c.sizes : fallbackCat?.sizes || ["All Size"],
@@ -1544,23 +1547,73 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const addCategory = (newCat: RahayuCategory) => {
     setCategories((prev) => [...prev, newCat]);
+    const matchedPillar = pillars.find(
+      (p) => p.name.toLowerCase() === (newCat.pillar || "").toLowerCase() || p.id === newCat.pillar
+    );
+    fetch("/api/categories", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: newCat.id,
+        name: newCat.nameId,
+        tagline: newCat.nameEn || newCat.nameId,
+        pillarId: matchedPillar?.id || pillars[0]?.id || "pillar-modest",
+        sizes: newCat.sizes,
+        measurementLabel: newCat.measurementLabel,
+        variantAttributeLabel: newCat.variantAttr,
+        icon: newCat.iconName || "Sparkles",
+        imageUrl: newCat.imageUrl ?? "",
+      }),
+    }).catch((err) => console.error("Failed to create category in DB:", err));
   };
 
   const updateCategory = (categoryId: string, updated: Partial<RahayuCategory>) => {
     setCategories((prev) =>
       prev.map((cat) => (cat.id === categoryId ? { ...cat, ...updated } : cat))
     );
+
+    const payload: Record<string, unknown> = {};
+    if (updated.nameId !== undefined) payload.name = updated.nameId;
+    if (updated.nameEn !== undefined) payload.tagline = updated.nameEn;
+    if (updated.imageUrl !== undefined) payload.imageUrl = updated.imageUrl;
+    if (updated.iconName !== undefined) payload.icon = updated.iconName;
+    if (updated.measurementLabel !== undefined) payload.measurementLabel = updated.measurementLabel;
+    if (updated.variantAttr !== undefined) payload.variantAttributeLabel = updated.variantAttr;
+    if (updated.sizes !== undefined) payload.sizes = updated.sizes;
+    if (updated.pillar !== undefined) {
+      const matchedPillar = pillars.find(
+        (p) => p.name.toLowerCase() === updated.pillar!.toLowerCase() || p.id === updated.pillar
+      );
+      if (matchedPillar) {
+        payload.pillarId = matchedPillar.id;
+      }
+    }
+
+    fetch(`/api/categories/${encodeURIComponent(categoryId)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }).catch((err) => console.error("Failed to update category in DB:", err));
   };
 
   const deleteCategory = (categoryId: string) => {
     setCategories((prev) => prev.filter((cat) => cat.id !== categoryId));
+    fetch(`/api/categories/${encodeURIComponent(categoryId)}`, {
+      method: "DELETE",
+    }).catch((err) => console.error("Failed to delete category in DB:", err));
   };
 
   const addCategorySize = (categoryId: string, newSize: string) => {
     setCategories((prev) =>
       prev.map((cat) => {
         if (cat.id === categoryId && !cat.sizes.includes(newSize)) {
-          return { ...cat, sizes: [...cat.sizes, newSize] };
+          const nextSizes = [...cat.sizes, newSize];
+          fetch(`/api/categories/${encodeURIComponent(categoryId)}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ sizes: nextSizes }),
+          }).catch((err) => console.error("Failed to add category size in DB:", err));
+          return { ...cat, sizes: nextSizes };
         }
         return cat;
       })
@@ -1571,7 +1624,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setCategories((prev) =>
       prev.map((cat) => {
         if (cat.id === categoryId) {
-          return { ...cat, sizes: cat.sizes.filter((s) => s !== sizeToRemove) };
+          const nextSizes = cat.sizes.filter((s) => s !== sizeToRemove);
+          fetch(`/api/categories/${encodeURIComponent(categoryId)}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ sizes: nextSizes }),
+          }).catch((err) => console.error("Failed to remove category size in DB:", err));
+          return { ...cat, sizes: nextSizes };
         }
         return cat;
       })
