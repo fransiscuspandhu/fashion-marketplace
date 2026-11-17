@@ -1,6 +1,7 @@
 # ==============================================================================
-# RAHAYU FASHION STORE — DOCKER COMPOSE ORCHESTRATION
-# Production & Staging Multi-Container Stack (Next.js 16 + PostgreSQL 15 + Seeder)
+# RAHAYU FASHION STORE — DEVELOPMENT DOCKER COMPOSE (DEFAULT)
+# Fast Build (Target: dev) + Live Next.js HTTP Logs + Prisma SQL Logs + Hot-Reload
+# Run with: docker compose up --build
 # ==============================================================================
 
 services:
@@ -28,23 +29,22 @@ services:
       - rahayu_network
 
   # ----------------------------------------------------------------------------
-  # 2. Main Web Application: Customer Webfront & Admin Portal
+  # 2. Main Web Application (DEVELOPMENT MODE: Live Logs, Prisma Queries & HMR)
   # ----------------------------------------------------------------------------
   web:
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}
-        NEXT_PUBLIC_SHOW_DEMO_CONNECTOR: ${NEXT_PUBLIC_SHOW_DEMO_CONNECTOR:-true}
-        DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-rahayu_fashion}?schema=public
+      target: dev
     container_name: rahayu_web
     restart: unless-stopped
     ports:
       - "${PORT:-3000}:3000"
     environment:
-      NODE_ENV: production
+      NODE_ENV: development
+      FORCE_COLOR: "1"
       PORT: 3000
+      HOSTNAME: "0.0.0.0"
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-rahayu_fashion}?schema=public
       NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}
       NEXT_PUBLIC_SHOW_DEMO_CONNECTOR: ${NEXT_PUBLIC_SHOW_DEMO_CONNECTOR:-true}
@@ -53,6 +53,9 @@ services:
       NEXT_PUBLIC_MIDTRANS_CLIENT_KEY: ${NEXT_PUBLIC_MIDTRANS_CLIENT_KEY:-SB-Mid-client-xxxx}
       FAL_KEY: ${FAL_KEY:-demo_key}
     volumes:
+      - ./src:/app/src
+      - ./public:/app/public
+      - ./prisma:/app/prisma
       - rahayu_uploads:/app/public/uploads
     depends_on:
       db:
@@ -61,38 +64,7 @@ services:
       - rahayu_network
 
   # ----------------------------------------------------------------------------
-  # 3. Dedicated Admin Portal Service (Dual-Build Architecture Mode)
-  # Run with: docker compose --profile dual-build up -d
-  # ----------------------------------------------------------------------------
-  admin:
-    profiles: ["dual-build"]
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        NEXT_PUBLIC_SITE_URL: ${ADMIN_SITE_URL:-http://localhost:3001}
-        NEXT_PUBLIC_SHOW_DEMO_CONNECTOR: "true"
-        DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-rahayu_fashion}?schema=public
-    container_name: rahayu_admin
-    restart: unless-stopped
-    ports:
-      - "${ADMIN_PORT:-3001}:3000"
-    environment:
-      NODE_ENV: production
-      PORT: 3000
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-rahayu_fashion}?schema=public
-      NEXT_PUBLIC_SITE_URL: ${ADMIN_SITE_URL:-http://localhost:3001}
-      NEXT_PUBLIC_SHOW_DEMO_CONNECTOR: "true"
-    volumes:
-      - rahayu_uploads:/app/public/uploads
-    depends_on:
-      db:
-        condition: service_healthy
-    networks:
-      - rahayu_network
-
-  # ----------------------------------------------------------------------------
-  # 4. Database Seeder Service (Initial Seed Automation)
+  # 3. Database Seeder Service (Manual Force Re-Seed Automation)
   # Run with: docker compose --profile seed run --rm seeder
   # ----------------------------------------------------------------------------
   seeder:
@@ -100,6 +72,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      target: dev
     container_name: rahayu_seeder
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-rahayu_fashion}?schema=public

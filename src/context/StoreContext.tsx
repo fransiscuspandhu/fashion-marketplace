@@ -996,21 +996,24 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
         if (catRes.status === "fulfilled" && catRes.value?.success && Array.isArray(catRes.value.data) && catRes.value.data.length > 0) {
           setCategories(
-            catRes.value.data.map((c: any) => ({
-              id: c.id,
-              slug: c.slug,
-              nameId: c.name,
-              nameEn: c.name,
-              pillar: c.pillar?.title || "Modest Fashion Wanita",
-              iconBg: "#EDE9FE",
-              colorHex: "#7C3AED",
-              iconName: c.icon || "Sparkles",
-              imageUrl: c.imageUrl,
-              measurementLabel: c.measurementLabel || "Dimensi",
-              variantAttr: c.variantAttributeLabel || "Varian",
-              sizes: c.sizes || [],
-              colors: [],
-            }))
+            catRes.value.data.map((c: any) => {
+              const fallbackCat = CATEGORIES_DATA.find((d) => d.id === c.id || d.slug === c.slug);
+              return {
+                id: c.id,
+                slug: c.slug,
+                nameId: c.name || fallbackCat?.nameId || c.id,
+                nameEn: fallbackCat?.nameEn || c.name || c.id,
+                pillar: c.pillar?.title || fallbackCat?.pillar || "Modest Fashion Wanita",
+                iconBg: fallbackCat?.iconBg || "#EDE9FE",
+                colorHex: fallbackCat?.colorHex || "#7C3AED",
+                iconName: c.icon || fallbackCat?.iconName || "Sparkles",
+                imageUrl: c.imageUrl || fallbackCat?.imageUrl || "",
+                measurementLabel: c.measurementLabel || fallbackCat?.measurementLabel || "Dimensi",
+                variantAttr: c.variantAttributeLabel || fallbackCat?.variantAttr || "Varian",
+                sizes: Array.isArray(c.sizes) && c.sizes.length > 0 ? c.sizes : fallbackCat?.sizes || ["All Size"],
+                colors: fallbackCat?.colors || [{ name: "Default", hex: "#7C3AED" }],
+              };
+            })
           );
         }
 
@@ -1018,38 +1021,78 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           setOrders(
             orderRes.value.data.map((o: any) => ({
               id: o.id,
-              createdAt: new Date(o.createdAt).toLocaleDateString("id-ID", {
-                day: "2-digit",
-                month: "short",
-                year: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-              }) + " WIB",
-              status: o.status,
-              items: Array.isArray(o.itemsJson) ? o.itemsJson : [],
-              subtotal: o.subtotal,
-              shippingCost: o.shippingCost,
-              discountAmount: o.discountAmount,
-              totalAmount: o.totalAmount,
+              createdAt:
+                new Date(o.createdAt).toLocaleDateString("id-ID", {
+                  day: "2-digit",
+                  month: "short",
+                  year: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                }) + " WIB",
+              status: o.status || "MENUNGGU_PEMBAYARAN",
+              items: Array.isArray(o.itemsJson)
+                ? o.itemsJson.map((it: any, idx: number) => {
+                    const matchedProd =
+                      PRODUCTS_DATA.find((p) => p.id === Number(it.product?.id ?? it.productId)) ||
+                      PRODUCTS_DATA[0];
+                    return {
+                      id: it.id || `item-${o.id}-${idx}`,
+                      selectedSize: it.selectedSize || "All Size",
+                      selectedColor: it.selectedColor || "Default",
+                      quantity: Number(it.quantity ?? 1),
+                      product:
+                        it.product && it.product.name
+                          ? {
+                              ...matchedProd,
+                              ...it.product,
+                              priceIdr: Number(it.product.priceIdr ?? matchedProd.priceIdr),
+                            }
+                          : {
+                              ...matchedProd,
+                              id: Number(it.productId ?? matchedProd.id),
+                              name: it.productName || matchedProd.name,
+                              priceIdr: Number(it.priceIdr ?? matchedProd.priceIdr),
+                              imageUrl: it.imageUrl || matchedProd.imageUrl,
+                            },
+                    };
+                  })
+                : [],
+              subtotal: Number(o.subtotal ?? 0),
+              shippingCost: Number(o.shippingCost ?? 0),
+              discountAmount: Number(o.discountAmount ?? 0),
+              totalAmount: Number(o.totalAmount ?? 0),
               courier: {
-                code: o.courierCode,
-                name: o.courierName,
-                service: o.courierService,
-                etd: o.etd,
+                code: o.courierCode || "JNE",
+                name: o.courierName || "JNE Express",
+                service: o.courierService || "Reguler (REG)",
+                etd: o.etd || "1-2 Hari",
               },
-              awb: o.awb,
-              address: o.addressJson,
+              awb: o.awb || null,
+              address: {
+                id: o.addressJson?.id || "ADDR-1",
+                label: o.addressJson?.label || "Rumah Utama",
+                recipient: o.addressJson?.recipient || o.customerName || "Pelanggan Rahayu",
+                phone: o.addressJson?.phone || o.customerPhone || "0812-8877-6655",
+                fullAddress:
+                  o.addressJson?.fullAddress || "Jl. Senopati No. 42, Kebayoran Baru",
+                city: o.addressJson?.city || "Jakarta Selatan, DKI Jakarta",
+                postalCode: o.addressJson?.postalCode || "12110",
+                isDefault: true,
+                tagLocation: o.addressJson?.tagLocation || "Rumah",
+              },
               paymentMethod: {
-                id: o.paymentMethodId,
-                name: o.paymentMethodName,
-                category: o.paymentCategory,
+                id: o.paymentMethodId || "va-bca",
+                name: o.paymentMethodName || "BCA Virtual Account",
+                category: o.paymentCategory || "VIRTUAL_ACCOUNT",
                 fee: 0,
               },
-              accountNumber: o.accountNumber,
-              accountName: o.accountName,
-              paymentDueDate: o.paymentDueDate,
-              paymentInstructions: o.paymentInstructions || [],
-              timeline: o.timelineJson || [],
+              accountNumber: o.accountNumber || undefined,
+              accountName: o.accountName || undefined,
+              paymentDueDate: o.paymentDueDate || undefined,
+              paymentInstructions: Array.isArray(o.paymentInstructions)
+                ? o.paymentInstructions
+                : [],
+              timeline: Array.isArray(o.timelineJson) ? o.timelineJson : [],
             }))
           );
         }
@@ -1060,14 +1103,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
               id: m.id,
               name: m.name,
               category: m.category,
-              isActive: m.isActive,
-              fee: m.fee,
-              icon: m.icon,
-              description: m.description,
-              accountNumber: m.accountNumber,
-              accountName: m.accountName,
-              qrImageUrl: m.qrImageUrl,
-              instructions: m.instructions || [],
+              isActive: m.isActive ?? true,
+              fee: Number(m.fee ?? 0),
+              icon: m.icon || "Building2",
+              description: m.description || "",
+              accountNumber: m.accountNumber || undefined,
+              accountName: m.accountName || undefined,
+              qrImageUrl: m.qrImageUrl || undefined,
+              instructions: Array.isArray(m.instructions) ? m.instructions : [],
             }))
           );
         }

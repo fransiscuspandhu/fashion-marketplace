@@ -903,6 +903,24 @@ async function seedDatabase() {
           quantity: 1,
           priceIdr: 249000,
           imageUrl: "https://images.unsplash.com/photo-1594223274512-ad4803739b7c?auto=format&fit=crop&w=800&q=80",
+          product: {
+            id: 1,
+            sku: "RHY-AT-001",
+            name: "Amira Armani Silk Tunic — Royal Plum (Busui & Wudhu Friendly)",
+            category: "Atasan Muslim Wanita",
+            priceIdr: 249000,
+            origPriceIdr: 329000,
+            discountPct: 24,
+            promoBadge: "PROMO GAJIAN -24%",
+            isPromoHighlight: true,
+            hasVideo: true,
+            videoUrl: "https://www.tiktok.com/@rahayufashion.store/video/740001",
+            desc: "Tunik mewah berbahan Armani Silk premium dengan kilau lembut yang elegan.",
+            rating: 4.9,
+            reviewCount: 148,
+            stock: 45,
+            imageUrl: "https://images.unsplash.com/photo-1594223274512-ad4803739b7c?auto=format&fit=crop&w=800&q=80",
+          },
         },
         {
           id: "item-va-2",
@@ -913,6 +931,24 @@ async function seedDatabase() {
           quantity: 1,
           priceIdr: 119000,
           imageUrl: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=800&q=80",
+          product: {
+            id: 2,
+            sku: "RHY-HJ-002",
+            name: "Signature Voal Ultrafine Laser Cut Scarf — 115x115 cm",
+            category: "Hijab",
+            priceIdr: 119000,
+            origPriceIdr: 149000,
+            discountPct: 20,
+            promoBadge: "BEST SELLER",
+            isPromoHighlight: true,
+            hasVideo: true,
+            videoUrl: "https://www.tiktok.com/@rahayufashion.store/video/740002",
+            desc: "Hijab voal ultrafine grade A yang tegak sempurna di dahi.",
+            rating: 5.0,
+            reviewCount: 382,
+            stock: 120,
+            imageUrl: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=800&q=80",
+          },
         },
       ],
       timelineJson: [
@@ -962,6 +998,24 @@ async function seedDatabase() {
           quantity: 1,
           priceIdr: 269000,
           imageUrl: "https://images.unsplash.com/photo-1516627145497-ae6968895b74?auto=format&fit=crop&w=800&q=80",
+          product: {
+            id: 4,
+            sku: "RHY-BH-004",
+            name: "Zahra Maternity A-Line Relaxed Dress — Soft Terracotta",
+            category: "Baju Hamil",
+            priceIdr: 269000,
+            origPriceIdr: 359000,
+            discountPct: 25,
+            promoBadge: "PROMO IBU & BAYI",
+            isPromoHighlight: true,
+            hasVideo: true,
+            videoUrl: "https://www.tiktok.com/@rahayufashion.store/video/740004",
+            desc: "Dress hamil berbahan katun rayon twill premium yang sangat adem.",
+            rating: 4.9,
+            reviewCount: 88,
+            stock: 28,
+            imageUrl: "https://images.unsplash.com/photo-1516627145497-ae6968895b74?auto=format&fit=crop&w=800&q=80",
+          },
         },
       ],
       timelineJson: [
@@ -1029,6 +1083,24 @@ async function seedDatabase() {
           quantity: 1,
           priceIdr: 189000,
           imageUrl: "https://images.unsplash.com/photo-1509631179647-0177331693ae?auto=format&fit=crop&w=800&q=80",
+          product: {
+            id: 3,
+            sku: "RHY-BW-003",
+            name: "Nafisa Pleated Modest Maxi Skirt — Sage Green",
+            category: "Bawahan Muslim Wanita",
+            priceIdr: 189000,
+            origPriceIdr: 229000,
+            discountPct: 17,
+            promoBadge: "TERLARIS",
+            isPromoHighlight: false,
+            hasVideo: false,
+            videoUrl: "",
+            desc: "Rok plisket lidi simetris dengan bahan heavy crepe yang jatuh anggun.",
+            rating: 4.8,
+            reviewCount: 96,
+            stock: 35,
+            imageUrl: "https://images.unsplash.com/photo-1509631179647-0177331693ae?auto=format&fit=crop&w=800&q=80",
+          },
         },
       ],
       timelineJson: [
@@ -1147,10 +1219,18 @@ async function run() {
     try {
       await ensureSchema();
       const productCount = await prisma.product.count();
-      if (productCount === 0 || forceSeed) {
+      const existingOrders = await prisma.order.findMany();
+      const needsOrderRepair = existingOrders.some(
+        (o) => !Array.isArray(o.itemsJson) || o.itemsJson.some((it) => !it || !it.product || !it.product.name)
+      );
+
+      if (productCount === 0 || forceSeed || needsOrderRepair) {
+        if (needsOrderRepair && productCount > 0) {
+          console.log("🔧 Detected legacy order itemsJson format in DB — repairing order items automatically...");
+        }
         await seedDatabase();
       } else {
-        console.log(`✅ Database already contains ${productCount} products (skipping auto-seed).`);
+        console.log(`✅ Database already contains ${productCount} products & ${existingOrders.length} valid orders.`);
       }
       return;
     } catch (err) {

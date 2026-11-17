@@ -3096,12 +3096,12 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
                             Penerima &amp; Alamat Tujuan:
                           </span>
                           <p className="font-bold text-zinc-900">
-                            {order.address.recipient} ({order.address.phone})
+                            {order.address?.recipient || "Pelanggan Rahayu"} ({order.address?.phone || "-"})
                           </p>
                           <p className="text-zinc-600 text-[11px] leading-relaxed">
-                            {order.address.fullAddress}, {order.address.city}
+                            {order.address?.fullAddress || "-"}, {order.address?.city || "-"}
                           </p>
-                          {order.address.tagLocation && (
+                          {order.address?.tagLocation && (
                             <span className="inline-block mt-1 px-2 py-0.5 rounded bg-purple-50 text-purple-700 text-[10px] font-bold">
                               📍 {order.address.tagLocation}
                             </span>
@@ -3114,7 +3114,7 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
                             Pembayaran &amp; Kurir:
                           </span>
                           <p className="font-semibold text-zinc-800">
-                            {order.paymentMethod.name}
+                            {order.paymentMethod?.name || "Transfer / Virtual Account"}
                           </p>
                           {order.accountNumber && (
                             <p className="font-mono text-zinc-500 text-[11px]">
@@ -3122,10 +3122,10 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
                             </p>
                           )}
                           <p className="text-zinc-600 text-[11px] pt-1">
-                            Kurir: <strong>{order.courier.name}</strong> ({order.courier.service})
+                            Kurir: <strong>{order.courier?.name || "JNE"}</strong> ({order.courier?.service || "REG"})
                           </p>
                           <p className="text-purple-700 font-bold text-sm">
-                            Total: Rp {order.totalAmount.toLocaleString("id-ID")}
+                            Total: Rp {(order.totalAmount || 0).toLocaleString("id-ID")}
                           </p>
                         </div>
 
@@ -3215,13 +3215,13 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
 
                       {/* Items Preview */}
                       <div className="pt-2 border-t border-zinc-100 flex items-center gap-2 text-xs text-zinc-500 overflow-x-auto">
-                        <span className="font-semibold text-zinc-700 shrink-0">Produk ({order.items.length}):</span>
-                        {order.items.map((it, idx) => (
+                        <span className="font-semibold text-zinc-700 shrink-0">Produk ({(order.items || []).length}):</span>
+                        {(order.items || []).map((it: any, idx) => (
                           <span
                             key={idx}
                             className="bg-zinc-100 px-2 py-0.5 rounded text-[11px] text-zinc-700 whitespace-nowrap"
                           >
-                            {it.product.name} ({it.selectedSize}, {it.quantity}x)
+                            {it.product?.name || it.productName || "Produk Rahayu"} ({it.selectedSize || "All Size"}, {it.quantity || 1}x)
                           </span>
                         ))}
                       </div>

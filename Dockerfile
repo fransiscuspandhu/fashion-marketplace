@@ -1,6 +1,7 @@
 # ==============================================================================
-# RAHAYU FASHION STORE — PRODUCTION DOCKERFILE
-# Multi-Stage Build with Alpine Linux & Next.js Standalone Engine (~120 MB image)
+# RAHAYU FASHION STORE — MULTI-TARGET DOCKERFILE (DEVELOPMENT & PRODUCTION)
+# - Target "dev"    : Fast Development Server with Live Logs, Prisma Query Logs & Hot-Reload
+# - Target "runner" : Hardened Production Next.js Standalone Engine (~120 MB image)
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
@@ -21,14 +22,36 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY prisma ./prisma/
 
-# Clean install all dependencies (including devDependencies needed for build)
+# Clean install all dependencies (including devDependencies)
 RUN npm ci
 
 # Generate Prisma Client specifically for the Alpine Linux environment
 RUN npx prisma generate
 
 # ------------------------------------------------------------------------------
-# 3. Next.js Build Stage (Output Standalone)
+# 3. Development Stage (Target: dev) — Live HTTP Logs, Prisma Query Logs & HMR
+# ------------------------------------------------------------------------------
+FROM base AS dev
+WORKDIR /app
+
+ENV NODE_ENV=development
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV FORCE_COLOR=1
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+RUN mkdir -p /app/public/uploads && chmod +x ./docker-entrypoint.sh
+
+EXPOSE 3000
+
+ENTRYPOINT ["./docker-entrypoint.sh"]
+CMD ["npx", "next", "dev", "-H", "0.0.0.0", "-p", "3000"]
+
+# ------------------------------------------------------------------------------
+# 4. Next.js Production Build Stage (Output Standalone)
 # ------------------------------------------------------------------------------
 FROM base AS builder
 WORKDIR /app
@@ -51,7 +74,7 @@ ENV NODE_ENV=production
 RUN npm run build
 
 # ------------------------------------------------------------------------------
-# 4. Production Runner Stage (Minimal, Hardened & Fast)
+# 5. Production Runner Stage (Target: runner) — Minimal, Hardened & Fast
 # ------------------------------------------------------------------------------
 FROM base AS runner
 WORKDIR /app

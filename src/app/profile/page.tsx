@@ -546,40 +546,45 @@ function ProfileContent() {
                         onClick={() => setSelectedOrderDetail(order)}
                         className="space-y-3 cursor-pointer group"
                       >
-                        {order.items.map((item, idx) => (
-                          <div key={idx} className="flex gap-3.5 items-center">
-                            <div className="w-14 h-16 bg-zinc-100 rounded-lg overflow-hidden shrink-0 border border-zinc-200">
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img
-                                src={
-                                  item.product.imageUrl ||
-                                  `https://images.unsplash.com/photo-${1584917865442 + item.product.id * 1000}?auto=format&fit=crop&w=200&q=80`
-                                }
-                                alt={item.product.name}
-                                className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                              />
-                            </div>
-                            <div className="flex-1 min-w-0 text-xs">
-                              <h4 className="font-bold text-zinc-900 leading-snug group-hover:text-purple-700 transition truncate">
-                                {item.product.name}
-                              </h4>
-                              <div className="text-zinc-500 mt-1 flex flex-wrap items-center gap-1.5 text-[11px]">
-                                <span className="bg-zinc-100 px-2 py-0.5 rounded text-zinc-700 font-medium">
-                                  {item.selectedSize}
+                        {(order.items || []).map((item: any, idx) => {
+                          const prodName = item.product?.name || item.productName || "Produk Rahayu Fashion";
+                          const prodImg =
+                            item.product?.imageUrl ||
+                            item.imageUrl ||
+                            "https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=200&q=80";
+                          const prodPrice = Number(item.product?.priceIdr ?? item.priceIdr ?? 0);
+                          return (
+                            <div key={idx} className="flex gap-3.5 items-center">
+                              <div className="w-14 h-16 bg-zinc-100 rounded-lg overflow-hidden shrink-0 border border-zinc-200">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src={prodImg}
+                                  alt={prodName}
+                                  className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                                />
+                              </div>
+                              <div className="flex-1 min-w-0 text-xs">
+                                <h4 className="font-bold text-zinc-900 leading-snug group-hover:text-purple-700 transition truncate">
+                                  {prodName}
+                                </h4>
+                                <div className="text-zinc-500 mt-1 flex flex-wrap items-center gap-1.5 text-[11px]">
+                                  <span className="bg-zinc-100 px-2 py-0.5 rounded text-zinc-700 font-medium">
+                                    {item.selectedSize || "All Size"}
+                                  </span>
+                                  <span>•</span>
+                                  <span>{item.selectedColor || "Default"}</span>
+                                  <span>•</span>
+                                  <span>{item.quantity || 1} barang</span>
+                                </div>
+                              </div>
+                              <div className="text-right text-xs shrink-0">
+                                <span className="font-bold text-zinc-900 block text-sm">
+                                  Rp {(prodPrice * (item.quantity || 1)).toLocaleString("id-ID")}
                                 </span>
-                                <span>•</span>
-                                <span>{item.selectedColor}</span>
-                                <span>•</span>
-                                <span>{item.quantity} barang</span>
                               </div>
                             </div>
-                            <div className="text-right text-xs shrink-0">
-                              <span className="font-bold text-zinc-900 block text-sm">
-                                Rp {(item.product.priceIdr * item.quantity).toLocaleString("id-ID")}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
 
                       {/* Payment Notice Banner if Menunggu Pembayaran */}
@@ -1089,34 +1094,39 @@ function ProfileContent() {
                 Daftar Produk ({selectedOrderDetail.items.length})
               </span>
               <div className="divide-y divide-zinc-100 max-h-48 overflow-y-auto">
-                {selectedOrderDetail.items.map((item, idx) => (
-                  <div key={idx} className="py-2 flex items-center justify-between text-xs gap-3">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-10 h-12 bg-zinc-100 rounded overflow-hidden shrink-0 border border-zinc-200">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={
-                            item.product.imageUrl ||
-                            `https://images.unsplash.com/photo-${1584917865442 + item.product.id * 1000}?auto=format&fit=crop&w=150&q=80`
-                          }
-                          alt={item.product.name}
-                          className="w-full h-full object-cover"
-                        />
+                {(selectedOrderDetail.items || []).map((item: any, idx) => {
+                  const prodName = item.product?.name || item.productName || "Produk Rahayu Fashion";
+                  const prodImg =
+                    item.product?.imageUrl ||
+                    item.imageUrl ||
+                    "https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=150&q=80";
+                  const prodPrice = Number(item.product?.priceIdr ?? item.priceIdr ?? 0);
+                  return (
+                    <div key={idx} className="py-2 flex items-center justify-between text-xs gap-3">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-10 h-12 bg-zinc-100 rounded overflow-hidden shrink-0 border border-zinc-200">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={prodImg}
+                            alt={prodName}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="truncate">
+                          <span className="font-bold text-zinc-900 block truncate">
+                            {prodName}
+                          </span>
+                          <span className="text-[11px] text-zinc-500">
+                            {item.selectedSize || "All Size"} • {item.selectedColor || "Default"} • {item.quantity || 1} pcs
+                          </span>
+                        </div>
                       </div>
-                      <div className="truncate">
-                        <span className="font-bold text-zinc-900 block truncate">
-                          {item.product.name}
-                        </span>
-                        <span className="text-[11px] text-zinc-500">
-                          {item.selectedSize} • {item.selectedColor} • {item.quantity} pcs
-                        </span>
-                      </div>
+                      <span className="font-bold text-zinc-900 whitespace-nowrap">
+                        Rp {(prodPrice * (item.quantity || 1)).toLocaleString("id-ID")}
+                      </span>
                     </div>
-                    <span className="font-bold text-zinc-900 whitespace-nowrap">
-                      Rp {(item.product.priceIdr * item.quantity).toLocaleString("id-ID")}
-                    </span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 

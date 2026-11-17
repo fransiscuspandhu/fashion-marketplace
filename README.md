@@ -126,6 +126,7 @@ Sistem mendukung 11 kategori resmi yang dibagi menjadi 3 pilar utama:
 | `/admin/login` | Internal | Staff / Gudang / Admin | Dedicated Dark Enterprise Portal (Security badges, 1-Click Role Login) |
 | `/admin` | Terproteksi | 5 Role Staf Internal | Internal Control Panel (9 Modul Operasional dengan Permission Matrix & Locked Alert) |
 | `/api/upload` | Internal | API Endpoint | Handler Server-side Upload Foto Produk (Maks 10MB, JPG/PNG/WebP) |
+| `/api/health` | Publik/Ops | Health Check | Diagnostik Koneksi Live PostgreSQL, Jumlah Baris 12 Tabel & Trigger Seeding (`?action=seed`) |
 
 ---
 
@@ -178,8 +179,8 @@ Untuk mempermudah review dan pengujian sistem, tersedia akun demo instan 1-click
 4. **Inisialisasi Database (Prisma)**:
    ```bash
    npx prisma generate
-   # Opsional: sinkronkan skema ke database
-   npx prisma db push
+   # Inisialisasi skema & auto-seed tanpa ketergantungan CLI eksternal:
+   npm run db:seed
    ```
 
 5. **Jalankan Development Server**:
@@ -196,76 +197,85 @@ Untuk mempermudah review dan pengujian sistem, tersedia akun demo instan 1-click
 
 ---
 
-## 8. Deployment & Menjalankan Menggunakan Docker (Docker & Docker Compose)
+## 8. Deployment & Menjalankan Menggunakan Docker (Development vs Production Build)
 
-Aplikasi Rahayu Fashion Store telah dilengkapi konfigurasi **Multi-Stage Dockerfile** berbasis `node:20-alpine` dengan Next.js Standalone Engine (ukuran image sangat ramping **~120 MB**) dan orkestrasi `docker-compose.yml` lengkap dengan PostgreSQL 15 & database seeder otomatis.
+Aplikasi Rahayu Fashion Store menggunakan **Multi-Target Dockerfile** berbasis `node:20-alpine` yang memisahkan secara tegas antara **Development Build** (`target: dev` di `docker-compose.yml`) dan **Production Build** (`target: runner` di `docker-compose.prod.yml`):
 
-### A. Quick Start dengan Docker Compose (1 Perintah):
+| Mode Docker | File Konfigurasi | Target Dockerfile | Karakteristik & Log |
+| :--- | :--- | :--- | :--- |
+| **Development Build (Default)** | `docker-compose.yml` | `target: dev` (`NODE_ENV=development`) | Build cepat (tanpa `npm run build`), **Live HTTP Request Logs**, **Prisma SQL Query Logs**, & **Hot-Reload (HMR)** langsung dari folder `./src`. |
+| **Production Build** | `docker-compose.prod.yml` | `target: runner` (`NODE_ENV=production`) | Next.js Standalone Engine (~120 MB), non-root user `nextjs`, siap deploy ke VPS / Cloud. |
 
-1. **Siapkan Environment File**:
+### A. Mode Development (Live Logs, Query Logs & Hot-Reload):
+
+1. **Siapkan Environment File (Opsional)**:
    ```bash
    cp .env.docker.example .env
    ```
 
-2. **Build & Jalankan Seluruh Stack (Next.js App + PostgreSQL)**:
+2. **Jalankan Development Stack (1 Perintah)**:
    ```bash
+   # Menampilkan live log langsung di terminal:
+   docker compose up --build
+
+   # Atau jalankan di background (detached) lalu pantau log:
    docker compose up -d --build
-   ```
-   * Aplikasi Webstore akan aktif di: `http://localhost:3000`
-   * Database PostgreSQL akan aktif di port: `5432`
-
-3. **Populasikan Data Awal (Seeding Database di Docker)**:
-   ```bash
-   docker compose --profile seed run --rm seeder
-   ```
-   *Perintah ini akan otomatis mengisi 11 kategori, produk lookbook, 5 akun staf admin RBAC, akun pembeli, dan metode pembayaran ke dalam database PostgreSQL di dalam container.*
-
-4. **Cek Status & Log Container**:
-   ```bash
-   # Melihat status container
-   docker compose ps
-
-   # Melihat log realtime web
    docker compose logs -f web
    ```
-
-5. **Menghentikan Stack**:
-   ```bash
-   docker compose down
-   # Atau jika ingin membersihkan volume database:
-   docker compose down -v
-   ```
+   * **Aplikasi Webstore & Admin:** `http://localhost:3000`
+   * **Cek Kesehatan & Koneksi Database:** `http://localhost:3000/api/health`
+   * **Database PostgreSQL 15:** Port `5432` (Otomatis membuat 12 tabel, memperbaiki struktur data lama, & mengisi seed data awal melalui `prisma/init-db.mjs` saat container menyala).
 
 ---
 
-### B. Menjalankan Mode Dual-Build (Frontstore & Admin Portal Terpisah):
+### B. Mode Production (Next.js Standalone Server):
 
-Untuk menguji isolasi penuh arsitektur dual-build (port 3000 untuk customer webfront dan port 3001 untuk internal admin portal):
+Untuk menjalankan container dalam mode produksi (`NODE_ENV=production` dengan image standalone minimal):
 
 ```bash
-docker compose --profile dual-build up -d
+# Build & jalankan Production Stack:
+docker compose -f docker-compose.prod.yml up -d --build
+
+# Melihat log container produksi:
+docker compose -f docker-compose.prod.yml logs -f web
+```
+
+#### Menjalankan Mode Dual-Build di Production (Frontstore & Admin Portal Terpisah):
+Untuk menguji isolasi penuh arsitektur dual-build (port `3000` untuk customer webfront dan port `3001` untuk internal admin portal):
+```bash
+docker compose -f docker-compose.prod.yml --profile dual-build up -d --build
 ```
 * **Customer Webfront:** `http://localhost:3000` (Akses belanja pelanggan)
 * **Internal Admin Portal:** `http://localhost:3001/admin/login` (Akses operasional staf & gudang)
 
 ---
 
-### C. Build Mandiri (Standalone Docker Image):
+### C. Reset / Re-Seed Database & Menghentikan Container:
+
+```bash
+# Memaksa pengisian ulang (force re-seed) data awal ke PostgreSQL:
+docker compose --profile seed run --rm seeder
+# Atau via browser/API:
+curl "http://localhost:3000/api/health?action=seed"
+
+# Menghentikan container:
+docker compose down
+# Menghentikan sekaligus menghapus volume database bersih dari awal:
+docker compose down -v
+```
+
+---
+
+### D. Build Mandiri (Standalone Docker Image):
 
 Jika ingin membangun image Docker secara terpisah untuk registry (Docker Hub, GitHub Container Registry, Coolify, atau AWS ECR):
 
 ```bash
-# Build image produksi
-docker build -t rahayu-fashion-store:latest .
+# Build image development (target: dev)
+docker build --target dev -t rahayu-fashion-store:dev .
 
-# Jalankan container mandiri
-docker run -d \
-  -p 3000:3000 \
-  -e DATABASE_URL="postgresql://user:pass@host:5432/rahayu_fashion" \
-  -e NEXT_PUBLIC_SITE_URL="https://www.rahayufashion.co.id" \
-  -e NEXT_PUBLIC_SHOW_DEMO_CONNECTOR="false" \
-  --name rahayu-store-app \
-  rahayu-fashion-store:latest
+# Build image produksi (target: runner)
+docker build --target runner -t rahayu-fashion-store:latest .
 ```
 
 ---
