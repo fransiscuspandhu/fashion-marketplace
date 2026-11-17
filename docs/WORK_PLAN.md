@@ -322,3 +322,57 @@ NEXT_PUBLIC_SHOW_DEMO_CONNECTOR=false
 * **Ketika `NEXT_PUBLIC_SHOW_DEMO_CONNECTOR=false` (Mode Produksi Go-Live):**
   * Tautan dan banner admin **dihapus 100% dari DOM HTML** pelanggan.
   * Rute publik tidak menyisakan petunjuk URL admin apapun kepada pembeli.
+
+---
+
+## 8. Arsitektur Containerization Docker & Orkestrasi Produksi
+
+Untuk memastikan portabilitas maksimal antar server (VPS Ubuntu, Coolify PaaS, AWS, Hetzner, atau DigitalOcean), aplikasi telah dilengkapi arsitektur containerization Docker:
+
+```mermaid
+flowchart TD
+    subgraph Host ["🖥️ Host Server / VPS (Coolify / Docker Engine)"]
+        subgraph Net ["🌐 Isolated Bridge Network (rahayu_network)"]
+            DB["🗄️ rahayu_postgres<br>(PostgreSQL 15 Alpine, Port 5432)"]
+            WEB["🛒 rahayu_web<br>(Next.js 16 Standalone, Port 3000)"]
+            ADMIN["🔒 rahayu_admin<br>(Dedicated Admin Portal, Port 3001)"]
+            SEEDER["🌱 rahayu_seeder<br>(One-Off DB Seed Runner)"]
+        end
+        VOL_DB[("💾 rahayu_pgdata Volume")]
+        VOL_UP[("📁 rahayu_uploads Volume")]
+    end
+
+    WEB -->|Read/Write Data| DB
+    ADMIN -->|Manage & Fulfillment| DB
+    SEEDER -.->|Initial Seeding| DB
+    DB --- VOL_DB
+    WEB --- VOL_UP
+    ADMIN --- VOL_UP
+```
+
+### A. Rincian Multi-Stage Dockerfile (`Dockerfile`)
+* **Base Stage:** `node:20-alpine` dengan paket `libc6-compat` dan `openssl` untuk kompatibilitas native binary Prisma dan Turbopack.
+* **Deps Stage:** `npm ci` dan eksekusi `npx prisma generate` untuk mengkompilasi Prisma engine khusus platform Linux Alpine.
+* **Builder Stage:** Kompilasi Next.js dengan opsi `output: "standalone"` yang mengekstrak modul dependensi penting ke folder `.next/standalone`.
+* **Runner Stage:** Image produksi minimalis yang dijalankan oleh user unprivileged `nextjs:nodejs` (UID 1001) tanpa akses root, menghasilkan bobot image sangat hemat: **~120 MB** (turun 88% dari image standar Node.js ~1 GB).
+* **Entrypoint Script (`docker-entrypoint.sh`):** Otomatis memverifikasi kesiapan koneksi database PostgreSQL dan mengeksekusi `prisma db push` sebelum menyalakan server Next.js.
+
+### B. Opsi Layanan Docker Compose (`docker-compose.yml`)
+1. **Layanan Standar (Single-Command Launch):**
+   ```bash
+   docker compose up -d --build
+   ```
+   Menjalankan kontainer database PostgreSQL (`rahayu_postgres`) dan aplikasi webstore terpadu (`rahayu_web` di port 3000).
+2. **Layanan Seeding Database Otomatis:**
+   ```bash
+   docker compose --profile seed run --rm seeder
+   ```
+   Menjalankan container seeder sekali pakai yang mengisi 11 kategori, produk lookbook, 5 akun staf RBAC, akun pembeli, dan metode pembayaran.
+3. **Layanan Dual-Build Terisolasi (Production Split):**
+   ```bash
+   docker compose --profile dual-build up -d
+   ```
+   Menjalankan dua kontainer terpisah:
+   * Kontainer `rahayu_web` (Port 3000): Webfront belanja publik.
+   * Kontainer `rahayu_admin` (Port 3001): Internal Admin Portal dengan proteksi RBAC dan opsi Cloudflare Zero Trust / IP Whitelist.
+

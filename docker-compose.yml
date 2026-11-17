@@ -1,0 +1,126 @@
+# ==============================================================================
+# RAHAYU FASHION STORE — DOCKER COMPOSE ORCHESTRATION
+# Production & Staging Multi-Container Stack (Next.js 16 + PostgreSQL 15 + Seeder)
+# ==============================================================================
+
+version: "3.8"
+
+services:
+  # ----------------------------------------------------------------------------
+  # 1. Database Service: PostgreSQL 15 (Persistent Storage & Healthcheck)
+  # ----------------------------------------------------------------------------
+  db:
+    image: postgres:15-alpine
+    container_name: rahayu_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-rahayu_fashion}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - rahayu_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-rahayu_fashion}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - rahayu_network
+
+  # ----------------------------------------------------------------------------
+  # 2. Main Web Application: Customer Webfront & Admin Portal
+  # ----------------------------------------------------------------------------
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}
+        NEXT_PUBLIC_SHOW_DEMO_CONNECTOR: ${NEXT_PUBLIC_SHOW_DEMO_CONNECTOR:-true}
+        DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-rahayu_fashion}?schema=public
+    container_name: rahayu_web
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-rahayu_fashion}?schema=public
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}
+      NEXT_PUBLIC_SHOW_DEMO_CONNECTOR: ${NEXT_PUBLIC_SHOW_DEMO_CONNECTOR:-true}
+      MIDTRANS_SERVER_KEY: ${MIDTRANS_SERVER_KEY:-SB-Mid-server-xxxx}
+      MIDTRANS_CLIENT_KEY: ${MIDTRANS_CLIENT_KEY:-SB-Mid-client-xxxx}
+      NEXT_PUBLIC_MIDTRANS_CLIENT_KEY: ${NEXT_PUBLIC_MIDTRANS_CLIENT_KEY:-SB-Mid-client-xxxx}
+      FAL_KEY: ${FAL_KEY:-demo_key}
+    volumes:
+      - rahayu_uploads:/app/public/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - rahayu_network
+
+  # ----------------------------------------------------------------------------
+  # 3. Dedicated Admin Portal Service (Dual-Build Architecture Mode)
+  # Run with: docker compose --profile dual-build up -d
+  # ----------------------------------------------------------------------------
+  admin:
+    profiles: ["dual-build"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_SITE_URL: ${ADMIN_SITE_URL:-http://localhost:3001}
+        NEXT_PUBLIC_SHOW_DEMO_CONNECTOR: "true"
+        DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-rahayu_fashion}?schema=public
+    container_name: rahayu_admin
+    restart: unless-stopped
+    ports:
+      - "${ADMIN_PORT:-3001}:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-rahayu_fashion}?schema=public
+      NEXT_PUBLIC_SITE_URL: ${ADMIN_SITE_URL:-http://localhost:3001}
+      NEXT_PUBLIC_SHOW_DEMO_CONNECTOR: "true"
+    volumes:
+      - rahayu_uploads:/app/public/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - rahayu_network
+
+  # ----------------------------------------------------------------------------
+  # 4. Database Seeder Service (Initial Seed Automation)
+  # Run with: docker compose --profile seed run --rm seeder
+  # ----------------------------------------------------------------------------
+  seeder:
+    profiles: ["seed"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rahayu_seeder
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-rahayu_fashion}?schema=public
+    command: ["npx", "prisma", "db", "seed"]
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - rahayu_network
+
+# ------------------------------------------------------------------------------
+# Persistent Data Volumes & Isolated Bridge Network
+# ------------------------------------------------------------------------------
+volumes:
+  rahayu_pgdata:
+    driver: local
+  rahayu_uploads:
+    driver: local
+
+networks:
+  rahayu_network:
+    driver: bridge

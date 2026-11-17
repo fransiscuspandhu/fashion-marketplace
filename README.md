@@ -196,7 +196,81 @@ Untuk mempermudah review dan pengujian sistem, tersedia akun demo instan 1-click
 
 ---
 
-## 8. Dokumentasi Internal & Roadmap
+## 8. Deployment & Menjalankan Menggunakan Docker (Docker & Docker Compose)
+
+Aplikasi Rahayu Fashion Store telah dilengkapi konfigurasi **Multi-Stage Dockerfile** berbasis `node:20-alpine` dengan Next.js Standalone Engine (ukuran image sangat ramping **~120 MB**) dan orkestrasi `docker-compose.yml` lengkap dengan PostgreSQL 15 & database seeder otomatis.
+
+### A. Quick Start dengan Docker Compose (1 Perintah):
+
+1. **Siapkan Environment File**:
+   ```bash
+   cp .env.docker.example .env
+   ```
+
+2. **Build & Jalankan Seluruh Stack (Next.js App + PostgreSQL)**:
+   ```bash
+   docker compose up -d --build
+   ```
+   * Aplikasi Webstore akan aktif di: `http://localhost:3000`
+   * Database PostgreSQL akan aktif di port: `5432`
+
+3. **Populasikan Data Awal (Seeding Database di Docker)**:
+   ```bash
+   docker compose --profile seed run --rm seeder
+   ```
+   *Perintah ini akan otomatis mengisi 11 kategori, produk lookbook, 5 akun staf admin RBAC, akun pembeli, dan metode pembayaran ke dalam database PostgreSQL di dalam container.*
+
+4. **Cek Status & Log Container**:
+   ```bash
+   # Melihat status container
+   docker compose ps
+
+   # Melihat log realtime web
+   docker compose logs -f web
+   ```
+
+5. **Menghentikan Stack**:
+   ```bash
+   docker compose down
+   # Atau jika ingin membersihkan volume database:
+   docker compose down -v
+   ```
+
+---
+
+### B. Menjalankan Mode Dual-Build (Frontstore & Admin Portal Terpisah):
+
+Untuk menguji isolasi penuh arsitektur dual-build (port 3000 untuk customer webfront dan port 3001 untuk internal admin portal):
+
+```bash
+docker compose --profile dual-build up -d
+```
+* **Customer Webfront:** `http://localhost:3000` (Akses belanja pelanggan)
+* **Internal Admin Portal:** `http://localhost:3001/admin/login` (Akses operasional staf & gudang)
+
+---
+
+### C. Build Mandiri (Standalone Docker Image):
+
+Jika ingin membangun image Docker secara terpisah untuk registry (Docker Hub, GitHub Container Registry, Coolify, atau AWS ECR):
+
+```bash
+# Build image produksi
+docker build -t rahayu-fashion-store:latest .
+
+# Jalankan container mandiri
+docker run -d \
+  -p 3000:3000 \
+  -e DATABASE_URL="postgresql://user:pass@host:5432/rahayu_fashion" \
+  -e NEXT_PUBLIC_SITE_URL="https://www.rahayufashion.co.id" \
+  -e NEXT_PUBLIC_SHOW_DEMO_CONNECTOR="false" \
+  --name rahayu-store-app \
+  rahayu-fashion-store:latest
+```
+
+---
+
+## 9. Dokumentasi Internal & Roadmap
 
 Rincian proses pengerjaan bertahap (Phase 1–6), estimasi biaya server bulanan (OPEX Rp 500rb–1jt/bln), arsitektur dual-build subdomain, serta kalkulasi photoshoot AI didokumentasikan di:
 
