@@ -25,7 +25,7 @@ interface ChatMessage {
 }
 
 export default function AiVirtualStylistChat() {
-  const { aiFeaturesConfig, products, addToCart } = useStore();
+  const { aiFeaturesConfig, products, addToCart, showStoreToast } = useStore();
   const [isOpen, setIsOpen] = useState(false);
   const [inputMessage, setInputMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -214,7 +214,11 @@ export default function AiVirtualStylistChat() {
                             type="button"
                             onClick={() => {
                               addToCart(prod, "M", "Default", 1);
-                              alert(`${prod.name} berhasil ditambahkan ke keranjang belanja!`);
+                              showStoreToast(
+                                "Rekomendasi Stylist Ditambahkan",
+                                `${prod.name} berhasil masuk ke keranjang belanja Anda!`,
+                                "success"
+                              );
                             }}
                             className="px-2 py-1 bg-purple-700 hover:bg-purple-800 text-white rounded text-[10px] font-bold flex items-center gap-1 shrink-0 cursor-pointer"
                           >

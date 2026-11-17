@@ -429,6 +429,24 @@ interface StoreContextType {
     lighting: string;
     background: string;
   }) => AiPhotoLog;
+
+  // Fancy Loading & Store Notification State
+  isStoreLoading: boolean;
+  isSyncingData: boolean;
+  syncMessage: string | null;
+  triggerFancyLoading: (message?: string, durationMs?: number) => void;
+  storeToast: {
+    id: number;
+    title: string;
+    message: string;
+    type: "success" | "info" | "warning";
+  } | null;
+  showStoreToast: (
+    title: string,
+    message: string,
+    type?: "success" | "info" | "warning"
+  ) => void;
+  dismissStoreToast: () => void;
 }
 
 const DEFAULT_USER: CustomerUser = {
@@ -946,6 +964,39 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   // 1b. Admin Internal Auth & RBAC State (Admin Portal - Separated from Customer)
   const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
 
+  // 1c. Fancy Loading & Store Notification State
+  const [isStoreLoading, setIsStoreLoading] = useState<boolean>(true);
+  const [isSyncingData, setIsSyncingData] = useState<boolean>(false);
+  const [syncMessage, setSyncMessage] = useState<string | null>("Menyinkronkan Koleksi Rahayu...");
+  const [storeToast, setStoreToast] = useState<{
+    id: number;
+    title: string;
+    message: string;
+    type: "success" | "info" | "warning";
+  } | null>(null);
+
+  const triggerFancyLoading = (message = "Memuat Koleksi Rahayu...", durationMs = 550) => {
+    setIsSyncingData(true);
+    setSyncMessage(message);
+    setTimeout(() => {
+      setIsSyncingData(false);
+    }, durationMs);
+  };
+
+  const showStoreToast = (
+    title: string,
+    message: string,
+    type: "success" | "info" | "warning" = "success"
+  ) => {
+    const id = Date.now();
+    setStoreToast({ id, title, message, type });
+    setTimeout(() => {
+      setStoreToast((prev) => (prev?.id === id ? null : prev));
+    }, 3600);
+  };
+
+  const dismissStoreToast = () => setStoreToast(null);
+
   // Synchronize admin session from localStorage after initial client mount to prevent SSR hydration mismatch
   useEffect(() => {
     try {
@@ -961,6 +1012,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   // Synchronize live data from PostgreSQL database
   useEffect(() => {
     async function loadDatabaseData() {
+      const startTime = Date.now();
+      setIsStoreLoading(true);
+      setIsSyncingData(true);
+      setSyncMessage("Menghubungkan Katalog & Database Rahayu...");
       try {
         const [prodRes, catRes, orderRes, payRes, homeRes] = await Promise.allSettled([
           fetch("/api/products").then((r) => r.json()),
@@ -1116,6 +1171,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         }
       } catch (err) {
         console.warn("Could not sync from database API, fallback to default state", err);
+      } finally {
+        const elapsed = Date.now() - startTime;
+        const minDisplay = Math.max(0, 650 - elapsed);
+        setTimeout(() => {
+          setIsStoreLoading(false);
+          setIsSyncingData(false);
+        }, minDisplay);
       }
     }
 
@@ -1694,6 +1756,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         updateAiFeaturesConfig,
         aiLogs,
         generateAiPhoto,
+        isStoreLoading,
+        isSyncingData,
+        syncMessage,
+        triggerFancyLoading,
+        storeToast,
+        showStoreToast,
+        dismissStoreToast,
       }}
     >
       {children}

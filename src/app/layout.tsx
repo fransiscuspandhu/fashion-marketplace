@@ -36,6 +36,7 @@ export const metadata: Metadata = {
 
 import { StoreProvider } from "@/context/StoreContext";
 import CartDrawer from "@/components/CartDrawer";
+import FrontstoreFancyLoader from "@/components/FrontstoreFancyLoader";
 
 export default function RootLayout({
   children,
@@ -67,6 +68,7 @@ export default function RootLayout({
       </head>
       <body className="antialiased bg-white text-[#18181B] selection:bg-[#18181B] selection:text-white" suppressHydrationWarning>
         <StoreProvider>
+          <FrontstoreFancyLoader />
           {children}
           <CartDrawer />
         </StoreProvider>

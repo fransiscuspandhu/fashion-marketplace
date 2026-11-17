@@ -72,6 +72,7 @@ export default function CheckoutPage() {
     cartTotal,
     paymentMethods,
     createOrder,
+    showStoreToast,
   } = useStore();
 
   // Active address
@@ -727,13 +728,18 @@ export default function CheckoutPage() {
 
             <button
               onClick={() => {
-                alert("Form Tambah Alamat Baru dapat diisi di Tab Alamat Halaman Profil!");
                 setIsAddressModalOpen(false);
+                showStoreToast(
+                  "Kelola Alamat Pengiriman",
+                  "Membuka halaman Buku Alamat di Profil Pelanggan Anda...",
+                  "info"
+                );
+                router.push("/profile");
               }}
-              className="w-full py-2 border border-dashed border-zinc-300 text-xs font-semibold text-zinc-700 rounded hover:bg-zinc-50 flex items-center justify-center gap-1.5"
+              className="w-full py-2 border border-dashed border-zinc-300 text-xs font-semibold text-zinc-700 rounded hover:bg-zinc-50 flex items-center justify-center gap-1.5 cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>Tambah Alamat Baru</span>
+              <span>Tambah Alamat Baru di Profil</span>
             </button>
           </div>
         </div>

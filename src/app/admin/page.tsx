@@ -244,7 +244,79 @@ export default function AdminPage() {
   });
   const [newInstructionText, setNewInstructionText] = useState("");
 
+  // Custom Enterprise Dialog & Floating Toast State (Replaces all standard browser alert/confirm)
+  const [adminDialog, setAdminDialog] = useState<{
+    isOpen: boolean;
+    variant: "danger" | "warning" | "success" | "info";
+    badgeText: string;
+    title: string;
+    message: string;
+    detailBox?: string;
+    confirmLabel: string;
+    cancelLabel?: string;
+    onConfirm?: () => void;
+  } | null>(null);
 
+  const [adminToast, setAdminToast] = useState<{
+    id: number;
+    variant: "success" | "warning" | "info";
+    title: string;
+    message: string;
+  } | null>(null);
+
+  const showAdminToast = (
+    title: string,
+    message: string,
+    variant: "success" | "warning" | "info" = "success"
+  ) => {
+    const id = Date.now();
+    setAdminToast({ id, variant, title, message });
+    setTimeout(() => {
+      setAdminToast((prev) => (prev?.id === id ? null : prev));
+    }, 4000);
+  };
+
+  const openAdminAlert = (opts: {
+    variant?: "danger" | "warning" | "success" | "info";
+    badgeText: string;
+    title: string;
+    message: string;
+    detailBox?: string;
+    confirmLabel?: string;
+  }) => {
+    setAdminDialog({
+      isOpen: true,
+      variant: opts.variant || "info",
+      badgeText: opts.badgeText,
+      title: opts.title,
+      message: opts.message,
+      detailBox: opts.detailBox,
+      confirmLabel: opts.confirmLabel || "Mengerti",
+    });
+  };
+
+  const openAdminConfirm = (opts: {
+    variant?: "danger" | "warning" | "success" | "info";
+    badgeText: string;
+    title: string;
+    message: string;
+    detailBox?: string;
+    confirmLabel: string;
+    cancelLabel?: string;
+    onConfirm: () => void;
+  }) => {
+    setAdminDialog({
+      isOpen: true,
+      variant: opts.variant || "danger",
+      badgeText: opts.badgeText,
+      title: opts.title,
+      message: opts.message,
+      detailBox: opts.detailBox,
+      confirmLabel: opts.confirmLabel,
+      cancelLabel: opts.cancelLabel || "Batalkan",
+      onConfirm: opts.onConfirm,
+    });
+  };
 
   // Analytics Metrics Calculation
   const totalRevenue = orders.reduce((sum, o) => sum + o.totalAmount, 0);
@@ -258,18 +330,44 @@ export default function AdminPage() {
     e.preventDefault();
     if (!newSizeInput.trim()) return;
     addCategorySize(selectedCatId, newSizeInput.trim());
+    showAdminToast(
+      "Ukuran Baru Ditambahkan",
+      `Ukuran "${newSizeInput.trim()}" ditambahkan ke kategori ${selectedCatId}.`,
+      "success"
+    );
     setNewSizeInput("");
   };
 
   const handleSaveAwb = (orderId: string) => {
     const val = awbInputs[orderId];
     if (!val || !val.trim()) {
-      alert("Masukkan nomor resi terlebih dahulu!");
+      openAdminAlert({
+        variant: "warning",
+        badgeText: "VALIDASI EKSPEDISI",
+        title: "Nomor Resi (AWB) Belum Diisi",
+        message:
+          "Silakan ketik kode nomor resi kurir terlebih dahulu (contoh: JNE-99481029 atau 003889127764) sebelum memproses pengiriman.",
+        detailBox: `ID Pesanan: ${orderId} • Status saat ini: SEDANG DIKEMAS`,
+        confirmLabel: "Mengerti, Isi Resi",
+      });
       return;
     }
     updateOrderAwb(orderId, val.trim());
     setActiveResiModalOrder(null);
-    alert(`Nomor resi ${val.trim()} berhasil disimpan dan pelanggan dapat melacak paket!`);
+    showAdminToast(
+      "Nomor Resi Kurir Aktif",
+      `Resi ${val.trim()} berhasil disimpan untuk pesanan ${orderId}.`,
+      "success"
+    );
+    openAdminAlert({
+      variant: "success",
+      badgeText: "DISPATCH EKSPEDISI BERHASIL",
+      title: "Nomor Resi Berhasil Diterbitkan!",
+      message: `Pesanan ${orderId} telah dipindahkan ke status DALAM PENGIRIMAN dengan nomor resi ${val.trim()}.`,
+      detailBox:
+        "Pelanggan kini dapat melacak pergerakan paket secara real-time di halaman Profil Pelanggan (/profile).",
+      confirmLabel: "Selesai",
+    });
   };
 
   // Product CRUD Handlers
@@ -328,7 +426,14 @@ export default function AdminPage() {
   const handleSaveProduct = (e: React.FormEvent) => {
     e.preventDefault();
     if (!productForm.name.trim() || !productForm.sku.trim()) {
-      alert("Nama produk dan SKU wajib diisi!");
+      openAdminAlert({
+        variant: "warning",
+        badgeText: "VALIDASI KATALOG PRODUK",
+        title: "Nama Produk & SKU Wajib Diisi",
+        message:
+          "Pastikan Anda telah mengisi Nama Produk dan kode unik SKU sebelum menyimpan data ke katalog.",
+        confirmLabel: "Kembali ke Form",
+      });
       return;
     }
 
@@ -336,20 +441,45 @@ export default function AdminPage() {
       updateProduct(editingProduct.id, {
         ...productForm,
       });
+      showAdminToast(
+        "Produk Berhasil Diperbarui",
+        `Perubahan pada "${productForm.name}" (${productForm.sku}) telah disimpan ke database.`,
+        "success"
+      );
     } else {
       const newId = Math.max(0, ...products.map((p) => p.id)) + 1;
       addProduct({
         id: newId,
         ...productForm,
       });
+      showAdminToast(
+        "Produk Baru Ditambahkan",
+        `"${productForm.name}" (${productForm.sku}) kini tampil di etalase Webstore.`,
+        "success"
+      );
     }
     setIsAddProductModalOpen(false);
   };
 
   const handleDeleteProduct = (productId: number, productName: string) => {
-    if (confirm(`Apakah Anda yakin ingin menghapus produk "${productName}"?`)) {
-      deleteProduct(productId);
-    }
+    openAdminConfirm({
+      variant: "danger",
+      badgeText: "KONFIRMASI HAPUS KATALOG",
+      title: `Hapus Produk "${productName}"?`,
+      message:
+        "Produk ini akan dihapus dari daftar etalase pelanggan dan tabel produk PostgreSQL.",
+      detailBox: `ID Produk: #${productId} • Tindakan penghapusan katalog bersifat permanen.`,
+      confirmLabel: "Ya, Hapus Produk",
+      cancelLabel: "Batal",
+      onConfirm: () => {
+        deleteProduct(productId);
+        showAdminToast(
+          "Produk Dihapus dari Katalog",
+          `"${productName}" telah berhasil dihapus dari sistem.`,
+          "info"
+        );
+      },
+    });
   };
 
   const handleRunProductAiGenerate = () => {
@@ -364,13 +494,22 @@ export default function AdminPage() {
       });
       setAiProductResult(generated.outputUrl);
       setIsProductAiGenerating(false);
+      showAdminToast(
+        "Render Studio AI Selesai",
+        "Foto model AI beresolusi tinggi siap diterapkan ke produk.",
+        "success"
+      );
     }, 1500);
   };
 
   const handleApplyAiImageToProduct = () => {
     if (aiProductResult) {
       setProductForm((prev) => ({ ...prev, imageUrl: aiProductResult }));
-      alert("Foto hasil AI berhasil dipasang sebagai foto produk!");
+      showAdminToast(
+        "Foto AI Dipasang ke Produk",
+        "Foto hasil Studio AI berhasil dijadikan gambar utama produk!",
+        "success"
+      );
     }
   };
 
@@ -399,6 +538,11 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
         promoBadge: prev.promoBadge || "HOT REKOMENDASI",
       }));
       setIsAiCopywriting(false);
+      showAdminToast(
+        "Copywriting SEO AI Selesai",
+        "Deskripsi spesifikasi & hashtag otomatis berhasil dibuat.",
+        "success"
+      );
     }, 600);
   };
 
@@ -427,6 +571,11 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
       qrImageUrl: paymentEditForm.qrImageUrl,
       instructions: paymentEditForm.instructions,
     });
+    showAdminToast(
+      "Metode Pembayaran Diperbarui",
+      `Konfigurasi & prosedur "${editingPayment.name}" berhasil disimpan.`,
+      "success"
+    );
     setEditingPayment(null);
   };
 
@@ -446,8 +595,6 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
     }));
   };
 
-
-
   const handleSavePillar = (e: React.FormEvent) => {
     e.preventDefault();
     if (editingPillar) {
@@ -456,15 +603,31 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
         name: editingPillar.name.trim(),
         description: editingPillar.description?.trim(),
       });
+      showAdminToast(
+        "Kelompok Kategori Diperbarui",
+        `Kelompok "${editingPillar.name}" berhasil disimpan.`,
+        "success"
+      );
       setEditingPillar(null);
-      alert(`Kelompok kategori "${editingPillar.name}" berhasil diperbarui!`);
     } else {
       if (!newPillarForm.id.trim() || !newPillarForm.name.trim()) {
-        alert("Harap isi ID dan Nama kelompok kategori!");
+        openAdminAlert({
+          variant: "warning",
+          badgeText: "VALIDASI KELOMPOK KATEGORI",
+          title: "ID & Nama Kelompok Wajib Diisi",
+          message: "Harap isi kode ID dan Nama kelompok kategori sebelum menambahkan.",
+          confirmLabel: "Lengkapi Data",
+        });
         return;
       }
       if (pillars.some((p) => p.id.toLowerCase() === newPillarForm.id.trim().toLowerCase())) {
-        alert("ID kelompok kategori sudah terdaftar!");
+        openAdminAlert({
+          variant: "warning",
+          badgeText: "DUPLIKASI ID KELOMPOK",
+          title: "ID Kelompok Kategori Sudah Terdaftar",
+          message: `ID "${newPillarForm.id}" sudah digunakan oleh kelompok kategori lain. Silakan gunakan kode unik lain.`,
+          confirmLabel: "Ganti ID",
+        });
         return;
       }
       addPillar({
@@ -472,30 +635,66 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
         name: newPillarForm.name.trim(),
         description: newPillarForm.description?.trim(),
       });
+      showAdminToast(
+        "Kelompok Kategori Ditambahkan",
+        `Kelompok "${newPillarForm.name.trim()}" siap digunakan.`,
+        "success"
+      );
       setNewPillarForm({ id: "", name: "", description: "" });
       setIsPillarModalOpen(false);
-      alert("Kelompok kategori baru berhasil ditambahkan!");
     }
   };
 
   const handleDeletePillar = (pillarId: string, pillarName: string) => {
     if (pillars.length <= 1) {
-      alert("Minimal harus tersisa 1 kelompok kategori.");
+      openAdminAlert({
+        variant: "warning",
+        badgeText: "BATAS MINIMUM KELOMPOK",
+        title: "Tidak Dapat Menghapus Kelompok Terakhir",
+        message: "Sistem mewajibkan minimal terdapat 1 kelompok kategori aktif.",
+        confirmLabel: "Mengerti",
+      });
       return;
     }
-    if (confirm(`Apakah Anda yakin ingin menghapus kelompok kategori "${pillarName}"? Kategori di dalamnya tetap tersimpan.`)) {
-      deletePillar(pillarId);
-    }
+    openAdminConfirm({
+      variant: "danger",
+      badgeText: "HAPUS KELOMPOK KATEGORI",
+      title: `Hapus Kelompok "${pillarName}"?`,
+      message:
+        "Kelompok kategori ini akan dihapus dari daftar pengelompokan, namun kategori produk di dalamnya tetap tersimpan dengan aman.",
+      confirmLabel: "Ya, Hapus Kelompok",
+      cancelLabel: "Batal",
+      onConfirm: () => {
+        deletePillar(pillarId);
+        showAdminToast(
+          "Kelompok Kategori Dihapus",
+          `Kelompok "${pillarName}" telah dihapus.`,
+          "info"
+        );
+      },
+    });
   };
 
   const handleCreateCategory = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCatForm.id.trim() || !newCatForm.nameId.trim()) {
-      alert("Harap lengkapi ID slug dan Nama Kategori!");
+      openAdminAlert({
+        variant: "warning",
+        badgeText: "VALIDASI KATEGORI",
+        title: "ID Slug & Nama Kategori Wajib Diisi",
+        message: "Harap lengkapi kode ID Slug dan Nama Kategori sebelum menyimpan.",
+        confirmLabel: "Lengkapi Form",
+      });
       return;
     }
     if (categories.some((c) => c.id.toLowerCase() === newCatForm.id.trim().toLowerCase())) {
-      alert("ID / Slug kategori sudah digunakan! Gunakan ID lain.");
+      openAdminAlert({
+        variant: "warning",
+        badgeText: "DUPLIKASI KATEGORI",
+        title: "ID / Slug Kategori Sudah Digunakan",
+        message: `Kategori dengan ID "${newCatForm.id}" sudah terdaftar di sistem. Silakan gunakan nama atau slug lain.`,
+        confirmLabel: "Ubah ID",
+      });
       return;
     }
     addCategory({
@@ -509,6 +708,7 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
       colors: newCatForm.colors || [{ name: "Default", hex: newCatForm.colorHex || "#8A2BE2" }],
       imageUrl: newCatForm.imageUrl?.trim() || undefined,
     });
+    const createdName = newCatForm.nameId.trim();
     setSelectedCatId(newCatForm.id.trim());
     setIsAddCatModalOpen(false);
     setNewCatForm({
@@ -526,7 +726,11 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
       iconName: "Sparkles",
       imageUrl: "",
     });
-    alert("Kategori baru berhasil ditambahkan!");
+    showAdminToast(
+      "Kategori Baru Ditambahkan",
+      `Kategori "${createdName}" berhasil disimpan ke database.`,
+      "success"
+    );
   };
 
   const handleStartEditCategory = (cat: RahayuCategory) => {
@@ -540,27 +744,57 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
     if (!activeCategory) return;
     updateCategory(activeCategory.id, editCatForm);
     setIsEditingCat(false);
-    alert(`Perubahan kategori "${editCatForm.nameId || activeCategory.nameId}" berhasil disimpan!`);
+    showAdminToast(
+      "Perubahan Kategori Disimpan",
+      `Atribut kategori "${editCatForm.nameId || activeCategory.nameId}" berhasil diperbarui!`,
+      "success"
+    );
   };
 
   const handleDeleteCategory = (catId: string, catName: string) => {
     if (categories.length <= 1) {
-      alert("Tidak dapat menghapus semua kategori. Minimal harus tersisa 1 kategori.");
+      openAdminAlert({
+        variant: "warning",
+        badgeText: "BATAS MINIMUM KATEGORI",
+        title: "Tidak Dapat Menghapus Semua Kategori",
+        message: "Sistem membutuhkan minimal 1 kategori produk aktif untuk beroperasi.",
+        confirmLabel: "Mengerti",
+      });
       return;
     }
-    if (confirm(`Apakah Anda yakin ingin menghapus kategori "${catName}"?`)) {
-      deleteCategory(catId);
-      const remaining = categories.filter((c) => c.id !== catId);
-      if (remaining.length > 0) {
-        setSelectedCatId(remaining[0].id);
-      }
-      setIsEditingCat(false);
-    }
+    openAdminConfirm({
+      variant: "danger",
+      badgeText: "KONFIRMASI HAPUS KATEGORI",
+      title: `Hapus Kategori "${catName}"?`,
+      message:
+        "Kategori ini akan dihapus dari navigasi etalase Webstore dan database PostgreSQL.",
+      detailBox: `ID Kategori: ${catId}`,
+      confirmLabel: "Ya, Hapus Kategori",
+      cancelLabel: "Batal",
+      onConfirm: () => {
+        deleteCategory(catId);
+        const remaining = categories.filter((c) => c.id !== catId);
+        if (remaining.length > 0) {
+          setSelectedCatId(remaining[0].id);
+        }
+        setIsEditingCat(false);
+        showAdminToast(
+          "Kategori Dihapus",
+          `Kategori "${catName}" telah dihapus dari sistem.`,
+          "info"
+        );
+      },
+    });
   };
 
   const handleSaveLayout = () => {
     updateHomepageConfig(layoutDraft);
     setLayoutSavedAlert(true);
+    showAdminToast(
+      "Tata Letak Beranda Disimpan",
+      "Konfigurasi Hero Banner, Countdown, dan Section Beranda berhasil disinkronkan.",
+      "success"
+    );
     setTimeout(() => setLayoutSavedAlert(false), 3000);
   };
 
@@ -707,10 +941,20 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
               {/* Logout Button */}
               <button
                 onClick={() => {
-                  if (confirm("Keluar dari Portal Admin Internal?")) {
-                    adminLogout();
-                    router.push("/admin/login");
-                  }
+                  openAdminConfirm({
+                    variant: "danger",
+                    badgeText: "KEAMANAN SESI INTERNAL",
+                    title: "Keluar dari Portal Admin Internal?",
+                    message: `Anda saat ini masuk sebagai ${adminUser.name} (${currentRoleConfig.label}). Sesi kerja internal Anda akan diakhiri.`,
+                    detailBox:
+                      "Pastikan seluruh perubahan katalog, nomor resi kurir, atau pengaturan toko telah tersimpan.",
+                    confirmLabel: "Ya, Keluar Sesi",
+                    cancelLabel: "Tetap di Portal",
+                    onConfirm: () => {
+                      adminLogout();
+                      router.push("/admin/login");
+                    },
+                  });
                 }}
                 className="p-1.5 rounded bg-zinc-800 hover:bg-rose-950/70 text-zinc-400 hover:text-rose-400 border border-zinc-700 hover:border-rose-800 transition cursor-pointer"
                 title="Keluar dari Akun Admin"
@@ -1280,10 +1524,25 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
                       <button
                         type="button"
                         onClick={() => {
-                          products
-                            .filter((p) => p.stock < 20)
-                            .forEach((p) => updateProductStock(p.id, p.stock + 50));
-                          alert("Permintaan PO restock otomatis (+50 pcs untuk setiap SKU kritis) berhasil diajukan!");
+                          const lowSkus = products.filter((p) => p.stock < 20);
+                          openAdminConfirm({
+                            variant: "info",
+                            badgeText: "OTOMASI GUDANG & PO",
+                            title: "Ajukan PO Restock Otomatis (+50 pcs)?",
+                            message:
+                              "Sistem akan langsung menambahkan +50 pcs ke seluruh SKU produk yang memiliki stok kritis (< 20 pcs) di database PostgreSQL.",
+                            detailBox: `SKU Kritis: ${lowSkus.map((s) => s.sku).join(", ") || "Semua aman"} (${lowSkus.length} Produk)`,
+                            confirmLabel: "Ya, Eksekusi Restock +50",
+                            cancelLabel: "Batal",
+                            onConfirm: () => {
+                              lowSkus.forEach((p) => updateProductStock(p.id, p.stock + 50));
+                              showAdminToast(
+                                "PO Restock Otomatis Berhasil",
+                                `${lowSkus.length} SKU kritis telah ditambah +50 pcs secara real-time.`,
+                                "success"
+                              );
+                            },
+                          });
                         }}
                         className="w-full mt-1 py-1.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-zinc-950 font-bold rounded text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-md transition"
                       >
@@ -1925,16 +2184,21 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
 
               {/* MODAL KELOLA KELOMPOK KATEGORI (PILLARS) */}
               {isPillarModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                  <div className="bg-white rounded-2xl border border-zinc-200 shadow-2xl max-w-lg w-full p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150">
-                    <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
-                      <div>
-                        <h2 className="text-base font-bold text-zinc-900">
-                          Kelola Kelompok Kategori
-                        </h2>
-                        <p className="text-xs text-zinc-500">
-                          Tambah, ubah nama, dan hapus kelompok kategori (tanpa kata "pilar") untuk mega-menu.
-                        </p>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-sm p-4">
+                  <div className="bg-white rounded-2xl border border-zinc-200 shadow-2xl max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+                    <div className="bg-gradient-to-r from-zinc-900 via-purple-950 to-zinc-900 px-6 py-4 text-white flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-400/40 flex items-center justify-center text-amber-300">
+                          <Layers className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-purple-300 block">
+                            Master Taksonomi
+                          </span>
+                          <h2 className="text-sm font-bold text-white">
+                            Kelola Kelompok Kategori
+                          </h2>
+                        </div>
                       </div>
                       <button
                         type="button"
@@ -1942,11 +2206,12 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
                           setIsPillarModalOpen(false);
                           setEditingPillar(null);
                         }}
-                        className="text-zinc-400 hover:text-zinc-600 p-1 rounded-full cursor-pointer"
+                        className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-zinc-300 hover:text-white transition cursor-pointer"
                       >
-                        <X className="w-5 h-5" />
+                        <X className="w-4 h-4" />
                       </button>
                     </div>
+                    <div className="p-6 space-y-4">
 
                     {/* Pillar List */}
                     <div className="space-y-2 max-h-56 overflow-y-auto">
@@ -2060,33 +2325,39 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
                         </button>
                       </div>
                     </form>
+                    </div>
                   </div>
                 </div>
               )}
 
               {/* MODAL TAMBAH KATEGORI BARU */}
               {isAddCatModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                  <div className="bg-white rounded-2xl border border-zinc-200 shadow-2xl max-w-lg w-full p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
-                    <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
-                      <div>
-                        <h2 className="text-base font-bold text-zinc-900">
-                          Tambah Kategori Produk Baru
-                        </h2>
-                        <p className="text-xs text-zinc-500">
-                          Kategori ini akan otomatis muncul di navigasi frontstore dan filter produk.
-                        </p>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-sm p-4">
+                  <div className="bg-white rounded-2xl border border-zinc-200 shadow-2xl max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] flex flex-col">
+                    <div className="bg-gradient-to-r from-zinc-900 via-purple-950 to-zinc-900 px-6 py-4 text-white flex items-center justify-between shrink-0">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-400/40 flex items-center justify-center text-amber-300">
+                          <Sparkles className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-purple-300 block">
+                            11+ Kategori Dinamis
+                          </span>
+                          <h2 className="text-sm font-bold text-white">
+                            Tambah Kategori Produk Baru
+                          </h2>
+                        </div>
                       </div>
                       <button
                         type="button"
                         onClick={() => setIsAddCatModalOpen(false)}
-                        className="text-zinc-400 hover:text-zinc-600 p-1 rounded-full cursor-pointer"
+                        className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-zinc-300 hover:text-white transition cursor-pointer"
                       >
-                        <X className="w-5 h-5" />
+                        <X className="w-4 h-4" />
                       </button>
                     </div>
 
-                    <form onSubmit={handleCreateCategory} className="space-y-3.5 text-xs">
+                    <form onSubmit={handleCreateCategory} className="p-6 overflow-y-auto space-y-3.5 text-xs">
                       <div>
                         <label className="block font-semibold text-zinc-700 mb-1">
                           ID / Slug Kategori (Unik, tanpa spasi) *
@@ -2519,27 +2790,32 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
 
               {/* MODAL TAMBAH / EDIT PRODUK + AI GENERATOR */}
               {isAddProductModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-                  <div className="bg-white rounded-2xl max-w-2xl w-full p-6 space-y-4 animate-in fade-in max-h-[92vh] overflow-y-auto shadow-2xl">
-                    <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
-                      <div>
-                        <h2 className="text-base font-bold text-zinc-900">
-                          {editingProduct ? `Edit Produk: ${editingProduct.name}` : "Tambah Produk Baru"}
-                        </h2>
-                        <p className="text-xs text-zinc-500">
-                          Lengkapi data produk, atur promo badge, update stok, dan pilih foto (upload / AI generator).
-                        </p>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-sm p-4">
+                  <div className="bg-white rounded-2xl max-w-2xl w-full overflow-hidden animate-in fade-in max-h-[92vh] flex flex-col shadow-2xl border border-zinc-200">
+                    <div className="bg-gradient-to-r from-zinc-900 via-purple-950 to-zinc-900 px-6 py-4 text-white flex items-center justify-between shrink-0">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-400/40 flex items-center justify-center text-amber-300">
+                          <Package className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-purple-300 block">
+                            Manajemen Katalog &amp; Studio AI
+                          </span>
+                          <h2 className="text-sm font-bold text-white">
+                            {editingProduct ? `Edit Produk: ${editingProduct.name}` : "Tambah Produk Baru"}
+                          </h2>
+                        </div>
                       </div>
                       <button
                         type="button"
                         onClick={() => setIsAddProductModalOpen(false)}
-                        className="text-zinc-400 hover:text-zinc-700 p-1 rounded-full cursor-pointer"
+                        className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-zinc-300 hover:text-white transition cursor-pointer"
                       >
-                        <X className="w-5 h-5" />
+                        <X className="w-4 h-4" />
                       </button>
                     </div>
 
-                    <form onSubmit={handleSaveProduct} className="space-y-4 text-xs">
+                    <form onSubmit={handleSaveProduct} className="p-6 overflow-y-auto space-y-4 text-xs">
                       {/* Section 1: Informasi Dasar */}
                       <div className="space-y-3 p-3.5 bg-zinc-50 border border-zinc-200 rounded-lg">
                         <span className="font-bold text-zinc-800 text-xs block">
@@ -3070,13 +3346,27 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
                           <span className="text-zinc-400">•</span>
                           <span className="text-zinc-500">{order.createdAt}</span>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setActiveResiModalOrder(order.id)}
+                            className="px-3 py-1 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>Detail &amp; Kelola Resi</span>
+                          </button>
                           <span className="font-semibold text-zinc-500">Status:</span>
                           <select
                             value={order.status}
-                            onChange={(e) =>
-                              updateOrderStatus(order.id, e.target.value as OrderStatus)
-                            }
+                            onChange={(e) => {
+                              const nextStatus = e.target.value as OrderStatus;
+                              updateOrderStatus(order.id, nextStatus);
+                              showAdminToast(
+                                "Status Pesanan Diperbarui",
+                                `Pesanan ${order.id} diubah menjadi ${nextStatus}.`,
+                                "success"
+                              );
+                            }}
                             className="px-2.5 py-1 border border-zinc-300 rounded text-xs font-bold bg-white focus:outline-none focus:border-purple-700"
                           >
                             <option value="MENUNGGU_PEMBAYARAN">MENUNGGU PEMBAYARAN</option>
@@ -3314,27 +3604,32 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
 
               {/* MODAL EDIT DETAIL & PROSEDUR PEMBAYARAN */}
               {editingPayment && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-                  <div className="bg-white rounded-2xl max-w-xl w-full p-6 space-y-4 animate-in fade-in max-h-[92vh] overflow-y-auto shadow-2xl">
-                    <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
-                      <div>
-                        <h2 className="text-base font-bold text-zinc-900">
-                          Edit Detail Pembayaran: {editingPayment.name}
-                        </h2>
-                        <p className="text-xs text-zinc-500">
-                          Data dan petunjuk langkah ini akan langsung muncul di checkout &amp; detail pesanan webfront.
-                        </p>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-sm p-4">
+                  <div className="bg-white rounded-2xl max-w-xl w-full overflow-hidden animate-in fade-in max-h-[92vh] flex flex-col shadow-2xl border border-zinc-200">
+                    <div className="bg-gradient-to-r from-zinc-900 via-purple-950 to-zinc-900 px-6 py-4 text-white flex items-center justify-between shrink-0">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-400/40 flex items-center justify-center text-amber-300">
+                          <CreditCard className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-purple-300 block">
+                            Payment Gateway Control
+                          </span>
+                          <h2 className="text-sm font-bold text-white">
+                            Edit Prosedur: {editingPayment.name}
+                          </h2>
+                        </div>
                       </div>
                       <button
                         type="button"
                         onClick={() => setEditingPayment(null)}
-                        className="text-zinc-400 hover:text-zinc-700 p-1 rounded-full cursor-pointer"
+                        className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-zinc-300 hover:text-white transition cursor-pointer"
                       >
-                        <X className="w-5 h-5" />
+                        <X className="w-4 h-4" />
                       </button>
                     </div>
 
-                    <form onSubmit={handleSavePaymentMethod} className="space-y-4 text-xs">
+                    <form onSubmit={handleSavePaymentMethod} className="p-6 overflow-y-auto space-y-4 text-xs">
                       <div>
                         <label className="block font-semibold text-zinc-700 mb-1">
                           Deskripsi Singkat Channel *
@@ -3560,8 +3855,22 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
                       />
                     </div>
                     <button
-                      onClick={() => alert("Timer promo diperbarui!")}
-                      className="px-4 py-2 bg-zinc-900 hover:bg-purple-900 text-white rounded text-xs font-bold"
+                      onClick={() => {
+                        showAdminToast(
+                          "Countdown Flash Sale Diperbarui",
+                          "Durasi hitung mundur promo highlight di beranda telah disinkronkan.",
+                          "success"
+                        );
+                        openAdminAlert({
+                          variant: "success",
+                          badgeText: "CAMPAIGN FLASH SALE",
+                          title: "Timer Promo Berhasil Diperbarui!",
+                          message:
+                            "Durasi hitung mundur Flash Sale pada halaman depan Webstore dan aplikasi Mobile telah diperbarui secara real-time.",
+                          confirmLabel: "Selesai",
+                        });
+                      }}
+                      className="px-4 py-2 bg-zinc-900 hover:bg-purple-900 text-white rounded text-xs font-bold cursor-pointer"
                     >
                       Update Countdown
                     </button>
@@ -3939,8 +4248,22 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
                     />
                   </div>
                   <button
-                    onClick={() => alert("Pengaturan SEO berhasil diperbarui!")}
-                    className="px-4 py-2 bg-zinc-900 hover:bg-purple-900 text-white rounded text-xs font-bold"
+                    onClick={() => {
+                      showAdminToast(
+                        "Konfigurasi SEO Disimpan",
+                        "Meta Title, Silo Keywords & Schema.org ClothingStore telah diperbarui.",
+                        "success"
+                      );
+                      openAdminAlert({
+                        variant: "success",
+                        badgeText: "SEO & SCHEMA.ORG",
+                        title: "Pengaturan SEO Berhasil Diperbarui!",
+                        message:
+                          "Konfigurasi Meta Title, Meta Keywords Silo, serta struktur JSON-LD Schema.org ClothingStore telah disinkronkan ke seluruh halaman publik.",
+                        confirmLabel: "Selesai",
+                      });
+                    }}
+                    className="px-4 py-2 bg-zinc-900 hover:bg-purple-900 text-white rounded text-xs font-bold cursor-pointer"
                   >
                     Simpan SEO
                   </button>
@@ -4742,6 +5065,303 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
                 Tutup Notifikasi
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: Enterprise Order Detail & AWB Resi Dispatcher Modal */}
+      {activeResiModalOrder && (() => {
+        const selectedOrder = orders.find((o) => o.id === activeResiModalOrder);
+        if (!selectedOrder) return null;
+        return (
+          <div className="fixed inset-0 z-50 bg-black/65 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150">
+            <div className="bg-white rounded-2xl max-w-2xl w-full overflow-hidden shadow-2xl border border-zinc-200 max-h-[90vh] flex flex-col">
+              {/* Luxury Enterprise Dark Header */}
+              <div className="bg-gradient-to-r from-zinc-900 via-purple-950 to-zinc-900 px-6 py-4 text-white flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-400/40 flex items-center justify-center text-amber-300">
+                    <Truck className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded bg-purple-500/30 text-purple-200 border border-purple-400/30">
+                        Detail Logistik &amp; AWB
+                      </span>
+                      <span className="font-mono text-xs text-amber-300 font-bold">
+                        {selectedOrder.id}
+                      </span>
+                    </div>
+                    <h3 className="text-sm font-bold text-white mt-0.5">
+                      Penerima: {selectedOrder.address?.recipient || "Pelanggan Rahayu"}
+                    </h3>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setActiveResiModalOrder(null)}
+                  className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-zinc-300 hover:text-white transition cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-6 overflow-y-auto space-y-5 text-xs">
+                {/* Recipient & Courier Summary */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="p-4 rounded-xl bg-zinc-50 border border-zinc-200 space-y-1.5">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-purple-700 block">
+                      Alamat Pengiriman
+                    </span>
+                    <p className="font-bold text-zinc-900">
+                      {selectedOrder.address?.recipient} ({selectedOrder.address?.phone})
+                    </p>
+                    <p className="text-zinc-600 leading-relaxed">
+                      {selectedOrder.address?.fullAddress}, {selectedOrder.address?.city}{" "}
+                      {selectedOrder.address?.postalCode}
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-purple-50/60 border border-purple-200 space-y-1.5">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-purple-800 block">
+                      Ekspedisi &amp; Pembayaran
+                    </span>
+                    <p className="font-bold text-zinc-900">
+                      {selectedOrder.courier?.name} — {selectedOrder.courier?.service}
+                    </p>
+                    <p className="text-zinc-600">
+                      Metode: <strong>{selectedOrder.paymentMethod?.name}</strong>
+                    </p>
+                    <p className="text-sm font-extrabold text-purple-800 pt-1">
+                      Total Tagihan: Rp {(selectedOrder.totalAmount || 0).toLocaleString("id-ID")}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Ordered Items List */}
+                <div className="space-y-2">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-700 block">
+                    Daftar Item Pesanan ({(selectedOrder.items || []).length} Produk)
+                  </span>
+                  <div className="divide-y divide-zinc-100 border border-zinc-200 rounded-xl overflow-hidden">
+                    {(selectedOrder.items || []).map((it: any, idx: number) => (
+                      <div key={idx} className="p-3 bg-white flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={
+                              it.product?.imageUrl ||
+                              it.imageUrl ||
+                              "https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=200&q=80"
+                            }
+                            alt={it.product?.name || it.productName || "Produk"}
+                            className="w-11 h-14 rounded-lg object-cover border border-zinc-200 shrink-0"
+                          />
+                          <div className="min-w-0">
+                            <p className="font-bold text-zinc-900 truncate">
+                              {it.product?.name || it.productName || "Koleksi Rahayu"}
+                            </p>
+                            <p className="text-[11px] text-zinc-500">
+                              Ukuran: <strong>{it.selectedSize}</strong> • Warna:{" "}
+                              <strong>{it.selectedColor}</strong> • Qty: <strong>{it.quantity}x</strong>
+                            </p>
+                          </div>
+                        </div>
+                        <span className="font-bold text-zinc-900 shrink-0">
+                          Rp{" "}
+                          {(
+                            (it.product?.priceIdr ?? it.priceIdr ?? 0) * (it.quantity || 1)
+                          ).toLocaleString("id-ID")}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* AWB Input Box */}
+                <div className="p-4 rounded-xl bg-zinc-900 text-white space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-amber-300">
+                      Input / Update Nomor Resi Kurir (AWB)
+                    </span>
+                    <span className="text-[10px] px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 font-mono">
+                      Status: {selectedOrder.status}
+                    </span>
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Contoh: JNE-RAH9928172 atau 003889127764"
+                      value={awbInputs[selectedOrder.id] ?? selectedOrder.awb ?? ""}
+                      onChange={(e) =>
+                        setAwbInputs({
+                          ...awbInputs,
+                          [selectedOrder.id]: e.target.value.toUpperCase(),
+                        })
+                      }
+                      className="flex-1 px-3.5 py-2 rounded-xl bg-zinc-800 border border-zinc-700 text-white font-mono text-xs uppercase focus:outline-none focus:border-purple-400"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleSaveAwb(selectedOrder.id)}
+                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-amber-500 hover:from-purple-500 hover:to-amber-400 text-white font-bold text-xs cursor-pointer shadow-lg"
+                    >
+                      Simpan &amp; Kirim Paket
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="px-6 py-3.5 bg-zinc-50 border-t border-zinc-200 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setActiveResiModalOrder(null)}
+                  className="px-4 py-2 rounded-xl border border-zinc-300 hover:bg-zinc-100 text-zinc-700 font-bold text-xs cursor-pointer"
+                >
+                  Tutup Jendela
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* MODAL 4: Custom Enterprise Confirmation & Alert Dialog (Replaces standard window.alert / window.confirm) */}
+      {adminDialog?.isOpen && (
+        <div className="fixed inset-0 z-[70] bg-black/65 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-md w-full overflow-hidden text-white shadow-2xl animate-in zoom-in-95 duration-150">
+            {/* Top Gradient Accent Bar */}
+            <div
+              className={`h-1.5 w-full ${
+                adminDialog.variant === "danger"
+                  ? "bg-gradient-to-r from-rose-600 via-red-500 to-amber-500"
+                  : adminDialog.variant === "warning"
+                  ? "bg-gradient-to-r from-amber-500 via-orange-500 to-yellow-400"
+                  : adminDialog.variant === "success"
+                  ? "bg-gradient-to-r from-emerald-500 via-teal-400 to-purple-500"
+                  : "bg-gradient-to-r from-purple-600 via-fuchsia-500 to-amber-400"
+              }`}
+            />
+
+            <div className="p-6 text-center space-y-4">
+              {/* Animated Icon Crest */}
+              <div
+                className={`w-14 h-14 rounded-2xl mx-auto flex items-center justify-center border shadow-lg ${
+                  adminDialog.variant === "danger"
+                    ? "bg-rose-950/80 border-rose-500/50 text-rose-400 shadow-rose-950/50"
+                    : adminDialog.variant === "warning"
+                    ? "bg-amber-950/80 border-amber-500/50 text-amber-300 shadow-amber-950/50"
+                    : adminDialog.variant === "success"
+                    ? "bg-emerald-950/80 border-emerald-500/50 text-emerald-300 shadow-emerald-950/50"
+                    : "bg-purple-950/80 border-purple-500/50 text-purple-300 shadow-purple-950/50"
+                }`}
+              >
+                {adminDialog.variant === "danger" ? (
+                  <Trash2 className="w-6 h-6" />
+                ) : adminDialog.variant === "warning" ? (
+                  <AlertTriangle className="w-6 h-6" />
+                ) : adminDialog.variant === "success" ? (
+                  <CheckCircle2 className="w-6 h-6" />
+                ) : (
+                  <Sparkles className="w-6 h-6" />
+                )}
+              </div>
+
+              {/* Badge & Title */}
+              <div className="space-y-1.5">
+                <span
+                  className={`inline-block text-[10px] font-bold uppercase tracking-widest px-2.5 py-0.5 rounded-full border ${
+                    adminDialog.variant === "danger"
+                      ? "bg-rose-950 text-rose-300 border-rose-700"
+                      : adminDialog.variant === "warning"
+                      ? "bg-amber-950 text-amber-300 border-amber-700"
+                      : adminDialog.variant === "success"
+                      ? "bg-emerald-950 text-emerald-300 border-emerald-700"
+                      : "bg-purple-950 text-purple-300 border-purple-700"
+                  }`}
+                >
+                  {adminDialog.badgeText}
+                </span>
+                <h3 className="text-base font-bold text-white pt-1">{adminDialog.title}</h3>
+                <p className="text-xs text-zinc-400 leading-relaxed">{adminDialog.message}</p>
+              </div>
+
+              {/* Optional Context Detail Box */}
+              {adminDialog.detailBox && (
+                <div className="p-3 rounded-xl bg-zinc-800/90 border border-zinc-700/80 text-[11px] text-zinc-300 text-left font-medium">
+                  {adminDialog.detailBox}
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2.5 pt-2">
+                {adminDialog.onConfirm && (
+                  <button
+                    type="button"
+                    onClick={() => setAdminDialog(null)}
+                    className="flex-1 py-2.5 px-4 rounded-xl border border-zinc-700 bg-zinc-800/70 hover:bg-zinc-800 text-zinc-300 hover:text-white text-xs font-bold transition cursor-pointer"
+                  >
+                    {adminDialog.cancelLabel || "Batalkan"}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const cb = adminDialog.onConfirm;
+                    setAdminDialog(null);
+                    if (cb) cb();
+                  }}
+                  className={`flex-1 py-2.5 px-4 rounded-xl text-white text-xs font-bold transition cursor-pointer shadow-lg ${
+                    adminDialog.variant === "danger"
+                      ? "bg-rose-600 hover:bg-rose-500 shadow-rose-950/50"
+                      : adminDialog.variant === "warning"
+                      ? "bg-amber-600 hover:bg-amber-500 shadow-amber-950/50"
+                      : adminDialog.variant === "success"
+                      ? "bg-emerald-600 hover:bg-emerald-500 shadow-emerald-950/50"
+                      : "bg-purple-600 hover:bg-purple-500 shadow-purple-950/50"
+                  }`}
+                >
+                  {adminDialog.confirmLabel}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* FLOATING ENTERPRISE NOTIFICATION TOAST */}
+      {adminToast && (
+        <div className="fixed bottom-6 right-6 z-[80] max-w-sm w-full animate-in fade-in slide-in-from-bottom-4 duration-200">
+          <div className="bg-zinc-900/95 backdrop-blur-md text-white rounded-2xl border border-purple-500/40 p-4 shadow-2xl flex items-start gap-3.5">
+            <div
+              className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${
+                adminToast.variant === "warning"
+                  ? "bg-amber-500/20 border-amber-400/40 text-amber-300"
+                  : adminToast.variant === "info"
+                  ? "bg-purple-500/20 border-purple-400/40 text-purple-300"
+                  : "bg-emerald-500/20 border-emerald-400/40 text-emerald-300"
+              }`}
+            >
+              {adminToast.variant === "warning" ? (
+                <AlertTriangle className="w-5 h-5" />
+              ) : (
+                <CheckCircle2 className="w-5 h-5" />
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-purple-300">
+                Sistem Internal Rahayu
+              </span>
+              <h4 className="text-xs font-bold text-white mt-0.5">{adminToast.title}</h4>
+              <p className="text-[11px] text-zinc-300 leading-relaxed mt-0.5">
+                {adminToast.message}
+              </p>
+            </div>
+            <button
+              onClick={() => setAdminToast(null)}
+              className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
         </div>
       )}

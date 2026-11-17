@@ -27,6 +27,7 @@ import { useStore } from "@/context/StoreContext";
 import { PRODUCTS_DATA, ProductItem } from "@/data/mock-data";
 import AiSmartSizeModal from "@/components/AiSmartSizeModal";
 import AiVirtualStylistChat from "@/components/AiVirtualStylistChat";
+import { ProductGridSkeleton } from "@/components/FrontstoreFancyLoader";
 
 function ProductCatalogContent() {
   const router = useRouter();
@@ -36,7 +37,7 @@ function ProductCatalogContent() {
   const querySearch = searchParams.get("search") || "";
   const queryFilter = searchParams.get("filter") || ""; // "new", "bestseller", "promo"
 
-  const { categories, products, addToCart, aiFeaturesConfig } = useStore();
+  const { categories, products, addToCart, aiFeaturesConfig, showStoreToast } = useStore();
 
   const [selectedCategory, setSelectedCategory] = useState<string>(queryCategory);
   const [searchQuery, setSearchQuery] = useState<string>(querySearch);
@@ -44,6 +45,7 @@ function ProductCatalogContent() {
   const [selectedSize, setSelectedSize] = useState<string>("all");
   const [selectedPriceRange, setSelectedPriceRange] = useState<string>("all");
   const [sortBy, setSortBy] = useState<"relevance" | "newest" | "price-asc" | "price-desc" | "rating">("relevance");
+  const [isFiltering, setIsFiltering] = useState<boolean>(false);
 
   // PDP Modal State
   const [activeModalProduct, setActiveModalProduct] = useState<ProductItem | null>(null);
@@ -58,6 +60,13 @@ function ProductCatalogContent() {
     setSearchQuery(querySearch);
     setSelectedFilter(queryFilter);
   }, [queryCategory, querySearch, queryFilter]);
+
+  // Trigger fancy shimmer skeleton when filter criteria change
+  React.useEffect(() => {
+    setIsFiltering(true);
+    const t = setTimeout(() => setIsFiltering(false), 320);
+    return () => clearTimeout(t);
+  }, [selectedCategory, selectedFilter, selectedPriceRange, sortBy]);
 
   // Available sizes across categories
   const allAvailableSizes = useMemo(() => {
@@ -406,7 +415,16 @@ function ProductCatalogContent() {
           </div>
 
           {/* Product Grid (3:4 Lookbook Ratio ala Hijup/Zalora) */}
-          {filteredProducts.length === 0 ? (
+          {isFiltering ? (
+            <ProductGridSkeleton
+              count={8}
+              label={
+                selectedCategory === "all"
+                  ? "Menyaring Koleksi Terbaik Rahayu..."
+                  : `Menampilkan Koleksi ${selectedCategory}...`
+              }
+            />
+          ) : filteredProducts.length === 0 ? (
             <div className="text-center py-20 bg-white border border-zinc-200 rounded-lg p-8">
               <Search className="w-12 h-12 text-zinc-300 mx-auto mb-3" />
               <h3 className="text-base font-bold text-zinc-800">Produk Tidak Ditemukan</h3>
@@ -726,7 +744,13 @@ export default function ProductsPage() {
     <div className="min-h-screen flex flex-col bg-white">
       <HeaderNavbar />
       <main className="flex-1">
-        <Suspense fallback={<div className="text-center p-16 text-sm text-zinc-500">Memuat katalog produk...</div>}>
+        <Suspense
+          fallback={
+            <div className="max-w-7xl mx-auto px-4 py-12">
+              <ProductGridSkeleton count={8} label="Menyiapkan Katalog 11 Kategori Resmi..." />
+            </div>
+          }
+        >
           <ProductCatalogContent />
         </Suspense>
       </main>
