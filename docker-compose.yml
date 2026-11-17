@@ -3,8 +3,6 @@
 # Production & Staging Multi-Container Stack (Next.js 16 + PostgreSQL 15 + Seeder)
 # ==============================================================================
 
-version: "3.8"
-
 services:
   # ----------------------------------------------------------------------------
   # 1. Database Service: PostgreSQL 15 (Persistent Storage & Healthcheck)
@@ -105,7 +103,7 @@ services:
     container_name: rahayu_seeder
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-rahayu_fashion}?schema=public
-    command: ["npx", "prisma", "db", "seed"]
+    entrypoint: ["node", "./prisma/init-db.mjs", "--force-seed"]
     depends_on:
       db:
         condition: service_healthy
