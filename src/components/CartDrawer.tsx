@@ -12,8 +12,10 @@ export default function CartDrawer() {
     closeCartDrawer,
     updateCartQty,
     removeFromCart,
+    clearCart,
     cartTotal,
     cartCount,
+    showStoreToast,
   } = useStore();
 
   if (!isCartDrawerOpen) return null;
@@ -37,12 +39,26 @@ export default function CartDrawer() {
                 Tas Belanja ({cartCount})
               </h2>
             </div>
-            <button
-              onClick={closeCartDrawer}
-              className="p-2 text-zinc-400 hover:text-zinc-700 hover:bg-zinc-200 rounded-full transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            <div className="flex items-center gap-2">
+              {cart.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    clearCart();
+                    showStoreToast("Tas Belanja Dikosongkan", "Seluruh item telah dihapus dari tas belanja.", "info");
+                  }}
+                  className="text-[11px] font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 px-2.5 py-1 rounded transition-colors cursor-pointer"
+                >
+                  Kosongkan
+                </button>
+              )}
+              <button
+                onClick={closeCartDrawer}
+                className="p-2 text-zinc-400 hover:text-zinc-700 hover:bg-zinc-200 rounded-full transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
 
           {/* Cart Item List */}
@@ -60,7 +76,7 @@ export default function CartDrawer() {
                 </p>
                 <button
                   onClick={closeCartDrawer}
-                  className="px-6 py-2.5 bg-[#18181B] text-white text-xs font-semibold uppercase tracking-wider rounded-sm hover:bg-purple-900 transition-colors"
+                  className="px-6 py-2.5 bg-[#18181B] text-white text-xs font-semibold uppercase tracking-wider rounded-sm hover:bg-purple-900 transition-colors cursor-pointer"
                 >
                   Mulai Belanja
                 </button>
@@ -69,17 +85,22 @@ export default function CartDrawer() {
               cart.map((item) => (
                 <div key={item.id} className="pt-4 first:pt-0 flex gap-4">
                   {/* Thumbnail */}
-                  <div className="w-20 h-26 rounded bg-zinc-100 overflow-hidden shrink-0 relative border border-zinc-200">
-                    <img
-                      src={`https://images.unsplash.com/photo-${1584917865442 + (item.product.id * 1000)}?auto=format&fit=crop&w=300&q=80`}
-                      alt={item.product.name}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        (e.target as HTMLElement).style.display = "none";
-                      }}
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent flex items-end p-1">
-                      <span className="text-[9px] text-white font-medium truncate">
+                  <div className="w-20 h-26 rounded bg-zinc-100 overflow-hidden shrink-0 relative border border-zinc-200 flex items-center justify-center">
+                    {item.product.imageUrl ? (
+                      <img
+                        src={item.product.imageUrl}
+                        alt={item.product.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).src =
+                            "https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=300&q=80";
+                        }}
+                      />
+                    ) : (
+                      <ShoppingBag className="w-6 h-6 text-purple-300" />
+                    )}
+                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/65 to-transparent flex items-end p-1.5">
+                      <span className="text-[9px] text-white font-semibold truncate">
                         {item.product.category}
                       </span>
                     </div>
@@ -94,7 +115,7 @@ export default function CartDrawer() {
                         </h4>
                         <button
                           onClick={() => removeFromCart(item.id)}
-                          className="text-zinc-400 hover:text-rose-600 transition-colors p-1"
+                          className="text-zinc-400 hover:text-rose-600 transition-colors p-1 cursor-pointer"
                           title="Hapus item"
                         >
                           <Trash2 className="w-4 h-4" />

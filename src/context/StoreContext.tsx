@@ -1319,7 +1319,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     }).catch((err) => console.warn("Failed to update product stock in DB:", err));
   };
 
-  // 3. Cart State
+  // 3. Cart State (with localStorage Persistence)
   const [cart, setCart] = useState<CartItem[]>([
     {
       id: `${PRODUCTS_DATA[0].id}-115x115 cm-Dusty Lilac`,
@@ -1336,7 +1336,33 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       quantity: 1,
     },
   ]);
+  const [isCartHydrated, setIsCartHydrated] = useState(false);
   const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
+
+  useEffect(() => {
+    try {
+      const savedCart = localStorage.getItem("rahayu_cart_items");
+      if (savedCart) {
+        const parsed = JSON.parse(savedCart);
+        if (Array.isArray(parsed)) {
+          setCart(parsed);
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to load cart from localStorage", e);
+    } finally {
+      setIsCartHydrated(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isCartHydrated) return;
+    try {
+      localStorage.setItem("rahayu_cart_items", JSON.stringify(cart));
+    } catch (e) {
+      console.warn("Failed to save cart to localStorage", e);
+    }
+  }, [cart, isCartHydrated]);
 
   const openCartDrawer = () => setIsCartDrawerOpen(true);
   const closeCartDrawer = () => setIsCartDrawerOpen(false);
