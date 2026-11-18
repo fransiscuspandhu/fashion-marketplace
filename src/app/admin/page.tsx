@@ -334,6 +334,8 @@ export default function AdminPage() {
   // Promo & Flash Sale Tab States (2 Jenis Promo: Voucher Redeem & Highlight Produk Langsung)
   const [promoActiveTab, setPromoActiveTab] = useState<"highlights" | "vouchers">("highlights");
   const [isAddPromoHighlightOpen, setIsAddPromoHighlightOpen] = useState(false);
+  const [promoProductSearch, setPromoProductSearch] = useState<string>("");
+  const [promoProductCatFilter, setPromoProductCatFilter] = useState<string>("ALL");
   const [promoHighlightForm, setPromoHighlightForm] = useState<{
     productId: number;
     promoBadge: string;
@@ -630,6 +632,8 @@ export default function AdminPage() {
 
   // Direct Product Promo Highlight Management Handlers
   const handleOpenAddPromoHighlight = () => {
+    setPromoProductSearch("");
+    setPromoProductCatFilter("ALL");
     const availableProds = products.filter((p) => !p.isPromoHighlight);
     const defaultProd = availableProds[0] || products[0];
     if (!defaultProd) return;
@@ -652,11 +656,19 @@ export default function AdminPage() {
   const handleSavePromoHighlight = (e: React.FormEvent) => {
     e.preventDefault();
     const prod = products.find((p) => p.id === promoHighlightForm.productId);
-    if (!prod) return;
+    if (!prod) {
+      openAdminAlert({
+        variant: "warning",
+        badgeText: "VALIDASI PRODUK",
+        title: "Pilih Produk dari Katalog",
+        message: "Silakan pilih salah satu produk dari katalog terlebih dahulu untuk dijadikan Promo Highlight.",
+      });
+      return;
+    }
 
     updateProduct(prod.id, {
       isPromoHighlight: true,
-      promoBadge: promoHighlightForm.promoBadge.trim() || "HOT PROMO",
+      promoBadge: promoHighlightForm.promoBadge.trim() || "FLASH SALE",
       discountPct: promoHighlightForm.discountPct,
       priceIdr: promoHighlightForm.promoPrice,
       origPriceIdr: promoHighlightForm.origPrice,
@@ -5988,179 +6000,375 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
         </div>
       )}
 
-      {/* MODAL: Tambah Produk ke Promo Highlight Hari Ini */}
-      {isAddPromoHighlightOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-          <div className="bg-white rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl border border-zinc-200 animate-in zoom-in-95 duration-150">
-            {/* Header */}
-            <div className="px-6 py-4 bg-gradient-to-r from-amber-600 via-rose-600 to-purple-700 text-white flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <Flame className="w-5 h-5 text-amber-200 fill-amber-200" />
-                <div>
-                  <h3 className="font-bold text-sm">Tambah Produk ke Promo Highlight</h3>
-                  <p className="text-[11px] text-amber-100">Tampil di Beranda &amp; Frontstore</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsAddPromoHighlightOpen(false)}
-                className="p-1 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+      {/* MODAL: Tambah Produk ke Promo Highlight Hari Ini (Dengan Pencarian Katalog) */}
+      {isAddPromoHighlightOpen && (() => {
+        const q = promoProductSearch.trim().toLowerCase();
+        const filteredCatalogProds = products.filter((p) => {
+          const matchesCat = promoProductCatFilter === "ALL" || p.category === promoProductCatFilter;
+          const matchesSearch =
+            !q ||
+            p.name.toLowerCase().includes(q) ||
+            p.sku.toLowerCase().includes(q) ||
+            p.category.toLowerCase().includes(q);
+          return matchesCat && matchesSearch;
+        });
 
-            <form onSubmit={handleSavePromoHighlight} className="p-6 space-y-4">
-              {/* Product Selector */}
-              <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-zinc-700">
-                  Pilih Produk dari Katalog:
-                </label>
-                <select
-                  value={promoHighlightForm.productId}
-                  onChange={(e) => {
-                    const pid = parseInt(e.target.value);
-                    const prod = products.find((p) => p.id === pid);
-                    if (prod) {
-                      const orig = prod.origPriceIdr || prod.priceIdr;
-                      const promo = Math.round(orig * (1 - promoHighlightForm.discountPct / 100));
-                      setPromoHighlightForm({
-                        ...promoHighlightForm,
-                        productId: pid,
-                        origPrice: orig,
-                        promoPrice: promo,
-                      });
-                    }
-                  }}
-                  className="w-full px-3 py-2 border border-zinc-300 rounded-xl text-xs font-bold text-zinc-900 bg-white focus:outline-none focus:border-purple-600"
-                >
-                  {products.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} — Rp {p.priceIdr.toLocaleString("id-ID")} ({p.category})
-                    </option>
-                  ))}
-                </select>
-              </div>
+        const selectedPromoProduct = products.find((p) => p.id === promoHighlightForm.productId);
 
-              {/* Promo Badge & Diskon % */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="block text-xs font-bold text-zinc-700">Badge Promo:</label>
-                  <input
-                    type="text"
-                    value={promoHighlightForm.promoBadge}
-                    onChange={(e) =>
-                      setPromoHighlightForm({
-                        ...promoHighlightForm,
-                        promoBadge: e.target.value.toUpperCase(),
-                      })
-                    }
-                    placeholder="cth. FLASH SALE"
-                    className="w-full px-3 py-2 border border-zinc-300 rounded-xl text-xs font-bold uppercase focus:outline-none focus:border-purple-600"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="block text-xs font-bold text-zinc-700">Persentase Diskon:</label>
-                  <div className="relative">
-                    <input
-                      type="number"
-                      min="1"
-                      max="95"
-                      value={promoHighlightForm.discountPct}
-                      onChange={(e) => {
-                        const pct = Math.max(1, Math.min(95, parseInt(e.target.value) || 0));
-                        const promo = Math.round(promoHighlightForm.origPrice * (1 - pct / 100));
-                        setPromoHighlightForm({
-                          ...promoHighlightForm,
-                          discountPct: pct,
-                          promoPrice: promo,
-                        });
-                      }}
-                      className="w-full px-3 py-2 border border-zinc-300 rounded-xl text-xs font-bold focus:outline-none focus:border-purple-600"
-                    />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-400">
-                      %
-                    </span>
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+            <div className="bg-white rounded-2xl max-w-xl w-full max-h-[92vh] flex flex-col overflow-hidden shadow-2xl border border-zinc-200 animate-in zoom-in-95 duration-150">
+              {/* Header */}
+              <div className="px-6 py-4 bg-gradient-to-r from-amber-600 via-rose-600 to-purple-700 text-white flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-2.5">
+                  <Flame className="w-5 h-5 text-amber-200 fill-amber-200" />
+                  <div>
+                    <h3 className="font-bold text-sm">Tambah Produk ke Promo Highlight</h3>
+                    <p className="text-[11px] text-amber-100">
+                      Cari produk dari katalog &amp; tampilkan di section Promo Beranda
+                    </p>
                   </div>
                 </div>
-              </div>
-
-              {/* Price Calculation (Normal vs Promo) */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="block text-xs font-bold text-zinc-700">Harga Coret (Normal):</label>
-                  <input
-                    type="number"
-                    value={promoHighlightForm.origPrice}
-                    onChange={(e) => {
-                      const orig = Math.max(0, parseInt(e.target.value) || 0);
-                      const promo = Math.round(orig * (1 - promoHighlightForm.discountPct / 100));
-                      setPromoHighlightForm({
-                        ...promoHighlightForm,
-                        origPrice: orig,
-                        promoPrice: promo,
-                      });
-                    }}
-                    className="w-full px-3 py-2 border border-zinc-300 rounded-xl text-xs font-mono font-bold focus:outline-none focus:border-purple-600"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="block text-xs font-bold text-zinc-700">Harga Promo (Bayar):</label>
-                  <input
-                    type="number"
-                    value={promoHighlightForm.promoPrice}
-                    onChange={(e) =>
-                      setPromoHighlightForm({
-                        ...promoHighlightForm,
-                        promoPrice: Math.max(0, parseInt(e.target.value) || 0),
-                      })
-                    }
-                    className="w-full px-3 py-2 border border-purple-300 bg-purple-50 rounded-xl text-xs font-mono font-bold text-purple-900 focus:outline-none focus:border-purple-600"
-                  />
-                </div>
-              </div>
-
-              {/* Preview Card */}
-              <div className="p-3.5 bg-zinc-50 rounded-xl border border-zinc-200 flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] text-zinc-400 block">Preview Badge di Beranda:</span>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="px-2 py-0.5 rounded bg-rose-600 text-white font-bold text-[10px]">
-                      {promoHighlightForm.promoBadge || "FLASH SALE"}
-                    </span>
-                    <span className="text-xs font-bold text-purple-900">
-                      Rp {promoHighlightForm.promoPrice.toLocaleString("id-ID")}
-                    </span>
-                    <span className="line-through text-[11px] text-zinc-400">
-                      Rp {promoHighlightForm.origPrice.toLocaleString("id-ID")}
-                    </span>
-                  </div>
-                </div>
-                <span className="text-xs font-extrabold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-200">
-                  Hemat {promoHighlightForm.discountPct}%
-                </span>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex items-center gap-3 pt-2">
                 <button
                   type="button"
                   onClick={() => setIsAddPromoHighlightOpen(false)}
-                  className="flex-1 py-2.5 rounded-xl border border-zinc-300 hover:bg-zinc-100 text-zinc-700 font-bold text-xs transition cursor-pointer"
+                  className="p-1 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition cursor-pointer"
                 >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-purple-700 to-indigo-800 hover:from-purple-800 hover:to-indigo-900 text-white font-bold text-xs shadow-md transition cursor-pointer"
-                >
-                  Simpan ke Promo Highlight
+                  <X className="w-4 h-4" />
                 </button>
               </div>
-            </form>
+
+              {/* Form Body - Scrollable */}
+              <form onSubmit={handleSavePromoHighlight} className="p-6 space-y-4 overflow-y-auto flex-1">
+                {/* 1. Searchable Product Selector */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-bold text-zinc-700">
+                      1. Pilih Produk dari Katalog ({products.length} Total):
+                    </label>
+                    <span className="text-[10px] text-purple-700 font-semibold">
+                      {filteredCatalogProds.length} produk sesuai filter
+                    </span>
+                  </div>
+
+                  {/* Search Bar Input */}
+                  <div className="relative">
+                    <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <input
+                      type="text"
+                      value={promoProductSearch}
+                      onChange={(e) => setPromoProductSearch(e.target.value)}
+                      placeholder="Cari nama produk, SKU, atau kategori (cth: Tunik, Voal, Gamis)..."
+                      className="w-full pl-9 pr-8 py-2.5 border border-zinc-300 rounded-xl text-xs bg-zinc-50 focus:bg-white text-zinc-900 focus:outline-none focus:border-purple-600 shadow-2xs"
+                    />
+                    {promoProductSearch && (
+                      <button
+                        type="button"
+                        onClick={() => setPromoProductSearch("")}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 p-0.5"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Category Filter Chips */}
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-0.5 scrollbar-thin">
+                    <button
+                      type="button"
+                      onClick={() => setPromoProductCatFilter("ALL")}
+                      className={`px-2.5 py-1 rounded-full text-[10px] font-bold shrink-0 transition cursor-pointer ${
+                        promoProductCatFilter === "ALL"
+                          ? "bg-purple-700 text-white shadow-xs"
+                          : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+                      }`}
+                    >
+                      Semua ({products.length})
+                    </button>
+                    {categories.map((c) => {
+                      const count = products.filter((p) => p.category === c.id).length;
+                      if (count === 0) return null;
+                      return (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => setPromoProductCatFilter(c.id)}
+                          className={`px-2.5 py-1 rounded-full text-[10px] font-bold shrink-0 transition cursor-pointer ${
+                            promoProductCatFilter === c.id
+                              ? "bg-purple-700 text-white shadow-xs"
+                              : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+                          }`}
+                        >
+                          {c.nameId || c.id} ({count})
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Scrollable Product Picker List */}
+                  <div className="max-h-48 overflow-y-auto border border-zinc-200 rounded-xl divide-y divide-zinc-100 bg-white shadow-inner p-1">
+                    {filteredCatalogProds.length === 0 ? (
+                      <div className="p-6 text-center text-zinc-400">
+                        <Search className="w-6 h-6 mx-auto mb-1 text-zinc-300" />
+                        <p className="text-xs font-semibold text-zinc-600">Tidak ada produk yang cocok</p>
+                        <p className="text-[11px] text-zinc-400 mt-0.5">
+                          Coba ketik kata kunci lain atau pilih tab kategori &ldquo;Semua&rdquo;.
+                        </p>
+                      </div>
+                    ) : (
+                      filteredCatalogProds.map((p) => {
+                        const isSelected = p.id === promoHighlightForm.productId;
+                        return (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => {
+                              const orig = p.origPriceIdr || p.priceIdr;
+                              const promo = Math.round(orig * (1 - promoHighlightForm.discountPct / 100));
+                              setPromoHighlightForm({
+                                ...promoHighlightForm,
+                                productId: p.id,
+                                origPrice: orig,
+                                promoPrice: promo,
+                              });
+                            }}
+                            className={`w-full p-2.5 rounded-lg text-left flex items-center justify-between gap-3 transition cursor-pointer ${
+                              isSelected
+                                ? "bg-purple-50/90 border border-purple-400 text-purple-950 shadow-2xs"
+                                : "hover:bg-zinc-50 border border-transparent"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={
+                                  p.imageUrl ||
+                                  "https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=200&q=80"
+                                }
+                                alt={p.name}
+                                className="w-10 h-12 rounded object-cover border border-zinc-200 shrink-0"
+                              />
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-1.5">
+                                  <p className="font-bold text-xs truncate max-w-[240px]">
+                                    {p.name}
+                                  </p>
+                                  {p.isPromoHighlight && (
+                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-800 shrink-0">
+                                      ★ Sudah di Highlight
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-[10px] text-zinc-400 font-mono mt-0.5">
+                                  {p.sku} • {p.category} • Stok: {p.stock ?? 0} pcs
+                                </p>
+                              </div>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <span className="font-bold text-xs text-purple-900 block">
+                                Rp {p.priceIdr.toLocaleString("id-ID")}
+                              </span>
+                              {isSelected && (
+                                <span className="text-[10px] font-bold text-purple-700 flex items-center gap-0.5 justify-end mt-0.5">
+                                  <Check className="w-3 h-3" /> Terpilih
+                                </span>
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+
+                {/* 2. Selected Product Banner */}
+                {selectedPromoProduct ? (
+                  <div className="p-3 bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-xl flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={
+                          selectedPromoProduct.imageUrl ||
+                          "https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=200&q=80"
+                        }
+                        alt={selectedPromoProduct.name}
+                        className="w-10 h-12 rounded-lg object-cover border border-purple-200 shrink-0"
+                      />
+                      <div className="min-w-0">
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-purple-700 block">
+                          Produk Terpilih:
+                        </span>
+                        <h4 className="font-bold text-xs text-zinc-900 truncate">
+                          {selectedPromoProduct.name}
+                        </h4>
+                        <p className="text-[10px] text-zinc-500 font-mono">
+                          Harga Reguler: Rp {selectedPromoProduct.priceIdr.toLocaleString("id-ID")} • Kategori: {selectedPromoProduct.category}
+                        </p>
+                      </div>
+                    </div>
+                    <span className="px-2.5 py-1 bg-purple-700 text-white text-[10px] font-bold rounded-lg shrink-0 flex items-center gap-1 shadow-2xs">
+                      <Check className="w-3 h-3" /> Siap Dipromokan
+                    </span>
+                  </div>
+                ) : (
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs font-medium">
+                    ⚠️ Silakan klik salah satu produk dari daftar di atas untuk memilihnya.
+                  </div>
+                )}
+
+                {/* 3. Promo Badge & Diskon % */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="block text-xs font-bold text-zinc-700">Badge Label Promo:</label>
+                    <input
+                      type="text"
+                      value={promoHighlightForm.promoBadge}
+                      onChange={(e) =>
+                        setPromoHighlightForm({
+                          ...promoHighlightForm,
+                          promoBadge: e.target.value.toUpperCase(),
+                        })
+                      }
+                      placeholder="cth. FLASH SALE"
+                      className="w-full px-3 py-2 border border-zinc-300 rounded-xl text-xs font-bold uppercase focus:outline-none focus:border-purple-600 bg-white"
+                    />
+                    <div className="flex flex-wrap gap-1 pt-1">
+                      {["FLASH SALE", "HOT PROMO", "PAYDAY DEAL", "BEST SELLER"].map((tag) => (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => setPromoHighlightForm({ ...promoHighlightForm, promoBadge: tag })}
+                          className="px-2 py-0.5 rounded bg-zinc-100 hover:bg-purple-100 text-zinc-600 hover:text-purple-800 text-[10px] font-semibold transition cursor-pointer"
+                        >
+                          +{tag}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="block text-xs font-bold text-zinc-700">Persentase Diskon (%):</label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min="1"
+                        max="95"
+                        value={promoHighlightForm.discountPct}
+                        onChange={(e) => {
+                          const pct = Math.max(1, Math.min(95, parseInt(e.target.value) || 0));
+                          const promo = Math.round(promoHighlightForm.origPrice * (1 - pct / 100));
+                          setPromoHighlightForm({
+                            ...promoHighlightForm,
+                            discountPct: pct,
+                            promoPrice: promo,
+                          });
+                        }}
+                        className="w-full px-3 py-2 border border-zinc-300 rounded-xl text-xs font-bold focus:outline-none focus:border-purple-600 bg-white"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-400">
+                        %
+                      </span>
+                    </div>
+                    <div className="flex gap-1 pt-1">
+                      {[10, 20, 25, 30, 50].map((pct) => (
+                        <button
+                          key={pct}
+                          type="button"
+                          onClick={() => {
+                            const promo = Math.round(promoHighlightForm.origPrice * (1 - pct / 100));
+                            setPromoHighlightForm({
+                              ...promoHighlightForm,
+                              discountPct: pct,
+                              promoPrice: promo,
+                            });
+                          }}
+                          className="px-2 py-0.5 rounded bg-zinc-100 hover:bg-purple-100 text-zinc-600 hover:text-purple-800 text-[10px] font-semibold transition cursor-pointer"
+                        >
+                          {pct}%
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4. Price Calculation (Normal vs Promo) */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="block text-xs font-bold text-zinc-700">Harga Coret (Normal):</label>
+                    <input
+                      type="number"
+                      value={promoHighlightForm.origPrice}
+                      onChange={(e) => {
+                        const orig = Math.max(0, parseInt(e.target.value) || 0);
+                        const promo = Math.round(orig * (1 - promoHighlightForm.discountPct / 100));
+                        setPromoHighlightForm({
+                          ...promoHighlightForm,
+                          origPrice: orig,
+                          promoPrice: promo,
+                        });
+                      }}
+                      className="w-full px-3 py-2 border border-zinc-300 rounded-xl text-xs font-mono font-bold focus:outline-none focus:border-purple-600 bg-white"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="block text-xs font-bold text-zinc-700">Harga Promo (Bayar):</label>
+                    <input
+                      type="number"
+                      value={promoHighlightForm.promoPrice}
+                      onChange={(e) =>
+                        setPromoHighlightForm({
+                          ...promoHighlightForm,
+                          promoPrice: Math.max(0, parseInt(e.target.value) || 0),
+                        })
+                      }
+                      className="w-full px-3 py-2 border border-purple-300 bg-purple-50 rounded-xl text-xs font-mono font-bold text-purple-900 focus:outline-none focus:border-purple-600"
+                    />
+                  </div>
+                </div>
+
+                {/* 5. Live Preview Card */}
+                <div className="p-3.5 bg-zinc-50 rounded-xl border border-zinc-200 flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] text-zinc-400 block font-semibold">Preview Badge di Beranda:</span>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="px-2 py-0.5 rounded bg-rose-600 text-white font-bold text-[10px]">
+                        {promoHighlightForm.promoBadge || "FLASH SALE"}
+                      </span>
+                      <span className="text-xs font-bold text-purple-900">
+                        Rp {promoHighlightForm.promoPrice.toLocaleString("id-ID")}
+                      </span>
+                      <span className="line-through text-[11px] text-zinc-400">
+                        Rp {promoHighlightForm.origPrice.toLocaleString("id-ID")}
+                      </span>
+                    </div>
+                  </div>
+                  <span className="text-xs font-extrabold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
+                    Hemat {promoHighlightForm.discountPct}%
+                  </span>
+                </div>
+
+                {/* 6. Action Buttons */}
+                <div className="flex items-center gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsAddPromoHighlightOpen(false)}
+                    className="flex-1 py-2.5 rounded-xl border border-zinc-300 hover:bg-zinc-100 text-zinc-700 font-bold text-xs transition cursor-pointer"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={!selectedPromoProduct}
+                    className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-purple-700 to-indigo-800 hover:from-purple-800 hover:to-indigo-900 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-xs shadow-md transition cursor-pointer"
+                  >
+                    Simpan ke Promo Highlight
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* MODAL: Buat Kode Voucher Promo Baru */}
       {isAddVoucherModalOpen && (

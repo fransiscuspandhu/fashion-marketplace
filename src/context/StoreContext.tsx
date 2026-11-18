@@ -1100,27 +1100,50 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         ]);
 
         if (prodRes.status === "fulfilled" && prodRes.value?.success && Array.isArray(prodRes.value.data) && prodRes.value.data.length > 0) {
-          setProducts(
-            prodRes.value.data.map((p: any) => ({
-              id: p.id,
-              sku: p.sku,
-              name: p.name,
-              category: p.categoryId,
-              priceIdr: p.priceIdr,
-              origPriceIdr: p.origPriceIdr,
-              discountPct: p.discountPct,
-              promoBadge: p.promoBadge || "",
-              promoType: p.promoType || "None",
-              isPromoHighlight: p.isPromoHighlight,
-              hasVideo: p.hasVideo,
-              videoUrl: p.videoUrl || "",
-              desc: p.desc,
-              rating: p.rating,
-              reviewCount: p.reviewCount,
-              stock: p.stock,
-              imageUrl: p.imageUrl,
-            }))
-          );
+          const dbProducts = prodRes.value.data.map((p: any) => ({
+            id: p.id,
+            sku: p.sku,
+            name: p.name,
+            category: p.categoryId,
+            priceIdr: p.priceIdr,
+            origPriceIdr: p.origPriceIdr,
+            discountPct: p.discountPct,
+            promoBadge: p.promoBadge || "",
+            promoType: p.promoType || "None",
+            isPromoHighlight: p.isPromoHighlight,
+            hasVideo: p.hasVideo,
+            videoUrl: p.videoUrl || "",
+            desc: p.desc,
+            rating: p.rating,
+            reviewCount: p.reviewCount,
+            stock: p.stock,
+            imageUrl: p.imageUrl,
+          }));
+
+          setProducts((prev) => {
+            const merged = dbProducts.map((dbp: any) => {
+              const localMatch = prev.find((lp) => lp.id === dbp.id);
+              if (localMatch) {
+                return {
+                  ...dbp,
+                  isPromoHighlight: localMatch.isPromoHighlight ?? dbp.isPromoHighlight,
+                  promoBadge: localMatch.promoBadge || dbp.promoBadge,
+                  discountPct: localMatch.discountPct ?? dbp.discountPct,
+                  priceIdr: localMatch.priceIdr ?? dbp.priceIdr,
+                  origPriceIdr: localMatch.origPriceIdr ?? dbp.origPriceIdr,
+                };
+              }
+              return dbp;
+            });
+            if (typeof window !== "undefined") {
+              try {
+                localStorage.setItem("rahayu_products", JSON.stringify(merged));
+              } catch (e) {
+                console.warn("Failed to cache merged products", e);
+              }
+            }
+            return merged;
+          });
         }
 
         if (catRes.status === "fulfilled" && catRes.value?.success && Array.isArray(catRes.value.data) && catRes.value.data.length > 0) {
@@ -1320,11 +1343,47 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // 2. Products State (CRUD & Stock with PostgreSQL Persistence)
+  // 2. Products State (CRUD & Stock with localStorage & PostgreSQL Persistence)
   const [products, setProducts] = useState<ProductItem[]>(PRODUCTS_DATA);
+  const [isProductsHydrated, setIsProductsHydrated] = useState<boolean>(false);
+
+  useEffect(() => {
+    try {
+      const savedProducts = localStorage.getItem("rahayu_products");
+      if (savedProducts) {
+        const parsed = JSON.parse(savedProducts);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setProducts(parsed);
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to load products from localStorage", e);
+    } finally {
+      setIsProductsHydrated(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isProductsHydrated) return;
+    try {
+      localStorage.setItem("rahayu_products", JSON.stringify(products));
+    } catch (e) {
+      console.warn("Failed to save products to localStorage", e);
+    }
+  }, [products, isProductsHydrated]);
 
   const addProduct = (newProduct: ProductItem) => {
-    setProducts((prev) => [newProduct, ...prev]);
+    setProducts((prev) => {
+      const next = [newProduct, ...prev];
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem("rahayu_products", JSON.stringify(next));
+        } catch (e) {
+          console.warn("Failed to persist new product to localStorage:", e);
+        }
+      }
+      return next;
+    });
     fetch("/api/products", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -1350,9 +1409,17 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateProduct = (productId: number, updated: Partial<ProductItem>) => {
-    setProducts((prev) =>
-      prev.map((p) => (p.id === productId ? { ...p, ...updated } : p))
-    );
+    setProducts((prev) => {
+      const next = prev.map((p) => (p.id === productId ? { ...p, ...updated } : p));
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem("rahayu_products", JSON.stringify(next));
+        } catch (e) {
+          console.warn("Failed to persist updated product to localStorage:", e);
+        }
+      }
+      return next;
+    });
     fetch(`/api/products/${productId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -1376,16 +1443,34 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteProduct = (productId: number) => {
-    setProducts((prev) => prev.filter((p) => p.id !== productId));
+    setProducts((prev) => {
+      const next = prev.filter((p) => p.id !== productId);
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem("rahayu_products", JSON.stringify(next));
+        } catch (e) {
+          console.warn("Failed to delete product from localStorage:", e);
+        }
+      }
+      return next;
+    });
     fetch(`/api/products/${productId}`, { method: "DELETE" }).catch((err) =>
       console.warn("Failed to delete product from DB:", err)
     );
   };
 
   const updateProductStock = (productId: number, newStock: number) => {
-    setProducts((prev) =>
-      prev.map((p) => (p.id === productId ? { ...p, stock: Math.max(0, newStock) } : p))
-    );
+    setProducts((prev) => {
+      const next = prev.map((p) => (p.id === productId ? { ...p, stock: Math.max(0, newStock) } : p));
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem("rahayu_products", JSON.stringify(next));
+        } catch (e) {
+          console.warn("Failed to persist stock to localStorage:", e);
+        }
+      }
+      return next;
+    });
     fetch(`/api/products/${productId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
