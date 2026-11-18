@@ -20,6 +20,8 @@ import {
   Flame,
   ArrowRight,
   ShieldCheck,
+  Minus,
+  Plus,
 } from "lucide-react";
 import HeaderNavbar from "@/components/HeaderNavbar";
 import Footer from "@/components/Footer";
@@ -52,6 +54,7 @@ function ProductCatalogContent() {
   const [pdpMediaType, setPdpMediaType] = useState<"photo" | "video">("photo");
   const [pdpSelectedSize, setPdpSelectedSize] = useState<string>("");
   const [pdpSelectedColor, setPdpSelectedColor] = useState<string>("");
+  const [pdpQuantity, setPdpQuantity] = useState<number>(1);
   const [isSmartSizeOpen, setIsSmartSizeOpen] = useState<boolean>(false);
 
   // Keep state synced with URL params when they change
@@ -130,6 +133,7 @@ function ProductCatalogContent() {
     const cat = categories.find((c) => c.id === product.category) || categories[0];
     setPdpSelectedSize(cat?.sizes[0] || "All Size");
     setPdpSelectedColor(cat?.colors[0]?.name || "Default");
+    setPdpQuantity(1);
     setPdpMediaType("photo");
   };
 
@@ -137,7 +141,13 @@ function ProductCatalogContent() {
     const cat = categories.find((c) => c.id === product.category) || categories[0];
     const sizeToUse = pdpSelectedSize || cat?.sizes[0] || "All Size";
     const colorToUse = pdpSelectedColor || cat?.colors[0]?.name || "Default";
-    addToCart(product, sizeToUse, colorToUse, 1);
+    const qtyToUse = Math.max(1, pdpQuantity);
+    addToCart(product, sizeToUse, colorToUse, qtyToUse);
+    showStoreToast(
+      "Dimasukkan ke Tas Belanja",
+      `${qtyToUse}x "${product.name}" (${sizeToUse}, ${colorToUse}) siap dicheckout.`,
+      "success"
+    );
     setActiveModalProduct(null);
   };
 
@@ -704,21 +714,78 @@ function ProductCatalogContent() {
                 </div>
               </div>
 
-              {/* Add to Cart CTA */}
-              <div className="pt-4 border-t border-zinc-100 space-y-2">
-                <button
-                  type="button"
-                  onClick={() => handleAddToCart(activeModalProduct)}
-                  className="w-full py-3 bg-[#18181B] hover:bg-purple-900 text-white text-xs font-bold uppercase tracking-widest rounded transition-colors shadow-lg flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <ShoppingBag className="w-4 h-4" />
-                  <span>Tambah ke Tas Belanja</span>
-                </button>
-                <div className="flex items-center justify-center gap-2 text-[10px] text-zinc-400">
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Garansi original 100% & kemudahan tukar ukuran 7 hari.</span>
+              {/* Quantity Selector */}
+              <div className="pt-2 border-t border-zinc-100 space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-zinc-800">Jumlah Pembelian:</span>
+                    <span className="text-[11px] text-zinc-500">
+                      Sisa Stok: <strong className="text-zinc-900 font-mono">{activeModalProduct.stock ?? 35} pcs</strong>
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="inline-flex items-center border border-zinc-300 rounded bg-white overflow-hidden shadow-2xs">
+                      <button
+                        type="button"
+                        onClick={() => setPdpQuantity((prev) => Math.max(1, prev - 1))}
+                        disabled={pdpQuantity <= 1}
+                        className="w-9 h-9 flex items-center justify-center hover:bg-zinc-100 text-zinc-700 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                        aria-label="Kurangi kuantitas"
+                      >
+                        <Minus className="w-3.5 h-3.5" />
+                      </button>
+                      <input
+                        type="number"
+                        min={1}
+                        max={activeModalProduct.stock ?? 99}
+                        value={pdpQuantity}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value);
+                          if (!isNaN(val)) {
+                            setPdpQuantity(Math.max(1, Math.min(activeModalProduct.stock ?? 99, val)));
+                          }
+                        }}
+                        className="w-12 h-9 text-center text-xs font-mono font-bold text-zinc-900 border-x border-zinc-200 focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setPdpQuantity((prev) =>
+                            Math.min(activeModalProduct.stock ?? 99, prev + 1)
+                          )
+                        }
+                        disabled={pdpQuantity >= (activeModalProduct.stock ?? 99)}
+                        className="w-9 h-9 flex items-center justify-center hover:bg-zinc-100 text-zinc-700 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                        aria-label="Tambah kuantitas"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    <div className="text-right">
+                      <span className="text-[10px] text-zinc-400 block uppercase font-bold">Subtotal Produk</span>
+                      <span className="text-sm font-extrabold text-purple-800">
+                        Rp {(activeModalProduct.priceIdr * Math.max(1, pdpQuantity)).toLocaleString("id-ID")}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              </div>
+
+                {/* Add to Cart CTA */}
+                <div className="pt-2 space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => handleAddToCart(activeModalProduct)}
+                    className="w-full py-3 bg-[#18181B] hover:bg-purple-900 text-white text-xs font-bold uppercase tracking-widest rounded transition-colors shadow-lg flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <ShoppingBag className="w-4 h-4" />
+                    <span>Tambah ke Tas Belanja ({pdpQuantity} Barang)</span>
+                  </button>
+                  <div className="flex items-center justify-center gap-2 text-[10px] text-zinc-400">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Garansi original 100% & kemudahan tukar ukuran 7 hari.</span>
+                  </div>
+                </div>
             </div>
           </div>
         </div>

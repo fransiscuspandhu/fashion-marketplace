@@ -4,7 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Heart, Play, ArrowRight, ShieldCheck, RefreshCw, Sparkles, Check, X, Clock, Star, Truck, Flame } from "lucide-react";
+import { Heart, Play, ArrowRight, ShieldCheck, RefreshCw, Sparkles, Check, X, Clock, Star, Truck, Flame, Minus, Plus, ShoppingBag } from "lucide-react";
 import { CATEGORIES_DATA, PRODUCTS_DATA, ProductItem, RahayuCategory } from "@/data/mock-data";
 import Footer from "@/components/Footer";
 import HeaderNavbar from "@/components/HeaderNavbar";
@@ -14,7 +14,7 @@ import AiVirtualStylistChat from "@/components/AiVirtualStylistChat";
 
 export default function HomePage() {
   const router = useRouter();
-  const { categories, products, addToCart, homepageConfig, aiFeaturesConfig } = useStore();
+  const { categories, products, addToCart, homepageConfig, aiFeaturesConfig, showStoreToast } = useStore();
   const [isLiveModalOpen, setIsLiveModalOpen] = useState<boolean>(false);
 
   // PDP Modal State
@@ -22,6 +22,7 @@ export default function HomePage() {
   const [pdpMediaType, setPdpMediaType] = useState<"photo" | "video">("photo");
   const [selectedSize, setSelectedSize] = useState<string>("");
   const [selectedColor, setSelectedColor] = useState<string>("");
+  const [pdpQuantity, setPdpQuantity] = useState<number>(1);
   const [isSmartSizeOpen, setIsSmartSizeOpen] = useState<boolean>(false);
 
   const promoHighlightProducts = products.filter((p) => p.isPromoHighlight);
@@ -33,6 +34,7 @@ export default function HomePage() {
     const cat = categories.find((c) => c.id === product.category) || categories[0];
     setSelectedSize(cat.sizes[0] || "All Size");
     setSelectedColor(cat.colors[0]?.name || "Default");
+    setPdpQuantity(1);
     setPdpMediaType("photo");
   };
 
@@ -40,7 +42,13 @@ export default function HomePage() {
     const cat = categories.find((c) => c.id === product.category) || categories[0];
     const sizeToUse = selectedSize || cat.sizes[0] || "All Size";
     const colorToUse = selectedColor || cat.colors[0]?.name || "Default";
-    addToCart(product, sizeToUse, colorToUse, 1);
+    const qtyToUse = Math.max(1, pdpQuantity);
+    addToCart(product, sizeToUse, colorToUse, qtyToUse);
+    showStoreToast(
+      "Dimasukkan ke Tas Belanja",
+      `${qtyToUse}x "${product.name}" (${sizeToUse}, ${colorToUse}) siap dicheckout.`,
+      "success"
+    );
     setActiveModalProduct(null);
   };
 
@@ -281,16 +289,21 @@ export default function HomePage() {
                   >
                     <div>
                       <div className="relative aspect-[3/4] bg-[#F6F4F0] border border-zinc-200/80 overflow-hidden mb-3 flex items-center justify-center">
-                        <div className="w-4/5 h-4/5 group-hover:scale-105 transition duration-300">
-                          <svg viewBox="0 0 180 240" className="w-full h-full">
-                            <path d="M25 230 V85 C25 45 55 20 90 20 C125 20 155 45 155 85 V230 Z" fill={catCfg.iconBg} opacity="0.75" />
-                            <path d="M56 75 L38 155 L55 158 L64 112 L60 218 L120 218 L116 112 L125 158 L142 155 L124 75 Z" fill={catCfg.colorHex} />
-                            <path d="M74 75 L90 105 L106 75 Z" fill="#FAF8F5" />
-                            <circle cx="90" cy="54" r="14" fill="#E6C2A6" />
-                          </svg>
-                        </div>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={
+                            p.imageUrl ||
+                            `https://images.unsplash.com/photo-${1584917865442 + p.id * 1000}?auto=format&fit=crop&w=600&q=80`
+                          }
+                          alt={p.name}
+                          className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLImageElement).src =
+                              `https://images.unsplash.com/photo-${1584917865442 + p.id * 1000}?auto=format&fit=crop&w=600&q=80`;
+                          }}
+                        />
                         {p.promoBadge && (
-                          <span className="absolute top-3 left-3 px-2.5 py-1 bg-rose-600 text-white text-[10px] font-bold uppercase tracking-widest">
+                          <span className="absolute top-3 left-3 px-2.5 py-1 bg-rose-600 text-white text-[10px] font-bold uppercase tracking-widest shadow">
                             {p.promoBadge}
                           </span>
                         )}
@@ -573,15 +586,20 @@ export default function HomePage() {
                 </div>
 
                 {pdpMediaType === "photo" ? (
-                  <div className="bg-[#F6F4F0] border border-zinc-200 aspect-[3/4] flex items-center justify-center p-6">
-                    <div className="w-48 h-64 flex items-center justify-center">
-                      <svg viewBox="0 0 180 240" className="w-full h-full">
-                        <path d="M25 230 V85 C25 45 55 20 90 20 C125 20 155 45 155 85 V230 Z" fill="#F3E8FF" opacity="0.75" />
-                        <path d="M56 75 L38 155 L55 158 L64 112 L60 218 L120 218 L116 112 L125 158 L142 155 L124 75 Z" fill="#7C3AED" />
-                        <path d="M74 75 L90 105 L106 75 Z" fill="#FAF8F5" />
-                        <circle cx="90" cy="54" r="14" fill="#E6C2A6" />
-                      </svg>
-                    </div>
+                  <div className="bg-[#F6F4F0] border border-zinc-200 aspect-[3/4] flex items-center justify-center overflow-hidden">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={
+                        activeModalProduct.imageUrl ||
+                        `https://images.unsplash.com/photo-${1584917865442 + activeModalProduct.id * 1000}?auto=format&fit=crop&w=800&q=80`
+                      }
+                      alt={activeModalProduct.name}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).src =
+                          `https://images.unsplash.com/photo-${1584917865442 + activeModalProduct.id * 1000}?auto=format&fit=crop&w=800&q=80`;
+                      }}
+                    />
                   </div>
                 ) : (
                   <div className="bg-zinc-900 text-white aspect-[3/4] relative overflow-hidden flex flex-col justify-between p-4">
@@ -700,12 +718,73 @@ export default function HomePage() {
                   );
                 })()}
 
-                <div className="pt-3 flex gap-2.5">
+                {/* Quantity Selector */}
+                <div className="pt-2 border-t border-zinc-100 space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold uppercase tracking-wider text-[11px] text-zinc-800">
+                      Jumlah Pembelian:
+                    </span>
+                    <span className="text-[11px] text-zinc-500">
+                      Sisa Stok: <strong className="text-zinc-900 font-mono">{activeModalProduct.stock ?? 35} pcs</strong>
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="inline-flex items-center border border-zinc-300 rounded bg-white overflow-hidden shadow-2xs">
+                      <button
+                        type="button"
+                        onClick={() => setPdpQuantity((prev) => Math.max(1, prev - 1))}
+                        disabled={pdpQuantity <= 1}
+                        className="w-9 h-9 flex items-center justify-center hover:bg-zinc-100 text-zinc-700 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                        aria-label="Kurangi jumlah"
+                      >
+                        <Minus className="w-3.5 h-3.5" />
+                      </button>
+                      <input
+                        type="number"
+                        min={1}
+                        max={activeModalProduct.stock ?? 99}
+                        value={pdpQuantity}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value);
+                          if (!isNaN(val)) {
+                            setPdpQuantity(Math.max(1, Math.min(activeModalProduct.stock ?? 99, val)));
+                          }
+                        }}
+                        className="w-12 h-9 text-center text-xs font-mono font-bold text-zinc-900 border-x border-zinc-200 focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setPdpQuantity((prev) =>
+                            Math.min(activeModalProduct.stock ?? 99, prev + 1)
+                          )
+                        }
+                        disabled={pdpQuantity >= (activeModalProduct.stock ?? 99)}
+                        className="w-9 h-9 flex items-center justify-center hover:bg-zinc-100 text-zinc-700 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                        aria-label="Tambah jumlah"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    <div className="text-right">
+                      <span className="text-[10px] text-zinc-400 block uppercase font-bold">Subtotal Produk</span>
+                      <span className="text-sm font-extrabold text-purple-800">
+                        Rp {(activeModalProduct.priceIdr * Math.max(1, pdpQuantity)).toLocaleString("id-ID")}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-2 flex gap-2.5">
                   <button
+                    type="button"
                     onClick={() => handleAddToCart(activeModalProduct)}
-                    className="flex-1 py-3 bg-zinc-900 hover:bg-[#7C3AED] text-white text-xs font-bold uppercase tracking-wider transition cursor-pointer"
+                    className="flex-1 py-3 bg-zinc-900 hover:bg-[#7C3AED] text-white text-xs font-bold uppercase tracking-wider transition cursor-pointer flex items-center justify-center gap-2 shadow-md"
                   >
-                    + Masukkan Tas Belanja
+                    <ShoppingBag className="w-4 h-4" />
+                    <span>Masukkan Tas Belanja ({pdpQuantity} Barang)</span>
                   </button>
                 </div>
               </div>

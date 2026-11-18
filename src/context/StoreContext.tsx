@@ -169,6 +169,73 @@ export interface HomepageSectionConfig {
   };
 }
 
+export interface VoucherPromo {
+  id: string;
+  code: string;
+  title: string;
+  discountType: "NOMINAL" | "PERCENT";
+  discountValue: number;
+  minSpend: number;
+  maxDiscount?: number;
+  quota: number;
+  usedCount: number;
+  isActive: boolean;
+  expiryDate: string;
+}
+
+export const INITIAL_VOUCHERS: VoucherPromo[] = [
+  {
+    id: "vouch-1",
+    code: "RAHAYUPAYDAY",
+    title: "Promo Gajian Payday Diskon Rp 50.000",
+    discountType: "NOMINAL",
+    discountValue: 50000,
+    minSpend: 200000,
+    quota: 500,
+    usedCount: 142,
+    isActive: true,
+    expiryDate: "30 Nov 2026",
+  },
+  {
+    id: "vouch-2",
+    code: "ONGKIRGRATIS",
+    title: "Potongan Bebas Ongkir se-Indonesia",
+    discountType: "NOMINAL",
+    discountValue: 14000,
+    minSpend: 100000,
+    quota: 1000,
+    usedCount: 388,
+    isActive: true,
+    expiryDate: "31 Des 2026",
+  },
+  {
+    id: "vouch-3",
+    code: "RAHAYULIVE20",
+    title: "Voucher Diskon 20% TikTok Live",
+    discountType: "PERCENT",
+    discountValue: 20,
+    minSpend: 150000,
+    maxDiscount: 40000,
+    quota: 300,
+    usedCount: 97,
+    isActive: true,
+    expiryDate: "30 Nov 2026",
+  },
+  {
+    id: "vouch-4",
+    code: "RAHAYU10",
+    title: "Voucher Pelanggan Baru 10%",
+    discountType: "PERCENT",
+    discountValue: 10,
+    minSpend: 100000,
+    maxDiscount: 25000,
+    quota: 200,
+    usedCount: 64,
+    isActive: true,
+    expiryDate: "31 Des 2026",
+  },
+];
+
 export type AdminRole =
   | "SUPER_ADMIN"
   | "PRODUCT_MANAGER"
@@ -406,6 +473,13 @@ interface StoreContextType {
   // Homepage & Section Management (Admin control)
   homepageConfig: HomepageSectionConfig;
   updateHomepageConfig: (newConfig: Partial<HomepageSectionConfig>) => void;
+
+  // Vouchers & Promo Redeem (Admin & Checkout)
+  vouchers: VoucherPromo[];
+  addVoucher: (newVoucher: VoucherPromo) => void;
+  updateVoucher: (voucherId: string, updated: Partial<VoucherPromo>) => void;
+  deleteVoucher: (voucherId: string) => void;
+  toggleVoucherStatus: (voucherId: string) => void;
 
   // Payment Methods (Admin control)
   paymentMethods: PaymentConfig[];
@@ -1678,6 +1752,55 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     }).catch((err) => console.warn("Failed to update homepage config in DB:", err));
   };
 
+  // 7.b Vouchers & Promo Redeem State
+  const [vouchers, setVouchers] = useState<VoucherPromo[]>(INITIAL_VOUCHERS);
+  const [isVouchersHydrated, setIsVouchersHydrated] = useState(false);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("rahayu_vouchers");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setVouchers(parsed);
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to load vouchers from localStorage", e);
+    } finally {
+      setIsVouchersHydrated(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isVouchersHydrated) return;
+    try {
+      localStorage.setItem("rahayu_vouchers", JSON.stringify(vouchers));
+    } catch (e) {
+      console.warn("Failed to save vouchers to localStorage", e);
+    }
+  }, [vouchers, isVouchersHydrated]);
+
+  const addVoucher = (newVoucher: VoucherPromo) => {
+    setVouchers((prev) => [newVoucher, ...prev]);
+  };
+
+  const updateVoucher = (voucherId: string, updated: Partial<VoucherPromo>) => {
+    setVouchers((prev) =>
+      prev.map((v) => (v.id === voucherId ? { ...v, ...updated } : v))
+    );
+  };
+
+  const deleteVoucher = (voucherId: string) => {
+    setVouchers((prev) => prev.filter((v) => v.id !== voucherId));
+  };
+
+  const toggleVoucherStatus = (voucherId: string) => {
+    setVouchers((prev) =>
+      prev.map((v) => (v.id === voucherId ? { ...v, isActive: !v.isActive } : v))
+    );
+  };
+
   // 8. Payment Methods Config State
   const [paymentMethods, setPaymentMethods] = useState<PaymentConfig[]>(INITIAL_PAYMENT_METHODS);
 
@@ -1830,6 +1953,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         removeCategorySize,
         homepageConfig,
         updateHomepageConfig,
+        vouchers,
+        addVoucher,
+        updateVoucher,
+        deleteVoucher,
+        toggleVoucherStatus,
         paymentMethods,
         togglePaymentMethod,
         updatePaymentFee,

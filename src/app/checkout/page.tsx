@@ -73,6 +73,7 @@ export default function CheckoutPage() {
     paymentMethods,
     createOrder,
     showStoreToast,
+    vouchers,
   } = useStore();
 
   // Active address
@@ -196,24 +197,66 @@ export default function CheckoutPage() {
     e.preventDefault();
     setVoucherError("");
     const cleanCode = voucherCode.trim().toUpperCase();
+
+    // 1. Check in dynamic vouchers from StoreContext
+    const matchedVoucher = vouchers.find(
+      (v) => v.code.toUpperCase() === cleanCode && v.isActive
+    );
+
+    if (matchedVoucher) {
+      if (matchedVoucher.minSpend && subtotal < matchedVoucher.minSpend) {
+        setVoucherError(
+          `Minimal belanja Rp ${matchedVoucher.minSpend.toLocaleString("id-ID")} untuk klaim kode ${matchedVoucher.code}.`
+        );
+        return;
+      }
+
+      let calculatedDiscount = 0;
+      if (matchedVoucher.discountType === "NOMINAL") {
+        calculatedDiscount = matchedVoucher.discountValue;
+      } else {
+        // PERCENT
+        calculatedDiscount = Math.round(subtotal * (matchedVoucher.discountValue / 100));
+        if (matchedVoucher.maxDiscount && calculatedDiscount > matchedVoucher.maxDiscount) {
+          calculatedDiscount = matchedVoucher.maxDiscount;
+        }
+      }
+
+      setAppliedVoucher({
+        code: matchedVoucher.code,
+        discount: calculatedDiscount,
+        description: `${matchedVoucher.title} (Hemat Rp ${calculatedDiscount.toLocaleString("id-ID")})`,
+      });
+      showStoreToast(
+        "Voucher Berhasil Digunakan",
+        `Kode ${matchedVoucher.code} memotong total belanja sebesar Rp ${calculatedDiscount.toLocaleString("id-ID")}.`,
+        "success"
+      );
+      return;
+    }
+
+    // 2. Hardcoded fallbacks
     if (cleanCode === "RAHAYUPAYDAY") {
       setAppliedVoucher({
         code: "RAHAYUPAYDAY",
         discount: 50000,
         description: "Diskon Payday Rp 50.000 aktif!",
       });
+      showStoreToast("Voucher Payday Aktif", "Potongan Rp 50.000 berhasil diterapkan.", "success");
     } else if (cleanCode === "ONGKIRGRATIS") {
       setAppliedVoucher({
         code: "ONGKIRGRATIS",
         discount: selectedCourier.cost,
         description: "Potongan Ongkir Gratis Berhasil Diterapkan!",
       });
+      showStoreToast("Bebas Ongkir Aktif", "Biaya ongkir telah dipotong gratis.", "success");
     } else if (cleanCode === "RAHAYU10") {
       setAppliedVoucher({
         code: "RAHAYU10",
         discount: Math.round(subtotal * 0.1),
         description: "Diskon 10% Spesial Tokopedia Flow!",
       });
+      showStoreToast("Diskon 10% Aktif", "Potongan 10% berhasil diterapkan.", "success");
     } else {
       setVoucherError("Kode voucher tidak valid atau telah kedaluwarsa.");
       setAppliedVoucher(null);

@@ -58,6 +58,9 @@ import {
   UserCheck,
   ShieldAlert,
   ArrowLeft,
+  Minus,
+  Flame,
+  Ticket,
 } from "lucide-react";
 import {
   useStore,
@@ -68,6 +71,7 @@ import {
   AdminModuleId,
   ADMIN_ROLES_CONFIG,
   DEMO_ADMIN_ACCOUNTS,
+  VoucherPromo,
 } from "@/context/StoreContext";
 import { ProductItem, RahayuCategory, MarketplacePillar } from "@/data/mock-data";
 import ImageUploader from "@/components/ImageUploader";
@@ -99,6 +103,11 @@ export default function AdminPage() {
     removeCategorySize,
     homepageConfig,
     updateHomepageConfig,
+    vouchers,
+    addVoucher,
+    updateVoucher,
+    deleteVoucher,
+    toggleVoucherStatus,
     paymentMethods,
     togglePaymentMethod,
     updatePaymentFee,
@@ -318,6 +327,50 @@ export default function AdminPage() {
     });
   };
 
+  // Safe Stock Management Modal State (Prevents accidental +/- button clicks)
+  const [stockModalProduct, setStockModalProduct] = useState<ProductItem | null>(null);
+  const [stockInputVal, setStockInputVal] = useState<number>(0);
+
+  // Promo & Flash Sale Tab States (2 Jenis Promo: Voucher Redeem & Highlight Produk Langsung)
+  const [promoActiveTab, setPromoActiveTab] = useState<"highlights" | "vouchers">("highlights");
+  const [isAddPromoHighlightOpen, setIsAddPromoHighlightOpen] = useState(false);
+  const [promoHighlightForm, setPromoHighlightForm] = useState<{
+    productId: number;
+    promoBadge: string;
+    discountPct: number;
+    promoPrice: number;
+    origPrice: number;
+    promoType: string;
+  }>({
+    productId: 0,
+    promoBadge: "FLASH SALE",
+    discountPct: 25,
+    promoPrice: 150000,
+    origPrice: 200000,
+    promoType: "Flash Sale 25%",
+  });
+
+  const [isAddVoucherModalOpen, setIsAddVoucherModalOpen] = useState(false);
+  const [voucherForm, setVoucherForm] = useState<{
+    code: string;
+    title: string;
+    discountType: "NOMINAL" | "PERCENT";
+    discountValue: number;
+    minSpend: number;
+    maxDiscount: number;
+    quota: number;
+    expiryDate: string;
+  }>({
+    code: "",
+    title: "",
+    discountType: "NOMINAL",
+    discountValue: 20000,
+    minSpend: 100000,
+    maxDiscount: 50000,
+    quota: 250,
+    expiryDate: "31 Des 2026",
+  });
+
   // Analytics Metrics Calculation
   const totalRevenue = orders.reduce((sum, o) => sum + o.totalAmount, 0);
   const totalOrders = orders.length;
@@ -367,6 +420,273 @@ export default function AdminPage() {
       detailBox:
         "Pelanggan kini dapat melacak pergerakan paket secara real-time di halaman Profil Pelanggan (/profile).",
       confirmLabel: "Selesai",
+    });
+  };
+
+  // Safe Stock Change with Confirmation Modal (Prevents accidental button clicks)
+  const handleOpenStockModal = (product: ProductItem) => {
+    setStockModalProduct(product);
+    setStockInputVal(product.stock ?? 0);
+  };
+
+  const handleSaveStockModal = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!stockModalProduct) return;
+    const prod = stockModalProduct;
+    const newStock = Math.max(0, stockInputVal);
+    const diff = newStock - (prod.stock ?? 0);
+
+    openAdminConfirm({
+      variant: newStock === 0 ? "danger" : "warning",
+      badgeText: "KONFIRMASI INVENTARIS GUDANG",
+      title: `Ubah Stok "${prod.name}"?`,
+      message: `Jumlah stok produk akan diubah dari ${prod.stock ?? 0} pcs menjadi ${newStock} pcs (${diff >= 0 ? "+" : ""}${diff} pcs) di database PostgreSQL.`,
+      detailBox: `SKU: ${prod.sku} • Kategori: ${prod.category} • Stok Baru: ${newStock} pcs`,
+      confirmLabel: "Ya, Simpan Stok Baru",
+      cancelLabel: "Batal",
+      onConfirm: () => {
+        updateProductStock(prod.id, newStock);
+        setStockModalProduct(null);
+        showAdminToast(
+          "Stok Produk Diperbarui",
+          `Stok "${prod.name}" kini ${newStock} pcs.`,
+          "success"
+        );
+      },
+    });
+  };
+
+  // Safe Order Status Change with Confirmation Popup
+  const handleConfirmOrderStatusChange = (
+    orderId: string,
+    targetStatus: OrderStatus,
+    actionDesc?: string
+  ) => {
+    const currentOrder = orders.find((o) => o.id === orderId);
+    const currentStatus = currentOrder?.status || "UNKNOWN";
+    if (currentStatus === targetStatus) return;
+
+    const isCancel = targetStatus === "DIBATALKAN";
+    const isComplete = targetStatus === "SELESAI";
+
+    openAdminConfirm({
+      variant: isCancel ? "danger" : isComplete ? "success" : "info",
+      badgeText: "KONFIRMASI STATUS PESANAN",
+      title: `Ubah Status Pesanan #${orderId}?`,
+      message: actionDesc
+        ? `${actionDesc}\n\nApakah Anda yakin ingin memproses perubahan status pesanan #${orderId} dari "${currentStatus}" menjadi "${targetStatus}"?`
+        : `Apakah Anda yakin ingin mengubah status pesanan #${orderId} dari "${currentStatus}" menjadi "${targetStatus}"? Status ini langsung tersinkron ke halaman Profil Pelanggan.`,
+      detailBox: `ID Pesanan: ${orderId} • Status Baru: ${targetStatus}`,
+      confirmLabel: `Ya, Ubah ke ${targetStatus}`,
+      cancelLabel: "Batal",
+      onConfirm: () => {
+        updateOrderStatus(orderId, targetStatus);
+        showAdminToast(
+          "Status Pesanan Berhasil Diperbarui",
+          `Pesanan ${orderId} dipindahkan ke status ${targetStatus}.`,
+          "success"
+        );
+      },
+    });
+  };
+
+  // Safe Payment Gateway Toggle
+  const handleTogglePaymentWithConfirm = (method: PaymentConfig) => {
+    openAdminConfirm({
+      variant: method.isActive ? "warning" : "info",
+      badgeText: "KONFIRMASI CHANNEL PEMBAYARAN",
+      title: `${method.isActive ? "Nonaktifkan" : "Aktifkan"} Channel "${method.name}"?`,
+      message: `Metode pembayaran ini akan ${method.isActive ? "disembunyikan sehingga pelanggan tidak bisa memilihnya" : "ditampilkan kembali"} pada halaman Checkout Toko.`,
+      confirmLabel: `Ya, ${method.isActive ? "Nonaktifkan" : "Aktifkan"}`,
+      cancelLabel: "Batal",
+      onConfirm: () => {
+        togglePaymentMethod(method.id);
+        showAdminToast(
+          "Metode Pembayaran Diperbarui",
+          `Channel "${method.name}" kini ${method.isActive ? "Nonaktif" : "Aktif"}.`,
+          "info"
+        );
+      },
+    });
+  };
+
+  // Safe AI Features Toggle
+  const handleToggleAiFeatureWithConfirm = (
+    key: keyof typeof aiFeaturesConfig,
+    label: string,
+    currentValue: boolean
+  ) => {
+    openAdminConfirm({
+      variant: currentValue ? "warning" : "info",
+      badgeText: "KONFIRMASI SWITCHBOARD AI",
+      title: `${currentValue ? "Matikan" : "Aktifkan"} Fitur "${label}"?`,
+      message: `Apakah Anda yakin ingin ${currentValue ? "menonaktifkan" : "mengaktifkan"} fitur ${label}? Modul toko dan operasional lainnya tetap berfungsi 100% normal.`,
+      confirmLabel: `Ya, ${currentValue ? "Matikan" : "Aktifkan"}`,
+      cancelLabel: "Batal",
+      onConfirm: () => {
+        updateAiFeaturesConfig({ [key]: !currentValue });
+        showAdminToast(
+          "Fitur AI Diperbarui",
+          `Fitur "${label}" kini ${!currentValue ? "Aktif" : "Nonaktif"}.`,
+          "info"
+        );
+      },
+    });
+  };
+
+  // Voucher Management Handlers
+  const handleCreateVoucher = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!voucherForm.code.trim() || !voucherForm.title.trim()) {
+      openAdminAlert({
+        variant: "warning",
+        badgeText: "VALIDASI VOUCHER",
+        title: "Kode & Judul Voucher Wajib Diisi",
+        message: "Pastikan kode voucher promo (contoh: PAYDAY25) dan judul promo telah diisi dengan benar.",
+      });
+      return;
+    }
+
+    const cleanCode = voucherForm.code.trim().toUpperCase().replace(/\s+/g, "");
+    if (vouchers.some((v) => v.code.toUpperCase() === cleanCode)) {
+      openAdminAlert({
+        variant: "warning",
+        badgeText: "DUPLIKASI KODE VOUCHER",
+        title: "Kode Voucher Sudah Digunakan",
+        message: `Kode voucher "${cleanCode}" sudah terdaftar. Silakan gunakan kode unik lain.`,
+      });
+      return;
+    }
+
+    addVoucher({
+      id: `vouch-${Date.now()}`,
+      code: cleanCode,
+      title: voucherForm.title.trim(),
+      discountType: voucherForm.discountType,
+      discountValue: voucherForm.discountValue,
+      minSpend: voucherForm.minSpend,
+      maxDiscount: voucherForm.maxDiscount,
+      quota: voucherForm.quota,
+      usedCount: 0,
+      isActive: true,
+      expiryDate: voucherForm.expiryDate || "31 Des 2026",
+    });
+
+    setIsAddVoucherModalOpen(false);
+    showAdminToast(
+      "Voucher Promo Dibuat",
+      `Kode voucher "${cleanCode}" berhasil disimpan & langsung aktif untuk checkout pelanggan!`,
+      "success"
+    );
+    setVoucherForm({
+      code: "",
+      title: "",
+      discountType: "NOMINAL",
+      discountValue: 20000,
+      minSpend: 100000,
+      maxDiscount: 50000,
+      quota: 250,
+      expiryDate: "31 Des 2026",
+    });
+  };
+
+  const handleToggleVoucherWithConfirm = (voucher: VoucherPromo) => {
+    openAdminConfirm({
+      variant: voucher.isActive ? "warning" : "info",
+      badgeText: "STATUS VOUCHER PROMO",
+      title: `${voucher.isActive ? "Nonaktifkan" : "Aktifkan"} Voucher "${voucher.code}"?`,
+      message: `Voucher ini akan ${voucher.isActive ? "dinonaktifkan sehingga pembeli tidak dapat menggunakannya saat checkout" : "diaktifkan kembali dan dapat diklaim pembeli"}.`,
+      confirmLabel: `Ya, ${voucher.isActive ? "Nonaktifkan" : "Aktifkan"}`,
+      cancelLabel: "Batal",
+      onConfirm: () => {
+        toggleVoucherStatus(voucher.id);
+        showAdminToast(
+          "Status Voucher Diperbarui",
+          `Voucher "${voucher.code}" kini ${voucher.isActive ? "Nonaktif" : "Aktif"}.`,
+          "info"
+        );
+      },
+    });
+  };
+
+  const handleDeleteVoucherWithConfirm = (voucher: VoucherPromo) => {
+    openAdminConfirm({
+      variant: "danger",
+      badgeText: "HAPUS VOUCHER PROMO",
+      title: `Hapus Voucher "${voucher.code}"?`,
+      message: `Voucher "${voucher.title}" akan dihapus permanen dari sistem dan tidak dapat dipulihkan.`,
+      confirmLabel: "Ya, Hapus Voucher",
+      cancelLabel: "Batal",
+      onConfirm: () => {
+        deleteVoucher(voucher.id);
+        showAdminToast(
+          "Voucher Dihapus",
+          `Kode promo "${voucher.code}" telah dihapus.`,
+          "info"
+        );
+      },
+    });
+  };
+
+  // Direct Product Promo Highlight Management Handlers
+  const handleOpenAddPromoHighlight = () => {
+    const availableProds = products.filter((p) => !p.isPromoHighlight);
+    const defaultProd = availableProds[0] || products[0];
+    if (!defaultProd) return;
+
+    const discountPct = 25;
+    const origPrice = defaultProd.origPriceIdr || defaultProd.priceIdr;
+    const promoPrice = Math.round(origPrice * (1 - discountPct / 100));
+
+    setPromoHighlightForm({
+      productId: defaultProd.id,
+      promoBadge: "FLASH SALE",
+      discountPct,
+      promoPrice,
+      origPrice,
+      promoType: `Flash Sale ${discountPct}%`,
+    });
+    setIsAddPromoHighlightOpen(true);
+  };
+
+  const handleSavePromoHighlight = (e: React.FormEvent) => {
+    e.preventDefault();
+    const prod = products.find((p) => p.id === promoHighlightForm.productId);
+    if (!prod) return;
+
+    updateProduct(prod.id, {
+      isPromoHighlight: true,
+      promoBadge: promoHighlightForm.promoBadge.trim() || "HOT PROMO",
+      discountPct: promoHighlightForm.discountPct,
+      priceIdr: promoHighlightForm.promoPrice,
+      origPriceIdr: promoHighlightForm.origPrice,
+      promoType: promoHighlightForm.promoType.trim() || "Promo Highlight Hari Ini",
+    });
+
+    setIsAddPromoHighlightOpen(false);
+    showAdminToast(
+      "Produk Masuk Promo Highlight",
+      `"${prod.name}" kini resmi tampil di section Promo Highlight Hari Ini di beranda!`,
+      "success"
+    );
+  };
+
+  const handleRemoveFromHighlightWithConfirm = (product: ProductItem) => {
+    openAdminConfirm({
+      variant: "warning",
+      badgeText: "KELUARKAN DARI HIGHLIGHT",
+      title: `Keluarkan "${product.name}" dari Promo Highlight?`,
+      message: `Produk ini tidak akan lagi tampil di section Promo Highlight Beranda, namun tetap ada di etalase katalog umum.`,
+      confirmLabel: "Ya, Keluarkan",
+      cancelLabel: "Batal",
+      onConfirm: () => {
+        updateProduct(product.id, { isPromoHighlight: false });
+        showAdminToast(
+          "Dikeluarkan dari Highlight",
+          `"${product.name}" telah dikeluarkan dari Promo Highlight Hari Ini.`,
+          "info"
+        );
+      },
     });
   };
 
@@ -1701,38 +2021,14 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
                                 </span>
                               </td>
                               <td className="py-2.5 px-4 text-right">
-                                <div className="flex items-center justify-end gap-1.5">
-                                  <button
-                                    type="button"
-                                    onClick={() => updateProductStock(p.id, stockVal - 1)}
-                                    className="w-6 h-6 border border-zinc-300 hover:bg-zinc-100 rounded text-xs font-bold text-zinc-600 cursor-pointer"
-                                    title="Kurang 1"
-                                  >
-                                    -
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => updateProductStock(p.id, stockVal + 1)}
-                                    className="w-6 h-6 border border-zinc-300 hover:bg-zinc-100 rounded text-xs font-bold text-zinc-600 cursor-pointer"
-                                    title="Tambah 1"
-                                  >
-                                    +
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => updateProductStock(p.id, stockVal + 10)}
-                                    className="px-2 py-1 bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-700 rounded text-[10px] font-bold cursor-pointer"
-                                  >
-                                    +10
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => updateProductStock(p.id, stockVal + 50)}
-                                    className="px-2 py-1 bg-purple-700 hover:bg-purple-800 text-white rounded text-[10px] font-bold cursor-pointer"
-                                  >
-                                    +50
-                                  </button>
-                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenStockModal(p)}
+                                  className="px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 rounded-lg text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer transition shadow-2xs"
+                                >
+                                  <Boxes className="w-3.5 h-3.5 text-purple-600" />
+                                  <span>Kelola Stok</span>
+                                </button>
                               </td>
                             </tr>
                           );
@@ -3395,12 +3691,7 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
                             value={order.status}
                             onChange={(e) => {
                               const nextStatus = e.target.value as OrderStatus;
-                              updateOrderStatus(order.id, nextStatus);
-                              showAdminToast(
-                                "Status Pesanan Diperbarui",
-                                `Pesanan ${order.id} diubah menjadi ${nextStatus}.`,
-                                "success"
-                              );
+                              handleConfirmOrderStatusChange(order.id, nextStatus);
                             }}
                             className="px-2.5 py-1 border border-zinc-300 rounded text-xs font-bold bg-white focus:outline-none focus:border-purple-700"
                           >
@@ -3465,7 +3756,13 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
                             <div className="space-y-1.5">
                               <button
                                 type="button"
-                                onClick={() => updateOrderStatus(order.id, "DIKEMAS")}
+                                onClick={() =>
+                                  handleConfirmOrderStatusChange(
+                                    order.id,
+                                    "DIKEMAS",
+                                    "Verifikasi pembayaran lunas telah diterima dari pelanggan."
+                                  )
+                                }
                                 className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold text-xs flex items-center justify-center gap-1 cursor-pointer shadow-xs"
                               >
                                 <CheckCircle2 className="w-3.5 h-3.5" />
@@ -3517,7 +3814,13 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
                               </div>
                               <button
                                 type="button"
-                                onClick={() => updateOrderStatus(order.id, "SELESAI")}
+                                onClick={() =>
+                                  handleConfirmOrderStatusChange(
+                                    order.id,
+                                    "SELESAI",
+                                    "Tandai pesanan telah selesai dan barang diterima oleh pelanggan."
+                                  )
+                                }
                                 className="w-full py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded font-bold text-xs flex items-center justify-center gap-1 cursor-pointer shadow-xs"
                               >
                                 <Check className="w-3.5 h-3.5" />
@@ -3575,10 +3878,10 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
                     className="p-5 flex flex-wrap items-center justify-between gap-4 hover:bg-zinc-50 transition"
                   >
                     <div className="flex items-center gap-4 min-w-0 flex-1">
-                      {/* Toggle Active Button */}
+                      {/* Toggle Active Button with Safety Confirmation */}
                       <button
                         type="button"
-                        onClick={() => togglePaymentMethod(method.id)}
+                        onClick={() => handleTogglePaymentWithConfirm(method)}
                         className={`w-12 h-6 rounded-full transition-colors relative cursor-pointer shrink-0 ${
                           method.isActive ? "bg-purple-700" : "bg-zinc-300"
                         }`}
@@ -3828,90 +4131,361 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
             </div>
           )}
 
-          {/* MODULE 6: PROMOS, BADGES & FLASH SALES */}
+          {/* MODULE 6: PROMOS, BADGES & FLASH SALES (2 JENIS PROMO) */}
           {activeModule === "promos" && (
             <div className="space-y-6">
-              <div>
-                <h1 className="text-xl font-bold text-zinc-900">
-                  Manajemen Promo, Badges & Countdown Flash Sale
-                </h1>
-                <p className="text-xs text-zinc-500">
-                  Atur voucher diskon, banner pengumuman atas, dan label promo highlight di toko.
-                </p>
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <h1 className="text-xl font-bold text-zinc-900 flex items-center gap-2">
+                    <Flame className="w-5 h-5 text-amber-500 fill-amber-500" />
+                    <span>Pusat Manajemen Promosi &amp; Flash Sale</span>
+                  </h1>
+                  <p className="text-xs text-zinc-500 mt-0.5">
+                    Kelola 2 jenis promosi: Promo Produk Langsung &amp; Masuk Highlight Hari Ini, serta Promo Kode Voucher / Redeem saat Checkout.
+                  </p>
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-white p-6 rounded-lg border border-zinc-200 shadow-2xs space-y-4">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-800 border-b border-zinc-100 pb-2">
-                    Voucher Aktif
-                  </h3>
-                  <div className="space-y-3 text-xs">
-                    <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg flex justify-between items-center">
-                      <div>
-                        <span className="font-mono font-bold text-purple-900 text-sm block">
-                          RAHAYUPAYDAY
-                        </span>
-                        <span className="text-[11px] text-purple-700">
-                          Diskon Rp 50.000 (Min. Belanja Rp 200.000)
-                        </span>
-                      </div>
-                      <span className="bg-purple-200 text-purple-800 text-[10px] px-2 py-0.5 rounded font-bold">
-                        Aktif
-                      </span>
-                    </div>
+              {/* Subtab Switcher: 2 Jenis Promo */}
+              <div className="flex items-center gap-3 border-b border-zinc-200">
+                <button
+                  type="button"
+                  onClick={() => setPromoActiveTab("highlights")}
+                  className={`pb-3 px-3 text-xs font-bold border-b-2 flex items-center gap-2 transition cursor-pointer ${
+                    promoActiveTab === "highlights"
+                      ? "border-purple-700 text-purple-900"
+                      : "border-transparent text-zinc-500 hover:text-zinc-800"
+                  }`}
+                >
+                  <Flame className="w-4 h-4 text-amber-500" />
+                  <span>1. Promo Produk Langsung &amp; Highlight</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 font-bold">
+                    {products.filter((p) => p.isPromoHighlight).length} Produk
+                  </span>
+                </button>
 
-                    <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg flex justify-between items-center">
-                      <div>
-                        <span className="font-mono font-bold text-emerald-900 text-sm block">
-                          ONGKIRGRATIS
-                        </span>
-                        <span className="text-[11px] text-emerald-700">
-                          Gratis Ongkir se-Indonesia hingga Rp 14.000
-                        </span>
-                      </div>
-                      <span className="bg-emerald-200 text-emerald-800 text-[10px] px-2 py-0.5 rounded font-bold">
-                        Aktif
-                      </span>
-                    </div>
-                  </div>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setPromoActiveTab("vouchers")}
+                  className={`pb-3 px-3 text-xs font-bold border-b-2 flex items-center gap-2 transition cursor-pointer ${
+                    promoActiveTab === "vouchers"
+                      ? "border-purple-700 text-purple-900"
+                      : "border-transparent text-zinc-500 hover:text-zinc-800"
+                  }`}
+                >
+                  <Ticket className="w-4 h-4 text-purple-600" />
+                  <span>2. Promo Kode Voucher &amp; Redeem</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 font-bold">
+                    {vouchers.length} Kode
+                  </span>
+                </button>
+              </div>
 
-                <div className="bg-white p-6 rounded-lg border border-zinc-200 shadow-2xs space-y-4">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-800 border-b border-zinc-100 pb-2">
-                    Countdown Timer Promo Highlight
-                  </h3>
-                  <div className="space-y-3 text-xs">
+              {/* TAB 1: PROMO PRODUK LANGSUNG & MASUK HIGHLIGHT */}
+              {promoActiveTab === "highlights" && (
+                <div className="space-y-6">
+                  {/* Action Bar & Quick Overview */}
+                  <div className="bg-gradient-to-r from-purple-50 via-amber-50 to-zinc-50 p-5 rounded-xl border border-purple-200/80 flex flex-wrap items-center justify-between gap-4 shadow-2xs">
                     <div>
-                      <label className="block text-zinc-600 mb-1">Durasi Flash Sale</label>
+                      <span className="inline-block px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold uppercase tracking-wider mb-1">
+                        Frontstore Highlight
+                      </span>
+                      <h3 className="text-sm font-bold text-zinc-900">
+                        Section Promo Highlight Hari Ini di Halaman Beranda
+                      </h3>
+                      <p className="text-xs text-zinc-600 max-w-xl mt-0.5">
+                        Produk di bawah ini otomatis tampil di banner highlight beranda lengkap dengan foto katalog, badge diskon (misal FLASH SALE), dan harga coret.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleOpenAddPromoHighlight}
+                      className="px-4 py-2 bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-800 hover:to-indigo-800 text-white rounded-lg text-xs font-bold flex items-center gap-2 cursor-pointer shadow-md transition"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Tambah Produk ke Promo Highlight</span>
+                    </button>
+                  </div>
+
+                  {/* Countdown Timer Editor Box */}
+                  <div className="bg-white p-5 rounded-xl border border-zinc-200 shadow-2xs flex flex-wrap items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 shrink-0">
+                        <Clock className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-bold text-zinc-900">
+                          Countdown Timer Flash Sale Beranda
+                        </h4>
+                        <p className="text-[11px] text-zinc-500">
+                          Menentukan sisa waktu hitung mundur yang dilihat calon pembeli di toko.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
                       <input
                         type="text"
                         defaultValue="06 Jam : 42 Menit : 19 Detik"
-                        className="w-full px-3 py-2 border border-zinc-300 rounded font-mono font-bold"
+                        className="px-3 py-1.5 border border-zinc-300 rounded-lg font-mono font-bold text-xs bg-zinc-50 focus:bg-white text-zinc-800"
                       />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          showAdminToast(
+                            "Countdown Flash Sale Disimpan",
+                            "Timer hitung mundur di halaman muka telah diperbarui.",
+                            "success"
+                          );
+                        }}
+                        className="px-3.5 py-1.5 bg-zinc-900 hover:bg-purple-900 text-white rounded-lg text-xs font-bold cursor-pointer transition"
+                      >
+                        Simpan Timer
+                      </button>
                     </div>
-                    <button
-                      onClick={() => {
-                        showAdminToast(
-                          "Countdown Flash Sale Diperbarui",
-                          "Durasi hitung mundur promo highlight di beranda telah disinkronkan.",
-                          "success"
-                        );
-                        openAdminAlert({
-                          variant: "success",
-                          badgeText: "CAMPAIGN FLASH SALE",
-                          title: "Timer Promo Berhasil Diperbarui!",
-                          message:
-                            "Durasi hitung mundur Flash Sale pada halaman depan Webstore dan aplikasi Mobile telah diperbarui secara real-time.",
-                          confirmLabel: "Selesai",
-                        });
-                      }}
-                      className="px-4 py-2 bg-zinc-900 hover:bg-purple-900 text-white rounded text-xs font-bold cursor-pointer"
-                    >
-                      Update Countdown
-                    </button>
+                  </div>
+
+                  {/* Highlight Products Table */}
+                  <div className="bg-white rounded-xl border border-zinc-200 overflow-hidden shadow-2xs">
+                    <div className="p-4 border-b border-zinc-200 flex items-center justify-between">
+                      <h3 className="text-xs font-bold text-zinc-800 uppercase tracking-wider">
+                        Daftar Produk Masuk Promo Highlight ({products.filter((p) => p.isPromoHighlight).length} Item)
+                      </h3>
+                      <span className="text-[11px] text-zinc-400">
+                        Sinkron real-time dengan halaman depan (/)
+                      </span>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs text-zinc-600">
+                        <thead className="bg-zinc-50 text-[11px] font-bold uppercase text-zinc-500 border-b border-zinc-200">
+                          <tr>
+                            <th className="p-3">Produk &amp; Foto</th>
+                            <th className="p-3">Kategori</th>
+                            <th className="p-3">Badge Promo</th>
+                            <th className="p-3">Harga Normal</th>
+                            <th className="p-3">Harga Promo</th>
+                            <th className="p-3 text-center">Diskon %</th>
+                            <th className="p-3 text-center">Stok</th>
+                            <th className="p-3 text-right">Aksi</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-zinc-200">
+                          {products.filter((p) => p.isPromoHighlight).length === 0 ? (
+                            <tr>
+                              <td colSpan={8} className="p-8 text-center text-zinc-400">
+                                <p className="font-medium text-sm text-zinc-500">
+                                  Belum ada produk yang dimasukkan ke Promo Highlight
+                                </p>
+                                <p className="text-xs mt-1">
+                                  Klik tombol &ldquo;Tambah Produk ke Promo Highlight&rdquo; di atas untuk memilih koleksi favorit.
+                                </p>
+                              </td>
+                            </tr>
+                          ) : (
+                            products
+                              .filter((p) => p.isPromoHighlight)
+                              .map((p) => (
+                                <tr key={p.id} className="hover:bg-zinc-50 transition">
+                                  <td className="p-3">
+                                    <div className="flex items-center gap-3">
+                                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                                      <img
+                                        src={
+                                          p.imageUrl ||
+                                          "https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=200&q=80"
+                                        }
+                                        alt={p.name}
+                                        className="w-10 h-12 rounded object-cover border border-zinc-200 shrink-0"
+                                      />
+                                      <div className="min-w-0">
+                                        <p className="font-bold text-zinc-900 truncate max-w-[200px]">
+                                          {p.name}
+                                        </p>
+                                        <span className="font-mono text-[10px] text-zinc-400">
+                                          {p.sku}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td className="p-3 font-semibold text-zinc-700">
+                                    {p.category}
+                                  </td>
+                                  <td className="p-3">
+                                    <span className="inline-block px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 font-bold text-[10px]">
+                                      {p.promoBadge || "FLASH SALE"}
+                                    </span>
+                                  </td>
+                                  <td className="p-3 line-through text-zinc-400 font-medium">
+                                    Rp {(p.origPriceIdr || p.priceIdr).toLocaleString("id-ID")}
+                                  </td>
+                                  <td className="p-3 font-extrabold text-purple-900">
+                                    Rp {p.priceIdr.toLocaleString("id-ID")}
+                                  </td>
+                                  <td className="p-3 text-center">
+                                    <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 font-bold text-[11px]">
+                                      {p.discountPct ? `-${p.discountPct}%` : "PROMO"}
+                                    </span>
+                                  </td>
+                                  <td className="p-3 text-center font-bold">
+                                    <span
+                                      className={`px-2 py-0.5 rounded ${
+                                        (p.stock ?? 0) < 5
+                                          ? "bg-rose-100 text-rose-800"
+                                          : "bg-zinc-100 text-zinc-800"
+                                      }`}
+                                    >
+                                      {p.stock ?? 0} pcs
+                                    </span>
+                                  </td>
+                                  <td className="p-3 text-right">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRemoveFromHighlightWithConfirm(p)}
+                                      className="px-2.5 py-1 text-xs font-bold text-rose-700 hover:bg-rose-50 border border-rose-200 rounded-lg transition cursor-pointer"
+                                    >
+                                      Keluarkan
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
+
+              {/* TAB 2: PROMO KODE VOUCHER & REDEEM CHECKOUT */}
+              {promoActiveTab === "vouchers" && (
+                <div className="space-y-6">
+                  {/* Action Bar */}
+                  <div className="bg-gradient-to-r from-purple-50 via-indigo-50 to-zinc-50 p-5 rounded-xl border border-purple-200/80 flex flex-wrap items-center justify-between gap-4 shadow-2xs">
+                    <div>
+                      <span className="inline-block px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-800 text-[10px] font-bold uppercase tracking-wider mb-1">
+                        Checkout Redeem System
+                      </span>
+                      <h3 className="text-sm font-bold text-zinc-900">
+                        Voucher Diskon &amp; Kode Promo Checkout
+                      </h3>
+                      <p className="text-xs text-zinc-600 max-w-xl mt-0.5">
+                        Kode promo yang dapat dimasukkan oleh pembeli saat berada di halaman Checkout untuk mendapatkan potongan harga nominal maupun persentase.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsAddVoucherModalOpen(true)}
+                      className="px-4 py-2 bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-800 hover:to-indigo-800 text-white rounded-lg text-xs font-bold flex items-center gap-2 cursor-pointer shadow-md transition"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>+ Buat Voucher Baru</span>
+                    </button>
+                  </div>
+
+                  {/* Voucher Cards Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {vouchers.map((v) => {
+                      const quotaPct =
+                        v.quota > 0 ? Math.min(100, Math.round((v.usedCount / v.quota) * 100)) : 0;
+                      return (
+                        <div
+                          key={v.id}
+                          className={`bg-white rounded-xl border p-5 space-y-4 shadow-2xs transition ${
+                            v.isActive ? "border-purple-200 hover:border-purple-300" : "border-zinc-200 opacity-75"
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono font-black text-sm tracking-wide px-2.5 py-1 rounded bg-purple-100 text-purple-900 border border-purple-200">
+                                  {v.code}
+                                </span>
+                                <span
+                                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                    v.isActive
+                                      ? "bg-emerald-100 text-emerald-800"
+                                      : "bg-zinc-200 text-zinc-600"
+                                  }`}
+                                >
+                                  {v.isActive ? "Aktif" : "Nonaktif"}
+                                </span>
+                              </div>
+                              <h4 className="font-bold text-xs text-zinc-900 mt-2">{v.title}</h4>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteVoucherWithConfirm(v)}
+                              className="p-1.5 rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
+                              title="Hapus Voucher"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-3 text-[11px] bg-zinc-50 p-3 rounded-lg border border-zinc-100">
+                            <div>
+                              <span className="text-zinc-400 block text-[10px]">Tipe Diskon:</span>
+                              <span className="font-bold text-purple-900">
+                                {v.discountType === "NOMINAL"
+                                  ? `Potongan Rp ${v.discountValue.toLocaleString("id-ID")}`
+                                  : `Diskon ${v.discountValue}% (Maks. Rp ${(v.maxDiscount || 0).toLocaleString("id-ID")})`}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-zinc-400 block text-[10px]">Min. Belanja:</span>
+                              <span className="font-bold text-zinc-800">
+                                Rp {v.minSpend.toLocaleString("id-ID")}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-zinc-400 block text-[10px]">Terpakai / Kuota:</span>
+                              <span className="font-bold text-zinc-800">
+                                {v.usedCount} / {v.quota} klaim
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-zinc-400 block text-[10px]">Berlaku Hingga:</span>
+                              <span className="font-bold text-zinc-800">{v.expiryDate}</span>
+                            </div>
+                          </div>
+
+                          {/* Quota Progress Bar */}
+                          <div>
+                            <div className="flex justify-between text-[10px] text-zinc-400 mb-1">
+                              <span>Penggunaan Kuota</span>
+                              <span>{quotaPct}%</span>
+                            </div>
+                            <div className="w-full bg-zinc-100 h-1.5 rounded-full overflow-hidden">
+                              <div
+                                className="bg-purple-600 h-full rounded-full transition-all"
+                                style={{ width: `${quotaPct}%` }}
+                              />
+                            </div>
+                          </div>
+
+                          {/* Footer Actions */}
+                          <div className="flex items-center justify-between pt-1 border-t border-zinc-100">
+                            <span className="text-[10px] text-zinc-400">
+                              Status di halaman checkout:
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleVoucherWithConfirm(v)}
+                              className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
+                                v.isActive
+                                  ? "bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200"
+                                  : "bg-purple-700 hover:bg-purple-800 text-white"
+                              }`}
+                            >
+                              {v.isActive ? "Nonaktifkan Voucher" : "Aktifkan Voucher"}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -3961,9 +4535,11 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
                     <button
                       type="button"
                       onClick={() =>
-                        updateAiFeaturesConfig({
-                          enableSmartSize: !aiFeaturesConfig.enableSmartSize,
-                        })
+                        handleToggleAiFeatureWithConfirm(
+                          "enableSmartSize",
+                          "AI Smart Size & Fit",
+                          aiFeaturesConfig.enableSmartSize
+                        )
                       }
                       className={`w-full py-1.5 rounded font-bold text-xs cursor-pointer transition ${
                         aiFeaturesConfig.enableSmartSize
@@ -4000,9 +4576,11 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
                     <button
                       type="button"
                       onClick={() =>
-                        updateAiFeaturesConfig({
-                          enableVirtualStylist: !aiFeaturesConfig.enableVirtualStylist,
-                        })
+                        handleToggleAiFeatureWithConfirm(
+                          "enableVirtualStylist",
+                          "AI Virtual Stylist Chat",
+                          aiFeaturesConfig.enableVirtualStylist
+                        )
                       }
                       className={`w-full py-1.5 rounded font-bold text-xs cursor-pointer transition ${
                         aiFeaturesConfig.enableVirtualStylist
@@ -4039,9 +4617,11 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
                     <button
                       type="button"
                       onClick={() =>
-                        updateAiFeaturesConfig({
-                          enableAutoCopywriter: !aiFeaturesConfig.enableAutoCopywriter,
-                        })
+                        handleToggleAiFeatureWithConfirm(
+                          "enableAutoCopywriter",
+                          "AI Auto-Copywriting",
+                          aiFeaturesConfig.enableAutoCopywriter
+                        )
                       }
                       className={`w-full py-1.5 rounded font-bold text-xs cursor-pointer transition ${
                         aiFeaturesConfig.enableAutoCopywriter
@@ -4078,9 +4658,11 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
                     <button
                       type="button"
                       onClick={() =>
-                        updateAiFeaturesConfig({
-                          enableDemandForecast: !aiFeaturesConfig.enableDemandForecast,
-                        })
+                        handleToggleAiFeatureWithConfirm(
+                          "enableDemandForecast",
+                          "AI Demand Forecast",
+                          aiFeaturesConfig.enableDemandForecast
+                        )
                       }
                       className={`w-full py-1.5 rounded font-bold text-xs cursor-pointer transition ${
                         aiFeaturesConfig.enableDemandForecast
@@ -4117,9 +4699,11 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
                     <button
                       type="button"
                       onClick={() =>
-                        updateAiFeaturesConfig({
-                          enableModelPhotoshoot: !aiFeaturesConfig.enableModelPhotoshoot,
-                        })
+                        handleToggleAiFeatureWithConfirm(
+                          "enableModelPhotoshoot",
+                          "AI Model Photoshoot",
+                          aiFeaturesConfig.enableModelPhotoshoot
+                        )
                       }
                       className={`w-full py-1.5 rounded font-bold text-xs cursor-pointer transition ${
                         aiFeaturesConfig.enableModelPhotoshoot
@@ -5259,6 +5843,511 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
           </div>
         );
       })()}
+
+      {/* MODAL: Safe Stock Management Modal (Dengan Konfirmasi) */}
+      {stockModalProduct && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl max-w-md w-full overflow-hidden shadow-2xl border border-zinc-200 animate-in zoom-in-95 duration-150">
+            {/* Header */}
+            <div className="px-6 py-4 bg-gradient-to-r from-purple-700 to-indigo-800 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <Boxes className="w-5 h-5 text-purple-200" />
+                <div>
+                  <h3 className="font-bold text-sm">Kelola &amp; Update Stok Produk</h3>
+                  <p className="text-[11px] text-purple-200">Inventaris Gudang Rahayu</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setStockModalProduct(null)}
+                className="p-1 rounded-lg text-purple-200 hover:text-white hover:bg-white/10 transition cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveStockModal} className="p-6 space-y-4">
+              {/* Product Info Card */}
+              <div className="flex items-center gap-3 p-3 bg-zinc-50 rounded-xl border border-zinc-200">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={
+                    stockModalProduct.imageUrl ||
+                    "https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=200&q=80"
+                  }
+                  alt={stockModalProduct.name}
+                  className="w-12 h-14 rounded-lg object-cover border border-zinc-200 shrink-0"
+                />
+                <div className="min-w-0 flex-1">
+                  <h4 className="font-bold text-xs text-zinc-900 truncate">
+                    {stockModalProduct.name}
+                  </h4>
+                  <p className="text-[11px] font-mono text-zinc-400">
+                    SKU: {stockModalProduct.sku}
+                  </p>
+                  <p className="text-[11px] text-purple-800 font-semibold">
+                    Stok Saat Ini: <strong>{stockModalProduct.stock ?? 0} pcs</strong>
+                  </p>
+                </div>
+              </div>
+
+              {/* Stock Input */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-zinc-700">
+                  Jumlah Stok Baru (Pcs):
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={stockInputVal}
+                    onChange={(e) => setStockInputVal(Math.max(0, parseInt(e.target.value) || 0))}
+                    className="w-full px-4 py-2.5 border-2 border-purple-200 focus:border-purple-600 rounded-xl text-lg font-bold font-mono text-zinc-900 focus:outline-none"
+                    placeholder="0"
+                    autoFocus
+                  />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-400">
+                    Pcs
+                  </span>
+                </div>
+              </div>
+
+              {/* Quick Helpers */}
+              <div className="space-y-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                  Shortcut Cepat:
+                </span>
+                <div className="grid grid-cols-5 gap-1.5 text-xs font-bold">
+                  <button
+                    type="button"
+                    onClick={() => setStockInputVal(0)}
+                    className="py-1.5 rounded-lg border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 transition cursor-pointer text-center text-[11px]"
+                  >
+                    0 (Habis)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStockInputVal((prev) => prev + 10)}
+                    className="py-1.5 rounded-lg border border-zinc-200 bg-zinc-50 text-zinc-700 hover:bg-zinc-100 transition cursor-pointer text-center text-[11px]"
+                  >
+                    +10
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStockInputVal((prev) => prev + 25)}
+                    className="py-1.5 rounded-lg border border-zinc-200 bg-zinc-50 text-zinc-700 hover:bg-zinc-100 transition cursor-pointer text-center text-[11px]"
+                  >
+                    +25
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStockInputVal((prev) => prev + 50)}
+                    className="py-1.5 rounded-lg border border-zinc-200 bg-zinc-50 text-zinc-700 hover:bg-zinc-100 transition cursor-pointer text-center text-[11px]"
+                  >
+                    +50
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStockInputVal((prev) => prev + 100)}
+                    className="py-1.5 rounded-lg border border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100 transition cursor-pointer text-center text-[11px]"
+                  >
+                    +100
+                  </button>
+                </div>
+              </div>
+
+              {/* Delta info notice */}
+              <div className="p-3 rounded-xl bg-purple-50/60 border border-purple-200 text-[11px] text-purple-900 flex items-center justify-between">
+                <span>Perubahan:</span>
+                <span className="font-bold font-mono">
+                  {stockModalProduct.stock ?? 0} &rarr; {stockInputVal} pcs (
+                  {stockInputVal - (stockModalProduct.stock ?? 0) >= 0 ? "+" : ""}
+                  {stockInputVal - (stockModalProduct.stock ?? 0)} pcs)
+                </span>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setStockModalProduct(null)}
+                  className="flex-1 py-2.5 rounded-xl border border-zinc-300 hover:bg-zinc-100 text-zinc-700 font-bold text-xs transition cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-purple-700 to-indigo-800 hover:from-purple-800 hover:to-indigo-900 text-white font-bold text-xs shadow-md transition cursor-pointer"
+                >
+                  Simpan &amp; Konfirmasi
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Tambah Produk ke Promo Highlight Hari Ini */}
+      {isAddPromoHighlightOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl border border-zinc-200 animate-in zoom-in-95 duration-150">
+            {/* Header */}
+            <div className="px-6 py-4 bg-gradient-to-r from-amber-600 via-rose-600 to-purple-700 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <Flame className="w-5 h-5 text-amber-200 fill-amber-200" />
+                <div>
+                  <h3 className="font-bold text-sm">Tambah Produk ke Promo Highlight</h3>
+                  <p className="text-[11px] text-amber-100">Tampil di Beranda &amp; Frontstore</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAddPromoHighlightOpen(false)}
+                className="p-1 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSavePromoHighlight} className="p-6 space-y-4">
+              {/* Product Selector */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-zinc-700">
+                  Pilih Produk dari Katalog:
+                </label>
+                <select
+                  value={promoHighlightForm.productId}
+                  onChange={(e) => {
+                    const pid = parseInt(e.target.value);
+                    const prod = products.find((p) => p.id === pid);
+                    if (prod) {
+                      const orig = prod.origPriceIdr || prod.priceIdr;
+                      const promo = Math.round(orig * (1 - promoHighlightForm.discountPct / 100));
+                      setPromoHighlightForm({
+                        ...promoHighlightForm,
+                        productId: pid,
+                        origPrice: orig,
+                        promoPrice: promo,
+                      });
+                    }
+                  }}
+                  className="w-full px-3 py-2 border border-zinc-300 rounded-xl text-xs font-bold text-zinc-900 bg-white focus:outline-none focus:border-purple-600"
+                >
+                  {products.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} — Rp {p.priceIdr.toLocaleString("id-ID")} ({p.category})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Promo Badge & Diskon % */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-zinc-700">Badge Promo:</label>
+                  <input
+                    type="text"
+                    value={promoHighlightForm.promoBadge}
+                    onChange={(e) =>
+                      setPromoHighlightForm({
+                        ...promoHighlightForm,
+                        promoBadge: e.target.value.toUpperCase(),
+                      })
+                    }
+                    placeholder="cth. FLASH SALE"
+                    className="w-full px-3 py-2 border border-zinc-300 rounded-xl text-xs font-bold uppercase focus:outline-none focus:border-purple-600"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-zinc-700">Persentase Diskon:</label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min="1"
+                      max="95"
+                      value={promoHighlightForm.discountPct}
+                      onChange={(e) => {
+                        const pct = Math.max(1, Math.min(95, parseInt(e.target.value) || 0));
+                        const promo = Math.round(promoHighlightForm.origPrice * (1 - pct / 100));
+                        setPromoHighlightForm({
+                          ...promoHighlightForm,
+                          discountPct: pct,
+                          promoPrice: promo,
+                        });
+                      }}
+                      className="w-full px-3 py-2 border border-zinc-300 rounded-xl text-xs font-bold focus:outline-none focus:border-purple-600"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-400">
+                      %
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Price Calculation (Normal vs Promo) */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-zinc-700">Harga Coret (Normal):</label>
+                  <input
+                    type="number"
+                    value={promoHighlightForm.origPrice}
+                    onChange={(e) => {
+                      const orig = Math.max(0, parseInt(e.target.value) || 0);
+                      const promo = Math.round(orig * (1 - promoHighlightForm.discountPct / 100));
+                      setPromoHighlightForm({
+                        ...promoHighlightForm,
+                        origPrice: orig,
+                        promoPrice: promo,
+                      });
+                    }}
+                    className="w-full px-3 py-2 border border-zinc-300 rounded-xl text-xs font-mono font-bold focus:outline-none focus:border-purple-600"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-zinc-700">Harga Promo (Bayar):</label>
+                  <input
+                    type="number"
+                    value={promoHighlightForm.promoPrice}
+                    onChange={(e) =>
+                      setPromoHighlightForm({
+                        ...promoHighlightForm,
+                        promoPrice: Math.max(0, parseInt(e.target.value) || 0),
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-purple-300 bg-purple-50 rounded-xl text-xs font-mono font-bold text-purple-900 focus:outline-none focus:border-purple-600"
+                  />
+                </div>
+              </div>
+
+              {/* Preview Card */}
+              <div className="p-3.5 bg-zinc-50 rounded-xl border border-zinc-200 flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] text-zinc-400 block">Preview Badge di Beranda:</span>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="px-2 py-0.5 rounded bg-rose-600 text-white font-bold text-[10px]">
+                      {promoHighlightForm.promoBadge || "FLASH SALE"}
+                    </span>
+                    <span className="text-xs font-bold text-purple-900">
+                      Rp {promoHighlightForm.promoPrice.toLocaleString("id-ID")}
+                    </span>
+                    <span className="line-through text-[11px] text-zinc-400">
+                      Rp {promoHighlightForm.origPrice.toLocaleString("id-ID")}
+                    </span>
+                  </div>
+                </div>
+                <span className="text-xs font-extrabold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-200">
+                  Hemat {promoHighlightForm.discountPct}%
+                </span>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAddPromoHighlightOpen(false)}
+                  className="flex-1 py-2.5 rounded-xl border border-zinc-300 hover:bg-zinc-100 text-zinc-700 font-bold text-xs transition cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-purple-700 to-indigo-800 hover:from-purple-800 hover:to-indigo-900 text-white font-bold text-xs shadow-md transition cursor-pointer"
+                >
+                  Simpan ke Promo Highlight
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Buat Kode Voucher Promo Baru */}
+      {isAddVoucherModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl border border-zinc-200 animate-in zoom-in-95 duration-150">
+            {/* Header */}
+            <div className="px-6 py-4 bg-gradient-to-r from-purple-700 to-indigo-800 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <Ticket className="w-5 h-5 text-purple-200" />
+                <div>
+                  <h3 className="font-bold text-sm">Buat Voucher Promo Baru</h3>
+                  <p className="text-[11px] text-purple-200">Klaim Kode Diskon saat Checkout</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAddVoucherModalOpen(false)}
+                className="p-1 rounded-lg text-purple-200 hover:text-white hover:bg-white/10 transition cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateVoucher} className="p-6 space-y-4">
+              {/* Code & Title */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-zinc-700">Kode Voucher:</label>
+                  <input
+                    type="text"
+                    required
+                    value={voucherForm.code}
+                    onChange={(e) =>
+                      setVoucherForm({
+                        ...voucherForm,
+                        code: e.target.value.toUpperCase().replace(/\s+/g, ""),
+                      })
+                    }
+                    placeholder="cth. PAYDAY30"
+                    className="w-full px-3 py-2 border border-zinc-300 rounded-xl font-mono text-xs font-bold uppercase focus:outline-none focus:border-purple-600"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-zinc-700">Judul Promo:</label>
+                  <input
+                    type="text"
+                    required
+                    value={voucherForm.title}
+                    onChange={(e) =>
+                      setVoucherForm({
+                        ...voucherForm,
+                        title: e.target.value,
+                      })
+                    }
+                    placeholder="cth. Spesial Gajian Diskon 30%"
+                    className="w-full px-3 py-2 border border-zinc-300 rounded-xl text-xs font-medium focus:outline-none focus:border-purple-600"
+                  />
+                </div>
+              </div>
+
+              {/* Discount Type & Value */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-zinc-700">Tipe Potongan:</label>
+                  <select
+                    value={voucherForm.discountType}
+                    onChange={(e) =>
+                      setVoucherForm({
+                        ...voucherForm,
+                        discountType: e.target.value as "NOMINAL" | "PERCENT",
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-zinc-300 rounded-xl text-xs font-bold bg-white focus:outline-none focus:border-purple-600"
+                  >
+                    <option value="NOMINAL">Potongan Nominal (Rp)</option>
+                    <option value="PERCENT">Persentase (%)</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-zinc-700">
+                    {voucherForm.discountType === "NOMINAL" ? "Nominal Diskon (Rp):" : "Diskon (%):"}
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    value={voucherForm.discountValue}
+                    onChange={(e) =>
+                      setVoucherForm({
+                        ...voucherForm,
+                        discountValue: Math.max(1, parseInt(e.target.value) || 0),
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-zinc-300 rounded-xl text-xs font-mono font-bold focus:outline-none focus:border-purple-600"
+                  />
+                </div>
+              </div>
+
+              {/* Min Spend & Max Discount */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-zinc-700">Minimal Belanja (Rp):</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={voucherForm.minSpend}
+                    onChange={(e) =>
+                      setVoucherForm({
+                        ...voucherForm,
+                        minSpend: Math.max(0, parseInt(e.target.value) || 0),
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-zinc-300 rounded-xl text-xs font-mono font-bold focus:outline-none focus:border-purple-600"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-zinc-700">Maks. Diskon (Rp):</label>
+                  <input
+                    type="number"
+                    min="0"
+                    disabled={voucherForm.discountType === "NOMINAL"}
+                    value={voucherForm.maxDiscount}
+                    onChange={(e) =>
+                      setVoucherForm({
+                        ...voucherForm,
+                        maxDiscount: Math.max(0, parseInt(e.target.value) || 0),
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-zinc-300 disabled:bg-zinc-100 rounded-xl text-xs font-mono font-bold focus:outline-none focus:border-purple-600"
+                  />
+                </div>
+              </div>
+
+              {/* Quota & Expiry Date */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-zinc-700">Kuota Pemakaian:</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={voucherForm.quota}
+                    onChange={(e) =>
+                      setVoucherForm({
+                        ...voucherForm,
+                        quota: Math.max(1, parseInt(e.target.value) || 0),
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-zinc-300 rounded-xl text-xs font-mono font-bold focus:outline-none focus:border-purple-600"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-zinc-700">Tanggal Berakhir:</label>
+                  <input
+                    type="text"
+                    value={voucherForm.expiryDate}
+                    onChange={(e) =>
+                      setVoucherForm({
+                        ...voucherForm,
+                        expiryDate: e.target.value,
+                      })
+                    }
+                    placeholder="cth. 31 Des 2026"
+                    className="w-full px-3 py-2 border border-zinc-300 rounded-xl text-xs font-medium focus:outline-none focus:border-purple-600"
+                  />
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAddVoucherModalOpen(false)}
+                  className="flex-1 py-2.5 rounded-xl border border-zinc-300 hover:bg-zinc-100 text-zinc-700 font-bold text-xs transition cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-purple-700 to-indigo-800 hover:from-purple-800 hover:to-indigo-900 text-white font-bold text-xs shadow-md transition cursor-pointer"
+                >
+                  Buat &amp; Aktifkan Voucher
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* MODAL 4: Custom Enterprise Confirmation & Alert Dialog (Replaces standard window.alert / window.confirm) */}
       {adminDialog?.isOpen && (
