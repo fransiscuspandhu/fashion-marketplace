@@ -336,6 +336,22 @@ export default function CheckoutPage() {
         },
       });
 
+      // Call payment create-transaction API endpoint
+      fetch("/api/payment/create-transaction", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderId: created.id,
+          grossAmount: finalTotal,
+          customerDetails: {
+            name: user?.name || activeAddress.recipient,
+            email: user?.email || "customer@rahayufashion.id",
+            phone: activeAddress.phone,
+          },
+          items: cart,
+        }),
+      }).catch((err) => console.warn("Payment API background error:", err));
+
       setIsSubmitting(false);
       setOrderSuccessId(created.id);
     }, 900);

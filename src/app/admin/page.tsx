@@ -845,9 +845,38 @@ export default function AdminPage() {
     });
   };
 
-  const handleRunProductAiGenerate = () => {
+  const handleRunProductAiGenerate = async () => {
     setIsProductAiGenerating(true);
-    setTimeout(() => {
+    try {
+      const res = await fetch("/api/ai/photoshoot", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productName: productForm.name || "Koleksi Fashion Modest",
+          category: productForm.category,
+          modelType: aiProductModel,
+          lighting: aiProductTone,
+          background: "Studio Modest Minimalist Aesthetic",
+          rawImageUrl: aiProductRawImage,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.outputUrl) {
+          setAiProductResult(data.outputUrl);
+          showAdminToast(
+            data.isLive ? `Render AI Live Berhasil (${data.provider})` : "Render Studio AI Selesai",
+            data.message || "Foto model AI beresolusi tinggi siap diterapkan ke produk.",
+            "success"
+          );
+          setIsProductAiGenerating(false);
+          return;
+        }
+      }
+      throw new Error("API call returned unsuccessful");
+    } catch (err) {
+      console.warn("AI photoshoot API fallback:", err);
       const generated = generateAiPhoto({
         productName: productForm.name || "Koleksi Fashion Modest",
         category: productForm.category,
@@ -856,13 +885,14 @@ export default function AdminPage() {
         background: "Studio Modest Minimalist Aesthetic",
       });
       setAiProductResult(generated.outputUrl);
-      setIsProductAiGenerating(false);
       showAdminToast(
-        "Render Studio AI Selesai",
+        "Render Studio AI Selesai (Sandbox)",
         "Foto model AI beresolusi tinggi siap diterapkan ke produk.",
         "success"
       );
-    }, 1500);
+    } finally {
+      setIsProductAiGenerating(false);
+    }
   };
 
   const handleApplyAiImageToProduct = () => {
@@ -876,9 +906,42 @@ export default function AdminPage() {
     }
   };
 
-  const handleAiAutoCopywriting = () => {
+  const handleAiAutoCopywriting = async () => {
     setIsAiCopywriting(true);
-    setTimeout(() => {
+    try {
+      const name = productForm.name.trim() || "Busana Modest Syar'i Modern";
+      const cat = productForm.category || "Gamis";
+
+      const res = await fetch("/api/ai/copywrite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          category: cat,
+          priceIdr: productForm.priceIdr,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.description) {
+          setProductForm((prev) => ({
+            ...prev,
+            desc: data.description,
+            promoBadge: prev.promoBadge || "HOT REKOMENDASI",
+          }));
+          showAdminToast(
+            data.isLive ? `Copywriting AI Live (${data.provider})` : "Copywriting SEO AI Selesai",
+            "Deskripsi spesifikasi & hashtag otomatis berhasil disusun.",
+            "success"
+          );
+          setIsAiCopywriting(false);
+          return;
+        }
+      }
+      throw new Error("Copywrite API returned unsuccessful");
+    } catch (err) {
+      console.warn("Copywriting API fallback:", err);
       const name = productForm.name.trim() || "Busana Modest Syar'i Modern";
       const cat = productForm.category || "Gamis";
       const generatedDesc = `${name} dirancang khusus untuk wanita muslimah modern yang mengutamakan keanggunan, kenyamanan, dan nilai kesopanan syar'i. Dibuat dengan siluet jatuh (flowy) yang elegan dan tidak menjiplak lekuk tubuh.
@@ -900,13 +963,14 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
         desc: generatedDesc,
         promoBadge: prev.promoBadge || "HOT REKOMENDASI",
       }));
-      setIsAiCopywriting(false);
       showAdminToast(
         "Copywriting SEO AI Selesai",
         "Deskripsi spesifikasi & hashtag otomatis berhasil dibuat.",
         "success"
       );
-    }, 600);
+    } finally {
+      setIsAiCopywriting(false);
+    }
   };
 
   // Payment Method Handlers

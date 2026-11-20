@@ -58,7 +58,7 @@ export default function AiVirtualStylistChat() {
     "Koleksi koko pria yang senada",
   ];
 
-  const handleSend = (userText: string) => {
+  const handleSend = async (userText: string) => {
     if (!userText.trim()) return;
 
     const userMsg: ChatMessage = {
@@ -72,11 +72,27 @@ export default function AiVirtualStylistChat() {
     setInputMessage("");
     setIsTyping(true);
 
-    // AI intelligent answer generation
-    setTimeout(() => {
-      let replyText = "";
-      let matchedProds: ProductItem[] = [];
+    let replyText = "";
+    let matchedProds: ProductItem[] = [];
 
+    try {
+      const res = await fetch("/api/ai/stylist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: userText }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.reply) {
+          replyText = data.reply;
+        }
+      }
+    } catch (e) {
+      console.warn("AI Stylist API fallback:", e);
+    }
+
+    if (!replyText) {
+      // Fallback smart matching
       const query = userText.toLowerCase();
 
       if (query.includes("lilac") || query.includes("gamis") || query.includes("jilbab")) {
@@ -103,18 +119,20 @@ export default function AiVirtualStylistChat() {
         replyText = `Tentu Sis! Berdasarkan koleksi terbaru di Rahayu Fashion, kami memiliki berbagai pilihan model modest dengan potongan syar'i dan bahan jatuh berkualitas. Berikut rekomendasi pilihan terbaik untuk Sis:`;
         matchedProds = products.slice(0, 2);
       }
+    } else {
+      matchedProds = products.slice(0, 2);
+    }
 
-      const botReply: ChatMessage = {
-        id: `bot-${Date.now()}`,
-        sender: "stylist",
-        text: replyText,
-        time: "Baru saja",
-        recommendedProducts: matchedProds.length > 0 ? matchedProds : undefined,
-      };
+    const botReply: ChatMessage = {
+      id: `bot-${Date.now()}`,
+      sender: "stylist",
+      text: replyText,
+      time: "Baru saja",
+      recommendedProducts: matchedProds.length > 0 ? matchedProds : undefined,
+    };
 
-      setMessages((prev) => [...prev, botReply]);
-      setIsTyping(false);
-    }, 700);
+    setMessages((prev) => [...prev, botReply]);
+    setIsTyping(false);
   };
 
   return (
