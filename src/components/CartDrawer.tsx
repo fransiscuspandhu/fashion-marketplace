@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { X, Trash2, Plus, Minus, ShoppingBag, ArrowRight } from "lucide-react";
+import { X, Trash2, Plus, Minus, ShoppingBag, ArrowRight, Ticket } from "lucide-react";
 import { useStore } from "@/context/StoreContext";
 
 export default function CartDrawer() {
@@ -178,6 +178,17 @@ export default function CartDrawer() {
                 <span className="text-lg font-extrabold text-zinc-900">
                   Rp {cartTotal.toLocaleString("id-ID")}
                 </span>
+              </div>
+              <div className="flex items-center justify-between text-[11px] text-zinc-600 pt-1 pb-1">
+                <Link
+                  href="/promos"
+                  onClick={closeCartDrawer}
+                  className="inline-flex items-center gap-1.5 text-purple-700 hover:text-purple-900 font-semibold hover:underline"
+                >
+                  <Ticket className="w-3.5 h-3.5 text-purple-600" />
+                  <span>Lihat Kupon &amp; Kode Promo Tersedia</span>
+                </Link>
+                <span className="text-[10px] text-zinc-400">Pilih di Checkout</span>
               </div>
               <p className="text-[11px] text-zinc-500 leading-relaxed">
                 Biaya ongkir dan potongan voucher promo akan dihitung pada langkah Checkout.
