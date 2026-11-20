@@ -19,12 +19,17 @@ pgdata
 *.db-journal
 packages/mobile
 
-# Documentation and design assets
+# Documentation and media assets
 docs
 *.png
 *.jpg
 *.jpeg
 *.svg
+*.mp4
+*.webm
+*.mov
+public/uploads/*
+!public/uploads/.gitkeep
 
 # Environment files (injected at runtime via docker-compose / Coolify)
 .env*.local
