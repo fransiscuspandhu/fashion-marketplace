@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
+import { logAiThirdParty, inspectAiKeys } from "@/lib/ai-logger";
 
 export async function POST(request: Request) {
+  const startTime = Date.now();
   try {
     const body = await request.json();
     const {
@@ -119,11 +121,40 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
 #RahayuFashion #${category.replace(/\s+/g, "")} #ModestFashionID #GamisSyari #HijabStyle2026`;
     }
 
+    const durationMs = Date.now() - startTime;
+    const keysDetected = inspectAiKeys();
+
+    logAiThirdParty({
+      service: "AI SEO Copywriter",
+      provider,
+      isLive,
+      endpoint: isLive ? (provider === "google-gemini" ? "https://generativelanguage.googleapis.com (Gemini 1.5 Flash)" : "https://api.openai.com (GPT-4o-mini)") : undefined,
+      durationMs,
+      inputs: {
+        productName: name,
+        category,
+        material,
+        priceIdr: priceIdr ? `Rp ${priceIdr}` : "-",
+      },
+      outputPreview: generatedDescription,
+      keysDetected,
+      note: isLive
+        ? `Copywriting berhasil di-generate secara live via model LLM ${provider}.`
+        : "Saat ini menggunakan Template Engine Modest Standar. Pasang GEMINI_API_KEY di .env untuk generative AI live copywriting tanpa batas.",
+    });
+
     return NextResponse.json({
       success: true,
       isLive,
       provider,
       description: generatedDescription,
+      _devDiagnostics: {
+        service: "AI SEO Copywriter",
+        provider,
+        isLive,
+        durationMs,
+        keysDetected,
+      },
     });
   } catch (error: any) {
     console.error("AI Copywriting error:", error);

@@ -99,6 +99,18 @@ export default function AiVirtualStylistChat() {
           replyText = data.reply;
           returnedHints = Array.isArray(data.keywordHints) ? data.keywordHints : [];
           returnedCategory = data.categoryHint || "";
+
+          if (data._devDiagnostics) {
+            console.groupCollapsed("%c🤖 [AI Diagnostic Dev Mode] Virtual Stylist", "color: #ec4899; font-weight: bold; font-size: 11px;");
+            console.log("Status     :", data.isLive ? "🟢 LIVE CLOUD API" : "🟡 SMART KNOWLEDGE ENGINE");
+            console.log("Provider   :", data.provider);
+            console.log("Execution  :", `${data._devDiagnostics.durationMs} ms`);
+            console.log("Category   :", data.categoryHint);
+            console.log("Keywords   :", data.keywordHints);
+            console.log("API Keys   :", data._devDiagnostics.keysDetected);
+            console.log("Response   :", data.reply.substring(0, 100) + "...");
+            console.groupEnd();
+          }
         }
       }
     } catch (e) {

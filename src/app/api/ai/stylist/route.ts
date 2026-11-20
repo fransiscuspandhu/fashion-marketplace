@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
+import { logAiThirdParty, inspectAiKeys } from "@/lib/ai-logger";
 
 export async function POST(request: Request) {
+  const startTime = Date.now();
   try {
     const body = await request.json();
     const { message = "", history = [] } = body;
@@ -377,6 +379,27 @@ Apakah ada model tertentu (Gamis, Tunik, Hijab Voal, atau Pakaian Pria/Anak) yan
       }
     }
 
+    const durationMs = Date.now() - startTime;
+    const keysDetected = inspectAiKeys();
+
+    logAiThirdParty({
+      service: "AI Virtual Stylist",
+      provider,
+      isLive,
+      endpoint: isLive ? (provider === "google-gemini" ? "https://generativelanguage.googleapis.com (Gemini 1.5 Flash)" : "https://api.openai.com (GPT-4o-mini)") : undefined,
+      durationMs,
+      inputs: {
+        userMessage: message,
+        categoryDetected: categoryHint,
+        keywords: keywordHints,
+      },
+      outputPreview: reply,
+      keysDetected,
+      note: isLive
+        ? `Stylist merespon via model Generative AI ${provider}.`
+        : "Saat ini menggunakan Smart Modest Knowledge Engine v2.0 (25+ topik). Pasang GEMINI_API_KEY di .env untuk live conversational generative AI.",
+    });
+
     return NextResponse.json({
       success: true,
       isLive,
@@ -384,6 +407,15 @@ Apakah ada model tertentu (Gamis, Tunik, Hijab Voal, atau Pakaian Pria/Anak) yan
       categoryHint,
       keywordHints,
       reply,
+      _devDiagnostics: {
+        service: "AI Virtual Stylist",
+        provider,
+        isLive,
+        durationMs,
+        categoryHint,
+        keywordHints,
+        keysDetected,
+      },
     });
   } catch (error: any) {
     console.error("AI Stylist error:", error);

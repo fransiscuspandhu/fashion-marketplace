@@ -866,6 +866,15 @@ export default function AdminPage() {
         const data = await res.json();
         if (data.success && data.outputUrl) {
           setAiProductResult(data.outputUrl);
+          if (data._devDiagnostics) {
+            console.groupCollapsed("%c🤖 [AI Diagnostic Dev Mode] Photoshoot Studio", "color: #9333ea; font-weight: bold; font-size: 11px;");
+            console.log("Status    :", data.isLive ? "🟢 LIVE CLOUD API" : "🟡 SANDBOX SIMULATOR");
+            console.log("Provider  :", data.provider);
+            console.log("Execution :", `${data._devDiagnostics.durationMs} ms`);
+            console.log("API Keys  :", data._devDiagnostics.keysDetected);
+            console.log("Output URL:", data.outputUrl);
+            console.groupEnd();
+          }
           showAdminToast(
             data.isLive ? `Render AI Live Berhasil (${data.provider})` : "Foto Model AI Berhasil Dibuat",
             data.message || "Foto model AI beresolusi tinggi siap diterapkan ke produk.",
@@ -927,6 +936,15 @@ export default function AdminPage() {
       if (res.ok) {
         const data = await res.json();
         if (data.success && data.description) {
+          if (data._devDiagnostics) {
+            console.groupCollapsed("%c🤖 [AI Diagnostic Dev Mode] SEO Copywriter", "color: #06b6d4; font-weight: bold; font-size: 11px;");
+            console.log("Status    :", data.isLive ? "🟢 LIVE CLOUD API" : "🟡 SANDBOX TEMPLATE ENGINE");
+            console.log("Provider  :", data.provider);
+            console.log("Execution :", `${data._devDiagnostics.durationMs} ms`);
+            console.log("API Keys  :", data._devDiagnostics.keysDetected);
+            console.log("Output    :", data.description.substring(0, 100) + "...");
+            console.groupEnd();
+          }
           setProductForm((prev) => ({
             ...prev,
             desc: data.description,

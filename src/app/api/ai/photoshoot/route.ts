@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { logAiThirdParty, inspectAiKeys } from "@/lib/ai-logger";
 
 export async function POST(request: Request) {
+  const startTime = Date.now();
   try {
     const body = await request.json();
     const {
@@ -195,6 +197,31 @@ export async function POST(request: Request) {
       console.warn("Could not save to PostgreSQL, returning in-memory log:", e);
     }
 
+    const durationMs = Date.now() - startTime;
+    const keysDetected = inspectAiKeys();
+
+    logAiThirdParty({
+      service: "AI Photoshoot Studio",
+      provider,
+      isLive,
+      endpoint: isLive ? (provider === "fal.ai" ? "https://queue.fal.run/fal-ai/flux/dev" : "https://api.replicate.com") : undefined,
+      durationMs,
+      costEstimate: `Rp ${costIdr} (~$${(costIdr / 16000).toFixed(3)} USD)`,
+      inputs: {
+        productName,
+        category,
+        modelType,
+        lighting,
+        background,
+        hasRawImage: !!rawImageUrl,
+      },
+      outputPreview: outputUrl,
+      keysDetected,
+      note: isLive
+        ? `Model AI berhasil memproses gambar via server cloud ${provider}.`
+        : "Saat ini berjalan di Mode Sandbox Simulator. Untuk merender baju mentah secara live via Cloud AI, pasang FAL_KEY asli di file .env.",
+    });
+
     return NextResponse.json({
       success: true,
       isLive,
@@ -206,6 +233,14 @@ export async function POST(request: Request) {
       message: isLive
         ? `Foto model berhasil di-generate secara live via ${provider}!`
         : "Foto model AI beresolusi tinggi berhasil dibuat & siap dipasang ke produk! (Mode Sandbox Simulator Aktif).",
+      _devDiagnostics: {
+        service: "AI Photoshoot Studio",
+        provider,
+        isLive,
+        durationMs,
+        costEstimate: `Rp ${costIdr}`,
+        keysDetected,
+      },
     });
   } catch (error: any) {
     console.error("AI Photoshoot error:", error);
