@@ -52,6 +52,7 @@ export default function HeaderNavbar({
     categories,
     pillars,
     orders,
+    vouchers,
   } = useStore();
 
   const [isMounted, setIsMounted] = useState(false);
@@ -234,8 +235,33 @@ export default function HeaderNavbar({
               </Link>
             </div>
 
-            {/* Right: Utility Buttons (Bag & User Tokopedia Flow) */}
+            {/* Right: Utility Buttons (Promo, Bag & User Tokopedia Flow) */}
             <div className="col-span-6 md:col-span-4 flex items-center justify-end gap-3 sm:gap-4 text-xs">
+              {/* Promo / Voucher Menu Item (Setara Keranjang Belanja) */}
+              <Link
+                href="/promos"
+                className={`flex items-center gap-1.5 font-semibold transition-colors py-1 cursor-pointer group ${
+                  pathname === "/promos"
+                    ? "text-purple-700 font-bold"
+                    : "text-zinc-900 hover:text-purple-700"
+                }`}
+                aria-label="Lihat Daftar Kode Promo & S&K"
+                title="Daftar Kupon & Kode Promo Rahayu"
+              >
+                <div className="relative flex items-center justify-center">
+                  <Ticket className="w-4 h-4 text-purple-600 group-hover:scale-110 transition-transform" />
+                  <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+                </div>
+                <span className="text-[11px] uppercase tracking-wider hidden sm:inline">Promo</span>
+                {vouchers && vouchers.filter((v) => v.isActive).length > 0 && (
+                  <span className="px-1.5 py-0.2 rounded-full bg-purple-100 text-purple-800 text-[10px] font-bold border border-purple-200">
+                    {vouchers.filter((v) => v.isActive).length}
+                  </span>
+                )}
+              </Link>
+
+              <span className="text-zinc-200 hidden sm:inline">|</span>
+
               {/* Shopping Bag trigger */}
               <button
                 onClick={openCartDrawer}
