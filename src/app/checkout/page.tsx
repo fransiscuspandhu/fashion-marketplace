@@ -354,7 +354,7 @@ export default function CheckoutPage() {
 
       setIsSubmitting(false);
       setOrderSuccessId(created.id);
-    }, 900);
+    }, 150);
   };
 
   return (

@@ -79,6 +79,7 @@ export default function AiVirtualStylistChat() {
       const res = await fetch("/api/ai/stylist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: AbortSignal.timeout(2000),
         body: JSON.stringify({ message: userText }),
       });
       if (res.ok) {

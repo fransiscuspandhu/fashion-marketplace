@@ -851,6 +851,7 @@ export default function AdminPage() {
       const res = await fetch("/api/ai/photoshoot", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: AbortSignal.timeout(2500),
         body: JSON.stringify({
           productName: productForm.name || "Koleksi Fashion Modest",
           category: productForm.category,
@@ -915,6 +916,7 @@ export default function AdminPage() {
       const res = await fetch("/api/ai/copywrite", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: AbortSignal.timeout(2500),
         body: JSON.stringify({
           name,
           category: cat,

@@ -1118,9 +1118,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
 
   // 1c. Fancy Loading & Store Notification State
-  const [isStoreLoading, setIsStoreLoading] = useState<boolean>(true);
+  const [isStoreLoading, setIsStoreLoading] = useState<boolean>(false);
   const [isSyncingData, setIsSyncingData] = useState<boolean>(false);
-  const [syncMessage, setSyncMessage] = useState<string | null>("Menyinkronkan Koleksi Rahayu...");
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [storeToast, setStoreToast] = useState<{
     id: number;
     title: string;
@@ -1162,20 +1162,19 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Synchronize live data from PostgreSQL database
+  // Synchronize live data from PostgreSQL database silently in background without blocking UI
   useEffect(() => {
     async function loadDatabaseData() {
-      const startTime = Date.now();
-      setIsStoreLoading(true);
-      setIsSyncingData(true);
-      setSyncMessage("Menghubungkan Katalog & Database Rahayu...");
       try {
+        const fetchWithTimeout = (url: string) =>
+          fetch(url, { signal: AbortSignal.timeout(1500) }).then((r) => r.json());
+
         const [prodRes, catRes, orderRes, payRes, homeRes] = await Promise.allSettled([
-          fetch("/api/products").then((r) => r.json()),
-          fetch("/api/categories").then((r) => r.json()),
-          fetch("/api/orders").then((r) => r.json()),
-          fetch("/api/payment-methods").then((r) => r.json()),
-          fetch("/api/homepage-config").then((r) => r.json()),
+          fetchWithTimeout("/api/products"),
+          fetchWithTimeout("/api/categories"),
+          fetchWithTimeout("/api/orders"),
+          fetchWithTimeout("/api/payment-methods"),
+          fetchWithTimeout("/api/homepage-config"),
         ]);
 
         if (prodRes.status === "fulfilled" && prodRes.value?.success && Array.isArray(prodRes.value.data) && prodRes.value.data.length > 0) {
@@ -1351,12 +1350,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       } catch (err) {
         console.warn("Could not sync from database API, fallback to default state", err);
       } finally {
-        const elapsed = Date.now() - startTime;
-        const minDisplay = Math.max(0, 650 - elapsed);
-        setTimeout(() => {
-          setIsStoreLoading(false);
-          setIsSyncingData(false);
-        }, minDisplay);
+        setIsStoreLoading(false);
+        setIsSyncingData(false);
       }
     }
 
