@@ -18,6 +18,7 @@ import {
   Flame,
   Star,
   Grid,
+  Ticket,
 } from "lucide-react";
 import { useStore, ADMIN_ROLES_CONFIG } from "@/context/StoreContext";
 
@@ -392,6 +393,21 @@ export default function HeaderNavbar({
               <Flame className="w-3.5 h-3.5 fill-current" />
               <span>Promo Highlight</span>
             </a>
+
+            <Link
+              href="/promos"
+              className={`hover:text-purple-700 pb-1 whitespace-nowrap flex items-center gap-1 transition-colors ${
+                pathname === "/promos"
+                  ? "border-b-2 border-purple-700 text-purple-700 font-bold"
+                  : "text-zinc-700 font-semibold"
+              }`}
+            >
+              <Ticket className="w-3.5 h-3.5 text-purple-600" />
+              <span>Kode Promo &amp; S&amp;K</span>
+              <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-rose-500 text-white font-bold">
+                HEMAT
+              </span>
+            </Link>
           </nav>
 
           {/* Mega Menu Dropdown */}

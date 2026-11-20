@@ -149,6 +149,7 @@ export interface HomepageSectionConfig {
     countdownHours: string;
     countdownMins: string;
     countdownSecs: string;
+    countdownText?: string;
   };
   newArrivalsSection: {
     isActive: boolean;
@@ -181,6 +182,8 @@ export interface VoucherPromo {
   usedCount: number;
   isActive: boolean;
   expiryDate: string;
+  categoryTag?: "Diskon Belanja" | "Gratis Ongkir" | "Live Special" | "Pelanggan Baru" | "Kategori Hijab";
+  terms?: string[];
 }
 
 export const INITIAL_VOUCHERS: VoucherPromo[] = [
@@ -195,6 +198,15 @@ export const INITIAL_VOUCHERS: VoucherPromo[] = [
     usedCount: 142,
     isActive: true,
     expiryDate: "30 Nov 2026",
+    categoryTag: "Diskon Belanja",
+    terms: [
+      "Berlaku untuk seluruh produk busana muslim, hijab voal, baju hamil, dan pakaian anak tanpa terkecuali.",
+      "Minimal transaksi Rp 200.000 pada subtotal keranjang belanja (sebelum ongkos kirim dan biaya proteksi).",
+      "Potongan langsung flat senilai Rp 50.000 dari total belanja pesanan.",
+      "Voucher hanya dapat digunakan 1 (satu) kali per akun pelanggan selama periode promo gajian berlangsung.",
+      "Dapat digabungkan dengan diskon langsung harga coret / promo flash sale produk.",
+      "Berlaku hingga 30 November 2026 pukul 23:59 WIB atau selama kuota masih tersedia.",
+    ],
   },
   {
     id: "vouch-2",
@@ -207,6 +219,15 @@ export const INITIAL_VOUCHERS: VoucherPromo[] = [
     usedCount: 388,
     isActive: true,
     expiryDate: "31 Des 2026",
+    categoryTag: "Gratis Ongkir",
+    terms: [
+      "Potongan subsidi ongkos kirim hingga Rp 14.000 untuk pengiriman ke seluruh wilayah Indonesia.",
+      "Minimal transaksi belanja Rp 100.000 dalam satu keranjang pesanan.",
+      "Berlaku untuk layanan kurir ekspedisi Reguler (JNE, SiCepat, J&T Express, Pos Indonesia).",
+      "Jika tarif ongkos kirim melebihi batas subsidi Rp 14.000, sisa kekurangan biaya ongkir ditanggung oleh pembeli.",
+      "Berlaku untuk semua metode pembayaran resmi (QRIS, VA BCA, Mandiri, COD, Kartu Kredit).",
+      "Masa berlaku kupon sampai dengan 31 Desember 2026 pukul 23:59 WIB.",
+    ],
   },
   {
     id: "vouch-3",
@@ -220,6 +241,15 @@ export const INITIAL_VOUCHERS: VoucherPromo[] = [
     usedCount: 97,
     isActive: true,
     expiryDate: "30 Nov 2026",
+    categoryTag: "Live Special",
+    terms: [
+      "Diskon 20% khusus penonton setia sesi interaktif TikTok Live & Webstore Live Streaming Rahayu Fashion.",
+      "Minimal total belanja Rp 150.000 dengan batas maksimal potongan sebesar Rp 40.000.",
+      "Berlaku untuk seluruh koleksi hijab premium, tunik silk, dress muslimah, dan bundle hemat.",
+      "Kuota terbatas 300 kali transaksi klaim per sesi tayangan live show.",
+      "Wajib memasukkan atau memilih kode voucher sebelum menyelesaikan pembayaran checkout.",
+      "Promo berlaku hingga 30 November 2026 pukul 23:59 WIB.",
+    ],
   },
   {
     id: "vouch-4",
@@ -233,6 +263,54 @@ export const INITIAL_VOUCHERS: VoucherPromo[] = [
     usedCount: 64,
     isActive: true,
     expiryDate: "31 Des 2026",
+    categoryTag: "Pelanggan Baru",
+    terms: [
+      "Diskon sambutan 10% khusus untuk transaksi pertama pelanggan baru di Rahayu Fashion Store.",
+      "Minimal transaksi Rp 100.000 dengan maksimal potongan nilai diskon Rp 25.000.",
+      "Berlaku untuk semua metode pembayaran online dan bayar di tempat (COD).",
+      "Tidak dapat diuangkan atau dipindahtangankan ke akun pengguna lain.",
+      "Berlaku sampai dengan 31 Desember 2026 pukul 23:59 WIB.",
+    ],
+  },
+  {
+    id: "vouch-5",
+    code: "FLASHRAYA30",
+    title: "Super Promo Raya Diskon 30%",
+    discountType: "PERCENT",
+    discountValue: 30,
+    minSpend: 250000,
+    maxDiscount: 60000,
+    quota: 150,
+    usedCount: 42,
+    isActive: true,
+    expiryDate: "15 Des 2026",
+    categoryTag: "Diskon Belanja",
+    terms: [
+      "Potongan harga 30% untuk persiapan busana Hari Raya & Modest Festive 2026.",
+      "Minimal belanja Rp 250.000 dengan batas potongan diskon tertinggi hingga Rp 60.000.",
+      "Berlaku untuk koleksi Gamis Syari, Tunik Silk, Abaya Modern, dan Kaftan Premium.",
+      "Batas kuota harian berlaku, siapa cepat dia dapat saat checkout.",
+      "Berlaku hingga 15 Desember 2026 pukul 23:59 WIB.",
+    ],
+  },
+  {
+    id: "vouch-6",
+    code: "VOALLOVERS",
+    title: "Kupon Spesial Hijab Voal Rp 20.000",
+    discountType: "NOMINAL",
+    discountValue: 20000,
+    minSpend: 120000,
+    quota: 400,
+    usedCount: 118,
+    isActive: true,
+    expiryDate: "31 Des 2026",
+    categoryTag: "Kategori Hijab",
+    terms: [
+      "Potongan langsung Rp 20.000 khusus pembelian aneka Hijab Voal Ultrafine & Pashmina Plisket.",
+      "Minimal belanja Rp 120.000 untuk kategori hijab dan aksesoris muslim.",
+      "Dapat digunakan untuk pembelian grosir mini (paket 3 hijab voal).",
+      "Berlaku hingga 31 Desember 2026 pukul 23:59 WIB.",
+    ],
   },
 ];
 
@@ -942,6 +1020,7 @@ const INITIAL_HOMEPAGE_CONFIG: HomepageSectionConfig = {
     countdownHours: "06",
     countdownMins: "42",
     countdownSecs: "19",
+    countdownText: "06 Jam : 42 Menit : 19 Detik",
   },
   newArrivalsSection: {
     isActive: true,
@@ -1824,12 +1903,57 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   // 7. Homepage Layout Config
   const [homepageConfig, setHomepageConfig] = useState<HomepageSectionConfig>(INITIAL_HOMEPAGE_CONFIG);
+  const [isHomepageConfigHydrated, setIsHomepageConfigHydrated] = useState(false);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("rahayu_homepage_config");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === "object") {
+          setHomepageConfig((prev) => ({
+            ...prev,
+            ...parsed,
+            promoHighlightSection: {
+              ...prev.promoHighlightSection,
+              ...(parsed.promoHighlightSection || {}),
+              countdownText:
+                parsed.promoHighlightSection?.countdownText ||
+                prev.promoHighlightSection.countdownText ||
+                "06 Jam : 42 Menit : 19 Detik",
+            },
+          }));
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to load homepage config from localStorage", e);
+    } finally {
+      setIsHomepageConfigHydrated(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isHomepageConfigHydrated) return;
+    try {
+      localStorage.setItem("rahayu_homepage_config", JSON.stringify(homepageConfig));
+    } catch (e) {
+      console.warn("Failed to save homepage config to localStorage", e);
+    }
+  }, [homepageConfig, isHomepageConfigHydrated]);
 
   const updateHomepageConfig = (newConfig: Partial<HomepageSectionConfig>) => {
-    setHomepageConfig((prev) => ({
-      ...prev,
-      ...newConfig,
-    }));
+    setHomepageConfig((prev) => {
+      const updated = {
+        ...prev,
+        ...newConfig,
+      };
+      try {
+        localStorage.setItem("rahayu_homepage_config", JSON.stringify(updated));
+      } catch (e) {
+        console.warn("Failed to sync homepage config to localStorage", e);
+      }
+      return updated;
+    });
     fetch("/api/homepage-config", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -1847,7 +1971,32 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          setVouchers(parsed);
+          // Merge terms & new initial vouchers if any are missing
+          const enriched: VoucherPromo[] = parsed.map((item: VoucherPromo) => {
+            const initialMatch = INITIAL_VOUCHERS.find(
+              (iv) => iv.id === item.id || iv.code === item.code
+            );
+            return {
+              ...item,
+              categoryTag: item.categoryTag || initialMatch?.categoryTag || "Diskon Belanja",
+              terms: (item.terms && item.terms.length > 0) ? item.terms : (initialMatch?.terms || [
+                `Berlaku untuk transaksi minimal Rp ${(item.minSpend || 0).toLocaleString("id-ID")}.`,
+                `Voucher berlaku hingga ${item.expiryDate}.`,
+                "Hanya dapat digunakan 1 kali per akun pengguna.",
+                "Tidak dapat digabungkan dengan kode promo sejenis lainnya.",
+              ]),
+            };
+          });
+
+          // Add any newly introduced initial vouchers not yet in user's saved list
+          const existingCodes = new Set(enriched.map((e: VoucherPromo) => e.code));
+          INITIAL_VOUCHERS.forEach((iv) => {
+            if (!existingCodes.has(iv.code)) {
+              enriched.push(iv);
+            }
+          });
+
+          setVouchers(enriched);
         }
       }
     } catch (e) {

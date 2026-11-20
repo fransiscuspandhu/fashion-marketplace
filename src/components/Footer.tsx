@@ -73,6 +73,7 @@ export default function Footer({ onCategoryClick, onProfileClick }: FooterProps)
               <li><button onClick={() => onCategoryClick?.('Baju Hamil')} className="hover:text-white transition text-left">Baju Hamil Modern & Dress Menyusui (Busui)</button></li>
               <li><button onClick={() => onCategoryClick?.('Pakaian Anak Perempuan')} className="hover:text-white transition text-left">Pakaian Anak Perempuan & Gamis Anak</button></li>
               <li><button onClick={() => onCategoryClick?.('Pakaian Bayi')} className="hover:text-white transition text-left">Pakaian Bayi Katun Organik (0–24 Bulan)</button></li>
+              <li><Link href="/promos" className="text-amber-400 hover:underline font-semibold text-left">🎟️ Daftar Kode Promo &amp; S&amp;K Diskon →</Link></li>
               <li><button onClick={() => onProfileClick?.()} className="text-[#E879F9] hover:underline font-semibold text-left">Akun Saya · Daftar Transaksi & Lacak Resi →</button></li>
             </ul>
           </nav>

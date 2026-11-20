@@ -187,9 +187,40 @@ export default function AdminPage() {
   const [layoutDraft, setLayoutDraft] = useState<HomepageSectionConfig>(homepageConfig);
   const [layoutSavedAlert, setLayoutSavedAlert] = useState(false);
 
+  // Countdown Timer Text Mode State (Flash Sale / Promo Highlight)
+  const [countdownTextInput, setCountdownTextInput] = useState<string>(
+    homepageConfig.promoHighlightSection.countdownText || "06 Jam : 42 Menit : 19 Detik"
+  );
+
   React.useEffect(() => {
     setLayoutDraft(homepageConfig);
+    if (homepageConfig.promoHighlightSection.countdownText) {
+      setCountdownTextInput(homepageConfig.promoHighlightSection.countdownText);
+    }
   }, [homepageConfig]);
+
+  const handleSaveCountdownTimer = (textToSave?: string) => {
+    const finalVal = (textToSave ?? countdownTextInput).trim() || "06 Jam : 42 Menit : 19 Detik";
+    setCountdownTextInput(finalVal);
+    updateHomepageConfig({
+      promoHighlightSection: {
+        ...homepageConfig.promoHighlightSection,
+        countdownText: finalVal,
+      },
+    });
+    setLayoutDraft((prev) => ({
+      ...prev,
+      promoHighlightSection: {
+        ...prev.promoHighlightSection,
+        countdownText: finalVal,
+      },
+    }));
+    showAdminToast(
+      "Countdown Flash Sale Disimpan! ⏱️",
+      `Timer hitung mundur di halaman beranda diperbarui menjadi: "${finalVal}".`,
+      "success"
+    );
+  };
 
   // Analytics State
   const [analyticsChartMode, setAnalyticsChartMode] = useState<"omzet" | "orders">("omzet");
@@ -4219,40 +4250,98 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
                     </button>
                   </div>
 
-                  {/* Countdown Timer Editor Box */}
-                  <div className="bg-white p-5 rounded-xl border border-zinc-200 shadow-2xs flex flex-wrap items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 shrink-0">
-                        <Clock className="w-5 h-5" />
+                  {/* Countdown Timer Editor Box (Text Mode Langsung & Cepat) */}
+                  <div className="bg-white p-5 rounded-xl border border-zinc-200 shadow-2xs space-y-3.5">
+                    <div className="flex flex-wrap items-center justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 shrink-0 shadow-2xs">
+                          <Clock className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="text-xs font-bold text-zinc-900">
+                              Countdown Timer Flash Sale Beranda (Mode Teks Bebas)
+                            </h4>
+                            <span className="text-[10px] px-2 py-0.2 rounded-full bg-emerald-100 text-emerald-800 font-bold">
+                              Text Mode Aktif
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-zinc-500 mt-0.5">
+                            Ketik teks waktu hitung mundur bebas (contoh: <code>06 Jam : 42 Menit</code>, <code>12:00:00</code>, atau <code>2 Hari Lagi</code>) atau klik preset cepat di bawah.
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <h4 className="text-xs font-bold text-zinc-900">
-                          Countdown Timer Flash Sale Beranda
-                        </h4>
-                        <p className="text-[11px] text-zinc-500">
-                          Menentukan sisa waktu hitung mundur yang dilihat calon pembeli di toko.
-                        </p>
+
+                      {/* Text Input & Save Button */}
+                      <div className="flex items-center gap-2 w-full sm:w-auto">
+                        <div className="relative flex-1 sm:w-72">
+                          <input
+                            type="text"
+                            value={countdownTextInput}
+                            onChange={(e) => setCountdownTextInput(e.target.value)}
+                            placeholder="cth. 06 Jam : 42 Menit : 19 Detik"
+                            className="w-full px-3 py-2 border border-zinc-300 rounded-lg font-mono font-bold text-xs bg-zinc-50 focus:bg-white text-zinc-900 focus:outline-none focus:border-purple-600 tracking-wider shadow-inner"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleSaveCountdownTimer()}
+                          className="px-4 py-2 bg-zinc-900 hover:bg-purple-900 text-white rounded-lg text-xs font-bold cursor-pointer transition flex items-center gap-1.5 shadow-xs shrink-0"
+                        >
+                          <Check className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>Simpan Timer</span>
+                        </button>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        defaultValue="06 Jam : 42 Menit : 19 Detik"
-                        className="px-3 py-1.5 border border-zinc-300 rounded-lg font-mono font-bold text-xs bg-zinc-50 focus:bg-white text-zinc-800"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          showAdminToast(
-                            "Countdown Flash Sale Disimpan",
-                            "Timer hitung mundur di halaman muka telah diperbarui.",
-                            "success"
-                          );
-                        }}
-                        className="px-3.5 py-1.5 bg-zinc-900 hover:bg-purple-900 text-white rounded-lg text-xs font-bold cursor-pointer transition"
-                      >
-                        Simpan Timer
-                      </button>
+
+                    {/* Quick 1-Click Preset Chips */}
+                    <div className="pt-2 border-t border-zinc-100 flex flex-wrap items-center gap-2 text-xs">
+                      <span className="text-[11px] font-semibold text-zinc-500 mr-1">
+                        Preset Cepat 1-Klik:
+                      </span>
+                      {[
+                        "01 Jam : 00 Menit : 00 Detik",
+                        "03 Jam : 00 Menit : 00 Detik",
+                        "06 Jam : 42 Menit : 19 Detik",
+                        "12 Jam : 00 Menit : 00 Detik",
+                        "24 Jam : 00 Menit : 00 Detik",
+                        "2 Hari Lagi",
+                        "Berakhir Malam Ini (23:59 WIB)",
+                        "Flash Sale Spesial Gajian",
+                      ].map((preset) => (
+                        <button
+                          key={preset}
+                          type="button"
+                          onClick={() => {
+                            setCountdownTextInput(preset);
+                            handleSaveCountdownTimer(preset);
+                          }}
+                          className={`px-2.5 py-1 rounded-md text-[11px] font-mono font-semibold transition cursor-pointer border ${
+                            countdownTextInput === preset
+                              ? "bg-purple-100 text-purple-900 border-purple-300 font-bold ring-1 ring-purple-400"
+                              : "bg-zinc-100 hover:bg-purple-50 text-zinc-700 hover:text-purple-800 border-zinc-200"
+                          }`}
+                          title={`Gunakan preset "${preset}"`}
+                        >
+                          {preset}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Live Frontstore Preview Pill */}
+                    <div className="p-2.5 rounded-lg bg-zinc-50 border border-zinc-200 flex flex-wrap items-center justify-between gap-2 text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-400">
+                          Pratinjau Frontstore:
+                        </span>
+                        <div className="inline-flex items-center gap-2 px-3 py-1 bg-zinc-900 text-white rounded font-mono font-bold text-xs shadow-2xs">
+                          <span className="text-zinc-400 text-[10px] font-sans">BERAKHIR DALAM:</span>
+                          <span className="text-rose-400">{countdownTextInput || "00:00:00"}</span>
+                        </div>
+                      </div>
+                      <span className="text-[11px] text-zinc-500">
+                        Perubahan langsung tersimpan ke memori toko &amp; terlihat di halaman beranda.
+                      </span>
                     </div>
                   </div>
 
@@ -5230,59 +5319,62 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
                   </div>
 
                   <div>
-                    <label className="block font-semibold text-zinc-700 mb-1">Countdown Timer</label>
-                    <div className="grid grid-cols-3 gap-3">
-                      <div>
-                        <span className="text-[10px] text-zinc-500 block mb-0.5">Jam (Hours):</span>
-                        <input
-                          type="text"
-                          value={layoutDraft.promoHighlightSection.countdownHours}
-                          onChange={(e) =>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block font-semibold text-zinc-700">
+                        Countdown Timer Flash Sale (Mode Teks Bebas)
+                      </label>
+                      <span className="text-[10px] text-purple-700 font-bold">
+                        Mode Teks Aktif
+                      </span>
+                    </div>
+                    <input
+                      type="text"
+                      value={layoutDraft.promoHighlightSection.countdownText ?? "06 Jam : 42 Menit : 19 Detik"}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setLayoutDraft({
+                          ...layoutDraft,
+                          promoHighlightSection: {
+                            ...layoutDraft.promoHighlightSection,
+                            countdownText: val,
+                          },
+                        });
+                        setCountdownTextInput(val);
+                      }}
+                      placeholder="cth. 06 Jam : 42 Menit : 19 Detik"
+                      className="w-full px-3 py-2 border border-zinc-300 rounded-md text-xs font-mono font-bold tracking-wider"
+                    />
+
+                    {/* Presets in Layout CMS */}
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                      <span className="text-[10px] text-zinc-400">Pilih Preset:</span>
+                      {[
+                        "01 Jam : 00 Menit : 00 Detik",
+                        "03 Jam : 00 Menit : 00 Detik",
+                        "06 Jam : 42 Menit : 19 Detik",
+                        "12 Jam : 00 Menit : 00 Detik",
+                        "24 Jam : 00 Menit : 00 Detik",
+                        "2 Hari Lagi",
+                        "Berakhir Malam Ini (23:59 WIB)",
+                      ].map((preset) => (
+                        <button
+                          key={preset}
+                          type="button"
+                          onClick={() => {
                             setLayoutDraft({
                               ...layoutDraft,
                               promoHighlightSection: {
                                 ...layoutDraft.promoHighlightSection,
-                                countdownHours: e.target.value,
+                                countdownText: preset,
                               },
-                            })
-                          }
-                          className="w-full px-3 py-2 border border-zinc-300 rounded-md text-xs font-mono text-center font-bold"
-                        />
-                      </div>
-                      <div>
-                        <span className="text-[10px] text-zinc-500 block mb-0.5">Menit (Mins):</span>
-                        <input
-                          type="text"
-                          value={layoutDraft.promoHighlightSection.countdownMins}
-                          onChange={(e) =>
-                            setLayoutDraft({
-                              ...layoutDraft,
-                              promoHighlightSection: {
-                                ...layoutDraft.promoHighlightSection,
-                                countdownMins: e.target.value,
-                              },
-                            })
-                          }
-                          className="w-full px-3 py-2 border border-zinc-300 rounded-md text-xs font-mono text-center font-bold"
-                        />
-                      </div>
-                      <div>
-                        <span className="text-[10px] text-zinc-500 block mb-0.5">Detik (Secs):</span>
-                        <input
-                          type="text"
-                          value={layoutDraft.promoHighlightSection.countdownSecs}
-                          onChange={(e) =>
-                            setLayoutDraft({
-                              ...layoutDraft,
-                              promoHighlightSection: {
-                                ...layoutDraft.promoHighlightSection,
-                                countdownSecs: e.target.value,
-                              },
-                            })
-                          }
-                          className="w-full px-3 py-2 border border-zinc-300 rounded-md text-xs font-mono text-center font-bold"
-                        />
-                      </div>
+                            });
+                            setCountdownTextInput(preset);
+                          }}
+                          className="px-2 py-0.5 rounded bg-zinc-100 hover:bg-purple-100 text-zinc-700 hover:text-purple-800 text-[10px] font-mono transition cursor-pointer border border-zinc-200"
+                        >
+                          {preset}
+                        </button>
+                      ))}
                     </div>
                   </div>
                 </div>

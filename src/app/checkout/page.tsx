@@ -18,8 +18,15 @@ import {
   Plus,
   ArrowRight,
   Lock,
+  Ticket,
+  ChevronDown,
+  ChevronUp,
+  Sparkles,
+  X,
+  Check,
+  HelpCircle,
 } from "lucide-react";
-import { useStore, CustomerAddress, PaymentConfig } from "@/context/StoreContext";
+import { useStore, CustomerAddress, PaymentConfig, VoucherPromo } from "@/context/StoreContext";
 import HeaderNavbar from "@/components/HeaderNavbar";
 import Footer from "@/components/Footer";
 
@@ -101,6 +108,8 @@ export default function CheckoutPage() {
     description: "Voucher Payday Diskon Rp 50.000 Berhasil Diterapkan!",
   });
   const [voucherError, setVoucherError] = useState("");
+  const [isPromoModalOpen, setIsPromoModalOpen] = useState(false);
+  const [expandedTermsVoucherId, setExpandedTermsVoucherId] = useState<string | null>(null);
 
   // Insurance checkbox
   const [useInsurance, setUseInsurance] = useState(true);
@@ -261,6 +270,46 @@ export default function CheckoutPage() {
       setVoucherError("Kode voucher tidak valid atau telah kedaluwarsa.");
       setAppliedVoucher(null);
     }
+  };
+
+  const eligibleVouchersCount = vouchers.filter(
+    (v) => v.isActive && subtotal >= (v.minSpend || 0)
+  ).length;
+
+  const applySelectedVoucher = (v: VoucherPromo) => {
+    const minRequired = v.minSpend || 0;
+    if (subtotal < minRequired) {
+      showStoreToast(
+        "Belum Memenuhi Syarat S&K",
+        `Minimal transaksi belanja Rp ${minRequired.toLocaleString("id-ID")}. Belanja kurang Rp ${(minRequired - subtotal).toLocaleString("id-ID")} lagi.`,
+        "warning"
+      );
+      return;
+    }
+
+    let calculatedDiscount = 0;
+    if (v.discountType === "NOMINAL") {
+      calculatedDiscount = v.discountValue;
+    } else {
+      calculatedDiscount = Math.round(subtotal * (v.discountValue / 100));
+      if (v.maxDiscount && calculatedDiscount > v.maxDiscount) {
+        calculatedDiscount = v.maxDiscount;
+      }
+    }
+
+    setVoucherCode(v.code);
+    setVoucherError("");
+    setAppliedVoucher({
+      code: v.code,
+      discount: calculatedDiscount,
+      description: `${v.title} (Hemat Rp ${calculatedDiscount.toLocaleString("id-ID")})`,
+    });
+    setIsPromoModalOpen(false);
+    showStoreToast(
+      "Kupon Berhasil Dipakai! 🎉",
+      `Kode ${v.code} berhasil memotong subtotal pesanan sebesar Rp ${calculatedDiscount.toLocaleString("id-ID")}.`,
+      "success"
+    );
   };
 
   const handlePlaceOrder = () => {
@@ -597,12 +646,20 @@ export default function CheckoutPage() {
             {/* Right Column: Order Summary & Pay Action */}
             <div className="lg:col-span-4 space-y-6">
               {/* Voucher Code Box */}
-              <div className="bg-white border border-zinc-200 rounded-lg p-6 shadow-2xs">
-                <div className="flex items-center gap-2 mb-3">
-                  <Tag className="w-4 h-4 text-purple-700" />
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-900">
-                    Voucher Promo Rahayu
-                  </h3>
+              <div className="bg-white border border-zinc-200 rounded-lg p-6 shadow-2xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Tag className="w-4 h-4 text-purple-700" />
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-900">
+                      Voucher Promo Rahayu
+                    </h3>
+                  </div>
+                  {eligibleVouchersCount > 0 && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                      <Sparkles className="w-3 h-3 text-emerald-600" />
+                      {eligibleVouchersCount} Siap Dipakai
+                    </span>
+                  )}
                 </div>
 
                 <form onSubmit={handleApplyVoucher} className="flex gap-2">
@@ -621,16 +678,37 @@ export default function CheckoutPage() {
                   </button>
                 </form>
 
+                {/* Quick Button to open full Promo Modal */}
+                <button
+                  type="button"
+                  onClick={() => setIsPromoModalOpen(true)}
+                  className="w-full py-2.5 px-3 bg-purple-50/80 hover:bg-purple-100/80 border border-purple-200 rounded-lg text-xs font-semibold text-purple-900 flex items-center justify-between transition cursor-pointer shadow-2xs"
+                >
+                  <div className="flex items-center gap-2">
+                    <Ticket className="w-4 h-4 text-purple-700" />
+                    <span>Pilih Kupon Hemat Tersedia</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] font-bold text-purple-700 underline">
+                      Lihat Semua &amp; S&amp;K
+                    </span>
+                    <ChevronRight className="w-3.5 h-3.5 text-purple-700" />
+                  </div>
+                </button>
+
                 {appliedVoucher && (
-                  <div className="mt-3 p-2.5 bg-emerald-50 border border-emerald-200 rounded text-[11px] text-emerald-800 flex items-center justify-between">
+                  <div className="mt-2 p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg text-[11px] text-emerald-800 flex items-center justify-between">
                     <div>
-                      <span className="font-bold">{appliedVoucher.code}</span>
-                      <p className="text-[10px] text-emerald-700">{appliedVoucher.description}</p>
+                      <div className="flex items-center gap-1.5 font-bold">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>{appliedVoucher.code}</span>
+                      </div>
+                      <p className="text-[10px] text-emerald-700 mt-0.5">{appliedVoucher.description}</p>
                     </div>
                     <button
                       type="button"
                       onClick={() => setAppliedVoucher(null)}
-                      className="text-xs text-rose-600 font-semibold hover:underline cursor-pointer"
+                      className="text-xs text-rose-600 font-semibold hover:underline cursor-pointer ml-2"
                     >
                       Batal
                     </button>
@@ -638,11 +716,22 @@ export default function CheckoutPage() {
                 )}
 
                 {voucherError && (
-                  <div className="mt-2 text-[11px] text-rose-600 flex items-center gap-1">
-                    <AlertCircle className="w-3.5 h-3.5" />
+                  <div className="mt-2 text-[11px] text-rose-600 flex items-center gap-1 bg-rose-50 border border-rose-200 p-2 rounded">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                     <span>{voucherError}</span>
                   </div>
                 )}
+
+                <div className="pt-1 flex items-center justify-between text-[11px] text-zinc-500">
+                  <Link
+                    href="/promos"
+                    target="_blank"
+                    className="hover:text-purple-700 underline flex items-center gap-1"
+                  >
+                    <HelpCircle className="w-3 h-3 text-zinc-400" />
+                    <span>Syarat &amp; Ketentuan Promo Lengkap</span>
+                  </Link>
+                </div>
               </div>
 
               {/* Price Calculation Summary */}
@@ -784,6 +873,239 @@ export default function CheckoutPage() {
               <Plus className="w-3.5 h-3.5" />
               <span>Tambah Alamat Baru di Profil</span>
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL PILIH KODE PROMO & S&K (CHECKOUT VALIDATION) */}
+      {isPromoModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white rounded-2xl max-w-xl w-full max-h-[85vh] flex flex-col shadow-2xl border border-zinc-200 overflow-hidden animate-in zoom-in-95">
+            {/* Modal Header */}
+            <div className="p-5 border-b border-zinc-200 bg-gradient-to-r from-purple-50 via-white to-pink-50 flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-purple-600 text-white flex items-center justify-center shadow-xs">
+                    <Ticket className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-sm text-zinc-900">
+                      Pilih Kupon Hemat &amp; Kode Promo
+                    </h3>
+                    <p className="text-[11px] text-zinc-500">
+                      Pilih promo yang memenuhi syarat minimal belanja pesanan Anda.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsPromoModalOpen(false)}
+                className="w-8 h-8 rounded-full hover:bg-zinc-200 text-zinc-500 hover:text-zinc-800 flex items-center justify-center cursor-pointer transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Subtotal Status Pill */}
+            <div className="px-5 py-2.5 bg-zinc-50 border-b border-zinc-200 flex items-center justify-between text-xs">
+              <span className="text-zinc-600 font-medium">Subtotal Belanja Saat Ini:</span>
+              <span className="font-bold text-zinc-900 font-mono text-sm">
+                Rp {subtotal.toLocaleString("id-ID")}
+              </span>
+            </div>
+
+            {/* Voucher List */}
+            <div className="p-5 overflow-y-auto space-y-3.5 flex-1">
+              {vouchers.filter((v) => v.isActive).length === 0 ? (
+                <div className="text-center py-8 text-zinc-500 text-xs">
+                  Belum ada voucher aktif yang tersedia saat ini.
+                </div>
+              ) : (
+                vouchers
+                  .filter((v) => v.isActive)
+                  .map((voucher) => {
+                    const minRequired = voucher.minSpend || 0;
+                    const isEligible = subtotal >= minRequired;
+                    const shortfall = Math.max(0, minRequired - subtotal);
+                    const isCurrentlyApplied = appliedVoucher?.code === voucher.code;
+
+                    let potentialSavings = 0;
+                    if (voucher.discountType === "NOMINAL") {
+                      potentialSavings = voucher.discountValue;
+                    } else {
+                      potentialSavings = Math.round(subtotal * (voucher.discountValue / 100));
+                      if (voucher.maxDiscount && potentialSavings > voucher.maxDiscount) {
+                        potentialSavings = voucher.maxDiscount;
+                      }
+                    }
+
+                    const isTermsExpanded = expandedTermsVoucherId === voucher.id;
+
+                    return (
+                      <div
+                        key={voucher.id}
+                        className={`rounded-xl border transition-all ${
+                          isCurrentlyApplied
+                            ? "border-emerald-500 bg-emerald-50/30 shadow-xs ring-1 ring-emerald-500"
+                            : isEligible
+                            ? "border-purple-200 bg-white hover:border-purple-400 shadow-2xs"
+                            : "border-zinc-200 bg-zinc-50/70 opacity-70"
+                        }`}
+                      >
+                        {/* Main Voucher Info */}
+                        <div className="p-4">
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div className="flex-1 min-w-[200px]">
+                              <div className="flex flex-wrap items-center gap-2 mb-1">
+                                <span className="font-mono font-bold text-xs px-2.5 py-0.5 rounded bg-zinc-900 text-white tracking-wider">
+                                  {voucher.code}
+                                </span>
+                                {voucher.categoryTag && (
+                                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-purple-100 text-purple-800">
+                                    {voucher.categoryTag}
+                                  </span>
+                                )}
+                                {isEligible ? (
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                                    <Check className="w-3 h-3" />
+                                    <span>Memenuhi S&amp;K</span>
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+                                    <AlertCircle className="w-3 h-3" />
+                                    <span>Belum Memenuhi S&amp;K</span>
+                                  </span>
+                                )}
+                              </div>
+                              <h4 className="font-bold text-xs text-zinc-900 mt-1">
+                                {voucher.title}
+                              </h4>
+                              <p className="text-[11px] text-zinc-500 mt-0.5">
+                                Min. belanja Rp {minRequired.toLocaleString("id-ID")} · Berlaku s/d {voucher.expiryDate}
+                              </p>
+                              {isEligible && (
+                                <p className="text-[11px] font-bold text-emerald-700 mt-1 flex items-center gap-1">
+                                  <Sparkles className="w-3.5 h-3.5" />
+                                  <span>Potongan Diskon: Hemat Rp {potentialSavings.toLocaleString("id-ID")}</span>
+                                </p>
+                              )}
+                            </div>
+
+                            {/* Action Button: Enabled or Disabled */}
+                            <div className="shrink-0 flex flex-col items-end">
+                              {isCurrentlyApplied ? (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setAppliedVoucher(null);
+                                    showStoreToast("Voucher Dibatalkan", "Kupon promo telah dilepas.", "info");
+                                  }}
+                                  className="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 text-white hover:bg-rose-600 flex items-center gap-1.5 cursor-pointer shadow-xs transition"
+                                  title="Klik untuk membatalkan penggunaan voucher"
+                                >
+                                  <Check className="w-3.5 h-3.5" />
+                                  <span>Aktif (Lepas)</span>
+                                </button>
+                              ) : isEligible ? (
+                                <button
+                                  type="button"
+                                  onClick={() => applySelectedVoucher(voucher)}
+                                  className="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-purple-700 hover:bg-purple-800 text-white flex items-center gap-1.5 cursor-pointer shadow-xs transition"
+                                >
+                                  <Ticket className="w-3.5 h-3.5" />
+                                  <span>Gunakan Kupon</span>
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  disabled={true}
+                                  className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-zinc-200 text-zinc-400 border border-zinc-300 cursor-not-allowed"
+                                  title="Belum memenuhi syarat minimal transaksi"
+                                >
+                                  Tidak Memenuhi S&amp;K
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Ineligible Shortfall Notice */}
+                          {!isEligible && (
+                            <div className="mt-3 p-2 rounded-lg bg-amber-50/90 border border-amber-200/80 text-[11px] text-amber-800 flex items-center gap-2">
+                              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                              <span>
+                                Belanja <strong>Rp {shortfall.toLocaleString("id-ID")}</strong> lagi untuk mengaktifkan kode ini.
+                              </span>
+                            </div>
+                          )}
+
+                          {/* Terms & Conditions Accordion Toggle */}
+                          <div className="mt-3 pt-2 border-t border-zinc-100 flex items-center justify-between">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setExpandedTermsVoucherId(isTermsExpanded ? null : voucher.id)
+                              }
+                              className="text-[11px] font-semibold text-zinc-500 hover:text-purple-700 flex items-center gap-1 cursor-pointer transition"
+                            >
+                              <span>Syarat &amp; Ketentuan (S&amp;K)</span>
+                              {isTermsExpanded ? (
+                                <ChevronUp className="w-3.5 h-3.5" />
+                              ) : (
+                                <ChevronDown className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+
+                            <span className="text-[10px] text-zinc-400">
+                              Sisa kuota: {voucher.quota - voucher.usedCount}
+                            </span>
+                          </div>
+
+                          {/* Expanded S&K Content */}
+                          {isTermsExpanded && (
+                            <div className="mt-2.5 p-3 rounded-lg bg-zinc-50 border border-zinc-200 text-[11px] text-zinc-600 space-y-1.5 animate-in fade-in">
+                              <div className="font-bold text-zinc-800 text-[10px] uppercase tracking-wider mb-1">
+                                Ketentuan Resmi Voucher:
+                              </div>
+                              {voucher.terms && voucher.terms.length > 0 ? (
+                                voucher.terms.map((term, tIdx) => (
+                                  <div key={tIdx} className="flex items-start gap-2">
+                                    <span className="text-purple-600 font-bold shrink-0">•</span>
+                                    <span>{term}</span>
+                                  </div>
+                                ))
+                              ) : (
+                                <div className="text-zinc-500">
+                                  Minimal transaksi Rp {minRequired.toLocaleString("id-ID")}. Berlaku s/d {voucher.expiryDate}.
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-zinc-200 bg-zinc-50 flex items-center justify-between">
+              <Link
+                href="/promos"
+                target="_blank"
+                className="text-xs font-semibold text-purple-700 hover:underline flex items-center gap-1"
+              >
+                <span>Halaman Promo &amp; S&amp;K Lengkap</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </Link>
+              <button
+                type="button"
+                onClick={() => setIsPromoModalOpen(false)}
+                className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold rounded-lg cursor-pointer transition"
+              >
+                Selesai / Tutup
+              </button>
+            </div>
           </div>
         </div>
       )}

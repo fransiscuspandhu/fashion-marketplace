@@ -253,26 +253,39 @@ export default function HomePage() {
                     {homepageConfig.promoHighlightSection.title}
                   </h2>
                 </div>
-                <div className="flex flex-wrap items-center gap-4">
+                <div className="flex flex-wrap items-center gap-3 sm:gap-4">
                   <div className="flex items-center gap-2 text-xs">
                     <span className="text-zinc-500 uppercase tracking-wider text-[11px]">Berakhir Dalam:</span>
-                    <div className="flex items-center gap-1 font-mono font-bold text-white text-xs">
-                      <span className="bg-zinc-900 px-2.5 py-1">
-                        {homepageConfig.promoHighlightSection.countdownHours}
-                      </span>:
-                      <span className="bg-zinc-900 px-2.5 py-1">
-                        {homepageConfig.promoHighlightSection.countdownMins}
-                      </span>:
-                      <span className="bg-rose-600 px-2.5 py-1">
-                        {homepageConfig.promoHighlightSection.countdownSecs}
+                    {homepageConfig.promoHighlightSection.countdownText ? (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-zinc-900 text-rose-400 font-mono font-bold text-xs tracking-wider border border-zinc-700 shadow-xs">
+                        <Clock className="w-3.5 h-3.5 text-rose-500 animate-pulse" />
+                        <span>{homepageConfig.promoHighlightSection.countdownText}</span>
                       </span>
-                    </div>
+                    ) : (
+                      <div className="flex items-center gap-1 font-mono font-bold text-white text-xs">
+                        <span className="bg-zinc-900 px-2.5 py-1">
+                          {homepageConfig.promoHighlightSection.countdownHours}
+                        </span>:
+                        <span className="bg-zinc-900 px-2.5 py-1">
+                          {homepageConfig.promoHighlightSection.countdownMins}
+                        </span>:
+                        <span className="bg-rose-600 px-2.5 py-1">
+                          {homepageConfig.promoHighlightSection.countdownSecs}
+                        </span>
+                      </div>
+                    )}
                   </div>
+                  <Link
+                    href="/promos"
+                    className="text-xs font-bold text-purple-700 hover:text-purple-900 flex items-center gap-1 cursor-pointer bg-purple-50 hover:bg-purple-100 px-2.5 py-1 rounded-full transition"
+                  >
+                    <span>🎟️ Kode Promo &amp; S&amp;K</span>
+                  </Link>
                   <Link
                     href="/products?filter=promo"
                     className="text-xs font-bold text-rose-600 hover:text-rose-800 flex items-center gap-1 cursor-pointer"
                   >
-                    <span>Lihat Semua Promo ({promoHighlightProducts.length})</span>
+                    <span>Lihat Semua ({promoHighlightProducts.length})</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </Link>
                 </div>
