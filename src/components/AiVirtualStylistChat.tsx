@@ -58,9 +58,13 @@ export default function AiVirtualStylistChat() {
 
   const quickPrompts = [
     "Padu padan jilbab untuk Gamis Lilac",
+    "Warna jilbab untuk kulit sawo matang",
     "Outfit kondangan syar'i & elegan",
-    "Bahan yang paling adem untuk harian",
-    "Koleksi koko pria yang senada",
+    "Bahan yang paling adem untuk cuaca panas",
+    "Koleksi koko pria sarimbit senada",
+    "Rekomendasi baju hamil & busui friendly",
+    "Tips gamis untuk tubuh mungil (petite)",
+    "Voucher promo diskon hari ini",
   ];
 
   const handleSend = async (userText: string) => {
@@ -79,54 +83,74 @@ export default function AiVirtualStylistChat() {
 
     let replyText = "";
     let matchedProds: ProductItem[] = [];
+    let returnedHints: string[] = [];
+    let returnedCategory = "";
 
     try {
       const res = await fetch("/api/ai/stylist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        signal: AbortSignal.timeout(2000),
+        signal: AbortSignal.timeout(4000),
         body: JSON.stringify({ message: userText }),
       });
       if (res.ok) {
         const data = await res.json();
         if (data.success && data.reply) {
           replyText = data.reply;
+          returnedHints = Array.isArray(data.keywordHints) ? data.keywordHints : [];
+          returnedCategory = data.categoryHint || "";
         }
       }
     } catch (e) {
       console.warn("AI Stylist API fallback:", e);
     }
 
-    if (!replyText) {
-      // Fallback smart matching
-      const query = userText.toLowerCase();
+    const query = userText.toLowerCase();
 
-      if (query.includes("lilac") || query.includes("gamis") || query.includes("jilbab")) {
-        replyText =
-          "Untuk nuansa **Gamis Lilac**, padanan terbaik adalah jilbab warna **Muted Khaki, Dusty Rose, atau Broken White**. Warna-warna ini memberikan kontras lembut yang anggun tanpa membuat tampilan terlihat mencolok. Berikut koleksi hijab & gamis yang sangat serasi:";
-        matchedProds = products.filter(
-          (p) => p.category.toLowerCase().includes("hijab") || p.name.toLowerCase().includes("gamis")
-        ).slice(0, 2);
-      } else if (query.includes("kondangan") || query.includes("pesta") || query.includes("elegan")) {
-        replyText =
-          "Untuk acara **Kondangan Formal**, kami rekomendasikan bahan **Silk Roberto Cavalli** dengan aksen drapery atau bordir halus. Tambahkan sentuhan jilbab silk berkilau lembut dan clutch bag berwarna gold/champagne:";
-        matchedProds = products.filter(
-          (p) => p.name.toLowerCase().includes("silk") || p.priceIdr > 200000
-        ).slice(0, 2);
-      } else if (query.includes("adem") || query.includes("harian") || query.includes("panas")) {
-        replyText =
-          "Bahan paling sejuk dan menyerap keringat adalah **Katun Toyobo Fodu** dan **Rayon Twill**. Karakteristik serat alaminya membuat Anda tetap nyaman seharian di cuaca tropis tanpa gerah:";
-        matchedProds = products.slice(0, 2);
-      } else if (query.includes("koko") || query.includes("pria")) {
-        replyText =
-          "Untuk busana pria sarimbit atau koko harian, pilihlah warna netral seperti **Sage, Denim Grey, atau Muted Brown** agar senada dengan gamis wanita:";
-        matchedProds = products.filter((p) => p.category.toLowerCase().includes("pria")).slice(0, 2);
-      } else {
-        replyText = `Tentu Sis! Berdasarkan koleksi terbaru di Rahayu Fashion, kami memiliki berbagai pilihan model modest dengan potongan syar'i dan bahan jatuh berkualitas. Berikut rekomendasi pilihan terbaik untuk Sis:`;
-        matchedProds = products.slice(0, 2);
-      }
-    } else {
-      matchedProds = products.slice(0, 2);
+    // 1. Dynamic product matching from API hints
+    if (returnedHints.length > 0 || returnedCategory) {
+      matchedProds = products
+        .filter((p) => {
+          const nameL = p.name.toLowerCase();
+          const catL = p.category.toLowerCase();
+          const descL = (p.desc || "").toLowerCase();
+
+          const matchesCat =
+            returnedCategory && returnedCategory !== "Semua"
+              ? catL.includes(returnedCategory.toLowerCase())
+              : false;
+          const matchesKw = returnedHints.some(
+            (h) =>
+              nameL.includes(h.toLowerCase()) ||
+              catL.includes(h.toLowerCase()) ||
+              descL.includes(h.toLowerCase())
+          );
+          return matchesCat || matchesKw;
+        })
+        .slice(0, 2);
+    }
+
+    // 2. Keyword fallback matching from user query
+    if (matchedProds.length === 0) {
+      matchedProds = products
+        .filter((p) => {
+          const nameL = p.name.toLowerCase();
+          const catL = p.category.toLowerCase();
+          return query
+            .split(" ")
+            .some((w) => w.length >= 3 && (nameL.includes(w) || catL.includes(w)));
+        })
+        .slice(0, 2);
+    }
+
+    // 3. Smart diverse fallback: ambil 2 produk acak agar tidak selalu menampilkan produk yang sama
+    if (matchedProds.length === 0 && products.length > 0) {
+      const shuffled = [...products].sort(() => Math.random() - 0.5);
+      matchedProds = shuffled.slice(0, 2);
+    }
+
+    if (!replyText) {
+      replyText = `Terima kasih atas pertanyaannya Sis! Untuk gaya yang anggun dan santun, kami merekomendasikan busana modest bernuansa earth-tone atau pastel lembut dengan hijab voal premium. Berikut pilihan terbaik dari koleksi kami untuk Sis:`;
     }
 
     const botReply: ChatMessage = {
