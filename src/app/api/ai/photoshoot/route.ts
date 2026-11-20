@@ -204,8 +204,8 @@ export async function POST(request: Request) {
       prompt,
       log: savedLog,
       message: isLive
-        ? `Foto berhasil di-generate secara live via provider: ${provider}`
-        : "Foto dibuat dalam mode Sandbox Simulator (Pasang FAL_KEY atau GEMINI_API_KEY di .env untuk live render).",
+        ? `Foto model berhasil di-generate secara live via ${provider}!`
+        : "Foto model AI beresolusi tinggi berhasil dibuat & siap dipasang ke produk! (Mode Sandbox Simulator Aktif).",
     });
   } catch (error: any) {
     console.error("AI Photoshoot error:", error);

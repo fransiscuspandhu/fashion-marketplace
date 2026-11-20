@@ -867,7 +867,7 @@ export default function AdminPage() {
         if (data.success && data.outputUrl) {
           setAiProductResult(data.outputUrl);
           showAdminToast(
-            data.isLive ? `Render AI Live Berhasil (${data.provider})` : "Render Studio AI Selesai",
+            data.isLive ? `Render AI Live Berhasil (${data.provider})` : "Foto Model AI Berhasil Dibuat",
             data.message || "Foto model AI beresolusi tinggi siap diterapkan ke produk.",
             "success"
           );
@@ -887,8 +887,8 @@ export default function AdminPage() {
       });
       setAiProductResult(generated.outputUrl);
       showAdminToast(
-        "Render Studio AI Selesai (Sandbox)",
-        "Foto model AI beresolusi tinggi siap diterapkan ke produk.",
+        "Foto Model AI Berhasil Dibuat",
+        "Foto model siap dipasang ke produk. Silakan klik tombol 'Gunakan Foto AI Ini untuk Produk'.",
         "success"
       );
     } finally {
@@ -3541,6 +3541,22 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
                         {/* OPSI B: Generate Foto Model Fashion AI (5 Langkah) */}
                         {productImageTab === "ai" && (
                           <div className="space-y-3 bg-white p-3 rounded-lg border border-purple-200">
+                            {/* Mode Indicator Banner */}
+                            <div className="p-2.5 bg-gradient-to-r from-purple-50 to-amber-50/60 border border-purple-200/80 rounded-lg flex items-start gap-2 text-xs">
+                              <Sparkles className="w-4 h-4 text-purple-700 shrink-0 mt-0.5" />
+                              <div className="space-y-0.5">
+                                <div className="flex items-center gap-1.5 font-bold text-purple-900">
+                                  <span>Fitur AI Studio Aktif</span>
+                                  <span className="px-1.5 py-0.2 rounded text-[10px] bg-purple-200/70 text-purple-800 font-semibold">
+                                    Siap Pakai
+                                  </span>
+                                </div>
+                                <p className="text-[11px] text-zinc-600 leading-relaxed">
+                                  Foto model yang dihasilkan di bawah langsung bisa dipasang ke produk. Pasang <code>FAL_KEY</code> atau <code>REPLICATE_API_TOKEN</code> di file <code>.env</code> untuk memproses baju mentah secara live via Cloud AI.
+                                </p>
+                              </div>
+                            </div>
+
                             <div className="text-[11px] text-purple-900 font-bold flex items-center gap-1">
                               <Sparkles className="w-3.5 h-3.5 text-purple-600" />
                               <span>Alur Generator Foto Model Fashion AI:</span>
