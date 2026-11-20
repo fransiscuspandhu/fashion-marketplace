@@ -1235,6 +1235,11 @@ async function run() {
       return;
     } catch (err) {
       console.warn(`⏳ Database initialization attempt ${attempt}/10 failed: ${err.message}`);
+      if (err.message && err.message.includes("Authentication failed")) {
+        console.warn("💡 Tip: Kredensial PostgreSQL tidak cocok dengan volume Docker yang tersimpan sebelumnya.");
+        console.warn("👉 Jalankan perintah berikut untuk mereset volume lama: docker compose down -v && docker compose up --build");
+        return; // Tidak perlu retry 10 kali jika kredensial salah, langsung lanjutkan startup web server
+      }
       if (attempt === 10) {
         console.error("⚠️ Could not initialize database after 10 attempts, continuing server startup...");
         return;
