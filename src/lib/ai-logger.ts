@@ -12,6 +12,7 @@ export interface AiLogContext {
   inputs?: Record<string, any>;
   outputPreview?: string;
   keysDetected?: Record<string, { present: boolean; masked?: string; status: "VALID" | "MISSING" | "PLACEHOLDER" }>;
+  warnings?: string[];
   note?: string;
 }
 
@@ -77,6 +78,14 @@ export function logAiThirdParty(ctx: AiLogContext) {
   if (ctx.outputPreview) {
     const preview = ctx.outputPreview.length > 70 ? ctx.outputPreview.substring(0, 67) + "..." : ctx.outputPreview;
     console.log(`│ ${bold}📤 Output Ringkas${reset} : ${green}${preview}${reset}`);
+  }
+
+  // Warnings / Error details if API failed
+  if (ctx.warnings && ctx.warnings.length > 0) {
+    console.log(`${magenta}├${divider}┤${reset}`);
+    ctx.warnings.forEach((w) => {
+      console.log(`│ ${red}${bold}⚠️ Error Detail :${reset} ${red}${w}${reset}`);
+    });
   }
 
   // Helpful hint

@@ -44,17 +44,23 @@ services:
     restart: unless-stopped
     ports:
       - "${PORT:-3000}:3000"
+    env_file:
+      - .env
     environment:
       NODE_ENV: production
       PORT: 3000
       HOSTNAME: "0.0.0.0"
+      FORCE_AI_LOGS: "true"
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-rahayu_fashion}?schema=public
       NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}
       NEXT_PUBLIC_SHOW_DEMO_CONNECTOR: ${NEXT_PUBLIC_SHOW_DEMO_CONNECTOR:-true}
       MIDTRANS_SERVER_KEY: ${MIDTRANS_SERVER_KEY:-SB-Mid-server-xxxx}
       MIDTRANS_CLIENT_KEY: ${MIDTRANS_CLIENT_KEY:-SB-Mid-client-xxxx}
       NEXT_PUBLIC_MIDTRANS_CLIENT_KEY: ${NEXT_PUBLIC_MIDTRANS_CLIENT_KEY:-SB-Mid-client-xxxx}
-      FAL_KEY: ${FAL_KEY:-demo_key}
+      FAL_KEY: ${FAL_KEY}
+      REPLICATE_API_TOKEN: ${REPLICATE_API_TOKEN}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
     volumes:
       - rahayu_uploads:/app/public/uploads
     depends_on:

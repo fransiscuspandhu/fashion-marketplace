@@ -30,14 +30,22 @@ export async function POST(request: Request) {
       customPrompt ||
       `Photorealistic Indonesian high-fashion modest lookbook of female model (${modelType}) wearing "${productName}" (${category}). Set in ${background}, illuminated by ${lighting}. 8k resolution, elegant drapery, commercial editorial quality.`;
 
-    // 1. Try fal.ai (Virtual Try-on / Flux)
-    if (falKey && !falKey.includes("your_")) {
+    const apiWarnings: string[] = [];
+
+    // Clean API keys
+    const cleanFalKey = (falKey || "").trim().replace(/^["']|["']$/g, "");
+    const isFalPlaceholder = cleanFalKey.includes("demo_") || cleanFalKey.includes("your_") || cleanFalKey === "demo_key";
+
+    // 1. Try fal.ai (Virtual Try-on / Flux Schnell & Dev)
+    if (!isFalPlaceholder && cleanFalKey.length > 5) {
       try {
         provider = "fal.ai";
-        // Call fal.ai API endpoint (e.g. Flux Realism or Fashn VTON)
+        // Use synchronous fal.run endpoints to receive direct image URL immediately
         const falEndpoint = rawImageUrl
-          ? "https://queue.fal.run/fal-ai/fashn-tryon"
-          : "https://queue.fal.run/fal-ai/flux/dev";
+          ? "https://fal.run/fal-ai/fashn-tryon"
+          : "https://fal.run/fal-ai/flux/schnell";
+
+        const falAuth = cleanFalKey.startsWith("Key ") ? cleanFalKey : `Key ${cleanFalKey}`;
 
         const falPayload = rawImageUrl
           ? {
@@ -48,43 +56,62 @@ export async function POST(request: Request) {
           : {
               prompt,
               image_size: "portrait_4_3",
-              num_inference_steps: 28,
-              guidance_scale: 3.5,
+              num_inference_steps: 4,
+              enable_safety_checker: true,
             };
 
         const res = await fetch(falEndpoint, {
           method: "POST",
           headers: {
-            Authorization: `Key ${falKey}`,
+            Authorization: falAuth,
             "Content-Type": "application/json",
           },
+          signal: AbortSignal.timeout(15000),
           body: JSON.stringify(falPayload),
         });
 
         if (res.ok) {
           const data = await res.json();
-          if (data.images && data.images[0]?.url) {
-            outputUrl = data.images[0].url;
+          const imgUrl =
+            data.images?.[0]?.url ||
+            data.image?.url ||
+            data.output?.[0]?.url ||
+            (Array.isArray(data.output) ? data.output[0] : null);
+
+          if (imgUrl) {
+            outputUrl = imgUrl;
             isLive = true;
-            costIdr = 650;
+            costIdr = 480;
+          } else {
+            console.warn("⚠️ fal.ai 200 OK but no image URL found in response:", data);
+            apiWarnings.push("fal.ai returned 200 OK but images array was empty.");
           }
+        } else {
+          const errDetail = await res.text();
+          console.error(`❌ fal.ai API error HTTP ${res.status}:`, errDetail);
+          apiWarnings.push(`fal.ai HTTP ${res.status}: ${errDetail.substring(0, 150)}`);
         }
-      } catch (err) {
-        console.warn("fal.ai API call failed, falling back to next provider:", err);
+      } catch (err: any) {
+        console.warn("❌ fal.ai API call failed:", err?.message || err);
+        apiWarnings.push(`fal.ai network error: ${err?.message || "Connection failed"}`);
       }
     }
 
     // 2. Try Replicate (IDM-VTON / Flux Schnell)
-    if (!outputUrl && replicateToken && !replicateToken.includes("your_")) {
+    const cleanRepToken = (replicateToken || "").trim().replace(/^["']|["']$/g, "");
+    const isRepPlaceholder = cleanRepToken.includes("demo_") || cleanRepToken.includes("your_") || cleanRepToken === "demo_key";
+
+    if (!outputUrl && !isRepPlaceholder && cleanRepToken.length > 5) {
       try {
         provider = "replicate";
         const repRes = await fetch("https://api.replicate.com/v1/predictions", {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${replicateToken}`,
+            Authorization: `Bearer ${cleanRepToken}`,
             "Content-Type": "application/json",
             Prefer: "wait",
           },
+          signal: AbortSignal.timeout(15000),
           body: JSON.stringify({
             version: "c871d2c9c7f66a2e4e15865063b4b5742feeb3cf4d2073998bde9989b6a1bf58", // Flux Schnell
             input: { prompt, aspect_ratio: "3:4" },
@@ -93,14 +120,20 @@ export async function POST(request: Request) {
 
         if (repRes.ok) {
           const data = await repRes.json();
-          if (data.output && Array.isArray(data.output) && data.output[0]) {
-            outputUrl = data.output[0];
+          const imgUrl = Array.isArray(data.output) ? data.output[0] : typeof data.output === "string" ? data.output : null;
+          if (imgUrl) {
+            outputUrl = imgUrl;
             isLive = true;
             costIdr = 450;
           }
+        } else {
+          const repErr = await repRes.text();
+          console.error(`❌ Replicate API error HTTP ${repRes.status}:`, repErr);
+          apiWarnings.push(`Replicate HTTP ${repRes.status}: ${repErr.substring(0, 150)}`);
         }
-      } catch (err) {
-        console.warn("Replicate API call failed, falling back to next provider:", err);
+      } catch (err: any) {
+        console.warn("❌ Replicate API call failed:", err?.message || err);
+        apiWarnings.push(`Replicate network error: ${err?.message || "Connection failed"}`);
       }
     }
 
@@ -217,9 +250,12 @@ export async function POST(request: Request) {
       },
       outputPreview: outputUrl,
       keysDetected,
+      warnings: apiWarnings,
       note: isLive
-        ? `Model AI berhasil memproses gambar via server cloud ${provider}.`
-        : "Saat ini berjalan di Mode Sandbox Simulator. Untuk merender baju mentah secara live via Cloud AI, pasang FAL_KEY asli di file .env.",
+        ? `Model AI berhasil memproses gambar secara nyata via cloud ${provider}.`
+        : apiWarnings.length > 0
+        ? `Panggilan ke ${provider} gagal (${apiWarnings[0]}). Beralih otomatis ke Sandbox Simulator agar sistem tidak error.`
+        : "Saat ini berjalan di Mode Sandbox Simulator. Jika sudah memasang FAL_KEY di .env, jalankan 'docker compose down && docker compose up -d' agar container Docker membaca perubahan .env.",
     });
 
     return NextResponse.json({
@@ -240,6 +276,7 @@ export async function POST(request: Request) {
         durationMs,
         costEstimate: `Rp ${costIdr}`,
         keysDetected,
+        warnings: apiWarnings,
       },
     });
   } catch (error: any) {
