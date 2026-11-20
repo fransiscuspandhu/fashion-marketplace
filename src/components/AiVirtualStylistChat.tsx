@@ -26,15 +26,11 @@ interface ChatMessage {
 
 export default function AiVirtualStylistChat() {
   const { aiFeaturesConfig, products, addToCart, showStoreToast } = useStore();
+  const [mounted, setMounted] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [inputMessage, setInputMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  // If feature is disabled in admin switchboard, do not render anything
-  if (!aiFeaturesConfig.enableVirtualStylist) {
-    return null;
-  }
 
   const initialGreeting: ChatMessage = {
     id: "m-0",
@@ -46,10 +42,19 @@ export default function AiVirtualStylistChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([initialGreeting]);
 
   useEffect(() => {
-    if (isOpen) {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (isOpen && mounted) {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
-  }, [messages, isOpen]);
+  }, [messages, isOpen, mounted]);
+
+  // If component is not mounted yet or disabled in switchboard, do not render to avoid SSR hydration mismatch
+  if (!mounted || !aiFeaturesConfig.enableVirtualStylist) {
+    return null;
+  }
 
   const quickPrompts = [
     "Padu padan jilbab untuk Gamis Lilac",
@@ -225,7 +230,7 @@ export default function AiVirtualStylistChat() {
                                 {prod.name}
                               </p>
                               <p className="text-[10px] text-purple-700 font-bold">
-                                Rp {prod.priceIdr.toLocaleString("id-ID")}
+                                Rp {prod.priceIdr.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")}
                               </p>
                             </div>
                           </div>
