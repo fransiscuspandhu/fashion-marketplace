@@ -13,16 +13,16 @@ Dokumen ini memuat panduan langkah-demi-langkah bagi pengembang, pemilik toko (*
 
 | Variabel Lingkungan | Layanan / Provider | Tautan Dashboard Pendaftaran | Fungsi di Aplikasi | Estimasi Biaya |
 | :--- | :--- | :--- | :--- | :---: |
-| `GEMINI_API_KEY` | **Google Gemini** | [aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey) | Chatbot Virtual Stylist di beranda & Auto-Copywriting SEO di admin | **Gratis** *(Free Tier 15 RPM)* |
-| `FAL_KEY` | **fal.ai** | [fal.ai/dashboard/keys](https://fal.ai/dashboard/keys) | Generator Foto Model AI Virtual Try-On dari baju flatlay/manekin | ~Rp 500 / foto render |
-| `REPLICATE_API_TOKEN` | **Replicate** | [replicate.com/account/api-tokens](https://replicate.com/account/api-tokens) | Alternatif Virtual Try-On (`IDM-VTON` / `Flux Schnell`) | ~Rp 450 / foto render |
-| `OPENAI_API_KEY` | **OpenAI** | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) | Alternatif LLM (GPT-4o-mini) & DALL-E 3 | Sesuai penggunaan token |
+| `GEMINI_API_KEY` | **Google Gemini & Nano Banana** *(All-in-One)* | [aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey) | **1 Kunci untuk Semua AI:** Photoshoot Studio (Nano Banana), Chatbot Stylist, & SEO Copywriter | **Gratis** (Free Tier) / ~Rp 540 per foto |
+| `FAL_KEY` | **fal.ai** *(Alternatif)* | [fal.ai/dashboard/keys](https://fal.ai/dashboard/keys) | Generator Foto Model AI Virtual Try-On cadangan (`Flux Schnell` / `Fashn`) | ~Rp 480 – Rp 1.200 / foto render |
+| `REPLICATE_API_TOKEN` | **Replicate** *(Alternatif)* | [replicate.com/account/api-tokens](https://replicate.com/account/api-tokens) | Alternatif Virtual Try-On (`IDM-VTON` / `Flux Schnell`) | ~Rp 450 / foto render |
+| `OPENAI_API_KEY` | **OpenAI** *(Alternatif)* | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) | Alternatif LLM (GPT-4o-mini) & DALL-E 3 | Sesuai penggunaan token |
 | `MIDTRANS_SERVER_KEY`<br>`MIDTRANS_CLIENT_KEY` | **Midtrans Snap** | [dashboard.midtrans.com](https://dashboard.midtrans.com) | Checkout QRIS Dinamis & Virtual Account bank (BCA, Mandiri, BRI, BNI) | 0.7% QRIS / Rp 4.000 VA per transaksi sukses |
 | `TIKTOK_USERNAME` | **TikTok Live** | [tiktok.com](https://www.tiktok.com) | Banner notifikasi status siaran live streaming & jumlah penonton | **Gratis** |
 | `R2_ACCESS_KEY_ID`<br>`R2_SECRET_ACCESS_KEY` | **Cloudflare R2** | [dash.cloudflare.com](https://dash.cloudflare.com) | Penyimpanan video PDP 9:16 & foto katalog bebas biaya kuota download | **Gratis 10 GB** (Rp 0 Egress) |
 
 > [!NOTE]
-> Seluruh endpoint API telah dilengkapi **Fallback Mode / Sandbox Simulator**. Jika API key belum dipasang, sistem tetap berjalan lancar tanpa error dan menampilkan notifikasi ramah bahwa sistem sedang dalam mode simulasi.
+> Seluruh endpoint AI telah dilengkapi **Fallback Mode / Sandbox Simulator**. Jika API key belum dipasang, sistem tetap berjalan lancar tanpa error dan menampilkan notifikasi ramah bahwa sistem sedang dalam mode simulasi.
 
 ---
 
@@ -30,14 +30,22 @@ Dokumen ini memuat panduan langkah-demi-langkah bagi pengembang, pemilik toko (*
 
 Fitur ini berada di formulir tambah/edit produk admin ([`/admin`](file:///home/antigravity/fransiscuspandhu/fashion-marketplace/src/app/admin)) pada tab **`✨ Buat dengan AI`**.
 
-### Pilihan A: Menggunakan fal.ai (Sangat Direkomendasikan)
-1. Buka [fal.ai/dashboard/keys](https://fal.ai/dashboard/keys) dan login/daftar menggunakan akun GitHub atau Google.
-2. Klik tombol **"Add Key"**, beri nama `rahayu-photoshoot`, lalu salin kunci API (`Key ...`).
+### Pilihan A: Menggunakan Google Nano Banana (Sangat Direkomendasikan — 1 Kunci untuk Semua AI)
+1. Buka [Google AI Studio](https://aistudio.google.com/app/apikey) dan klik **"Create API Key"**.
+2. Masukkan ke file `.env` di server:
+   ```env
+   GEMINI_API_KEY="AIzaSyYourGeneratedGeminiApiKeyHere"
+   ```
+3. **Cara Kerja Mesin:** Saat admin mengunggah foto pakaian mentah (*flatlay*), endpoint backend `/api/ai/photoshoot` memadukan foto baju asli dengan persona model muslimah menggunakan kapabilitas *Multi-Image Fusion* model `gemini-2.5-flash-image` / `gemini-3.1-flash-lite-image`. Foto hasil render langsung tersimpan permanen di folder server `/public/uploads/ai-generated/`.
+4. **Keuntungan:** Tidak perlu daftar akun fal.ai terpisah, tagihan menyatu dalam Google Cloud, dan mendukung kartu debit lokal Indonesia (BCA, Mandiri, Jenius).
+
+### Pilihan B: Menggunakan fal.ai (Alternatif)
+1. Buka [fal.ai/dashboard/keys](https://fal.ai/dashboard/keys) dan login/daftar.
+2. Klik tombol **"Add Key"** dan salin kuncinya.
 3. Tambahkan ke file `.env` di server:
    ```env
    FAL_KEY="f4l_xxxxxxxxxxxxxxxxxxxxxxxxxxxx"
    ```
-4. **Cara Kerja Mesin:** Saat admin mengunggah foto pakaian mentah (*flatlay*), endpoint backend `/api/ai/photoshoot` akan memproses segmentasi pakaian (`BiRefNet`) dan memakaikannya ke model virtual modest hijab Indonesia dengan pencahayaan studio mewah.
 
 ### Pilihan B: Menggunakan Replicate (Alternatif)
 1. Daftar di [replicate.com/account/api-tokens](https://replicate.com/account/api-tokens).

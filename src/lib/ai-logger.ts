@@ -102,9 +102,9 @@ export function logAiThirdParty(ctx: AiLogContext) {
  * Utility to inspect available AI keys safely (without leaking secrets)
  */
 export function inspectAiKeys() {
+  const geminiKey = process.env.GEMINI_API_KEY;
   const falKey = process.env.FAL_KEY;
   const replicateToken = process.env.REPLICATE_API_TOKEN;
-  const geminiKey = process.env.GEMINI_API_KEY;
   const openaiKey = process.env.OPENAI_API_KEY;
 
   const mask = (val?: string) => {
@@ -115,11 +115,22 @@ export function inspectAiKeys() {
 
   const getStatus = (val?: string): "VALID" | "MISSING" | "PLACEHOLDER" => {
     if (!val) return "MISSING";
-    if (val.includes("demo_") || val.includes("your_") || val === "demo_key") return "PLACEHOLDER";
+    if (
+      val.includes("demo_") ||
+      val.includes("your_") ||
+      val.includes("YourGoogleGeminiApiKeyHere") ||
+      val === "demo_key"
+    )
+      return "PLACEHOLDER";
     return "VALID";
   };
 
   return {
+    GEMINI_API_KEY: {
+      present: !!geminiKey,
+      masked: mask(geminiKey),
+      status: getStatus(geminiKey),
+    },
     FAL_KEY: {
       present: !!falKey,
       masked: mask(falKey),
@@ -129,11 +140,6 @@ export function inspectAiKeys() {
       present: !!replicateToken,
       masked: mask(replicateToken),
       status: getStatus(replicateToken),
-    },
-    GEMINI_API_KEY: {
-      present: !!geminiKey,
-      masked: mask(geminiKey),
-      status: getStatus(geminiKey),
     },
     OPENAI_API_KEY: {
       present: !!openaiKey,

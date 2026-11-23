@@ -851,7 +851,7 @@ export default function AdminPage() {
       const res = await fetch("/api/ai/photoshoot", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        signal: AbortSignal.timeout(2500),
+        signal: AbortSignal.timeout(20000),
         body: JSON.stringify({
           productName: productForm.name || "Koleksi Fashion Modest",
           category: productForm.category,
@@ -3566,11 +3566,11 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
                                 <div className="flex items-center gap-1.5 font-bold text-purple-900">
                                   <span>Fitur AI Studio Aktif</span>
                                   <span className="px-1.5 py-0.2 rounded text-[10px] bg-purple-200/70 text-purple-800 font-semibold">
-                                    Siap Pakai
+                                    Google Nano Banana &amp; Cloud Ready
                                   </span>
                                 </div>
                                 <p className="text-[11px] text-zinc-600 leading-relaxed">
-                                  Foto model yang dihasilkan di bawah langsung bisa dipasang ke produk. Pasang <code>FAL_KEY</code> atau <code>REPLICATE_API_TOKEN</code> di file <code>.env</code> untuk memproses baju mentah secara live via Cloud AI.
+                                  Foto model yang dihasilkan langsung bisa dipasang ke produk. Cukup pasang <code>GEMINI_API_KEY</code> di file <code>.env</code> untuk memproses baju mentah secara live via Google Nano Banana (atau <code>FAL_KEY</code>).
                                 </p>
                               </div>
                             </div>

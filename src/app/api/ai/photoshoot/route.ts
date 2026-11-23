@@ -1,6 +1,39 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { logAiThirdParty, inspectAiKeys } from "@/lib/ai-logger";
+import fs from "fs/promises";
+import path from "path";
+
+/**
+ * Helper to resolve raw image URL/path into base64 payload for Google Nano Banana multimodal prompt
+ */
+async function resolveImageBase64(imageUrl: string): Promise<{ mimeType: string; data: string } | null> {
+  try {
+    if (!imageUrl) return null;
+    if (imageUrl.startsWith("data:")) {
+      const match = imageUrl.match(/^data:([^;]+);base64,(.+)$/);
+      if (match) {
+        return { mimeType: match[1], data: match[2] };
+      }
+    } else if (imageUrl.startsWith("/uploads/")) {
+      const localFilePath = path.join(process.cwd(), "public", imageUrl.replace(/^\//, ""));
+      const fileBuffer = await fs.readFile(localFilePath);
+      const ext = path.extname(imageUrl).toLowerCase();
+      const mimeType = ext === ".png" ? "image/png" : ext === ".webp" ? "image/webp" : "image/jpeg";
+      return { mimeType, data: fileBuffer.toString("base64") };
+    } else if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://")) {
+      const res = await fetch(imageUrl, { signal: AbortSignal.timeout(8000) });
+      if (res.ok) {
+        const arrayBuffer = await res.arrayBuffer();
+        const mimeType = res.headers.get("content-type") || "image/jpeg";
+        return { mimeType, data: Buffer.from(arrayBuffer).toString("base64") };
+      }
+    }
+  } catch (err) {
+    console.warn("Could not resolve image to base64 for Nano Banana:", err);
+  }
+  return null;
+}
 
 export async function POST(request: Request) {
   const startTime = Date.now();
@@ -16,9 +49,9 @@ export async function POST(request: Request) {
       prompt: customPrompt,
     } = body;
 
+    const geminiKey = process.env.GEMINI_API_KEY;
     const falKey = process.env.FAL_KEY;
     const replicateToken = process.env.REPLICATE_API_TOKEN;
-    const geminiKey = process.env.GEMINI_API_KEY;
     const openaiKey = process.env.OPENAI_API_KEY;
 
     let outputUrl = "";
@@ -33,14 +66,120 @@ export async function POST(request: Request) {
     const apiWarnings: string[] = [];
 
     // Clean API keys
-    const cleanFalKey = (falKey || "").trim().replace(/^["']|["']$/g, "");
-    const isFalPlaceholder = cleanFalKey.includes("demo_") || cleanFalKey.includes("your_") || cleanFalKey === "demo_key";
+    const cleanGeminiKey = (geminiKey || "").trim().replace(/^["']|["']$/g, "");
+    const isGeminiPlaceholder =
+      !cleanGeminiKey ||
+      cleanGeminiKey.includes("YourGoogleGeminiApiKeyHere") ||
+      cleanGeminiKey.includes("demo_") ||
+      cleanGeminiKey.includes("your_") ||
+      cleanGeminiKey === "demo_key";
 
-    // 1. Try fal.ai (Virtual Try-on / Flux Schnell & Dev)
-    if (!isFalPlaceholder && cleanFalKey.length > 5) {
+    const cleanFalKey = (falKey || "").trim().replace(/^["']|["']$/g, "");
+    const isFalPlaceholder =
+      !cleanFalKey ||
+      cleanFalKey.includes("demo_") ||
+      cleanFalKey.includes("your_") ||
+      cleanFalKey === "demo_key";
+
+    const cleanRepToken = (replicateToken || "").trim().replace(/^["']|["']$/g, "");
+    const isRepPlaceholder =
+      !cleanRepToken ||
+      cleanRepToken.includes("demo_") ||
+      cleanRepToken.includes("your_") ||
+      cleanRepToken === "demo_key";
+
+    // =========================================================================
+    // 1. PRIMARY PROVIDER: Google Nano Banana (Gemini Image Multi-Image Fusion)
+    // =========================================================================
+    if (!isGeminiPlaceholder && cleanGeminiKey.length > 5) {
+      const nanoBananaModels = [
+        "gemini-2.5-flash-image",
+        "gemini-3.1-flash-lite-image",
+        "gemini-3.1-flash-image",
+      ];
+
+      for (const modelName of nanoBananaModels) {
+        try {
+          provider = `google-nano-banana (${modelName})`;
+          const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${cleanGeminiKey}`;
+
+          const parts: any[] = [];
+          const nanoPrompt =
+            customPrompt ||
+            `Photorealistic Indonesian high-fashion modest editorial lookbook photoshoot of a female model (${modelType}) wearing "${productName}" (${category}). Setting: ${background}. Lighting: ${lighting}. Authentic Indonesian modest muslimah aesthetic, professional commercial studio photography, graceful hijab styling, clean drapery, 8k resolution, crisp realistic fabric texture, sharp commercial quality.`;
+
+          parts.push({ text: nanoPrompt });
+
+          // If raw garment flatlay image is uploaded, attach as inlineData for Multi-Image Fusion
+          if (rawImageUrl) {
+            const rawBase64 = await resolveImageBase64(rawImageUrl);
+            if (rawBase64) {
+              parts.push({
+                inlineData: {
+                  mimeType: rawBase64.mimeType,
+                  data: rawBase64.data,
+                },
+              });
+            }
+          }
+
+          const geminiRes = await fetch(geminiEndpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            signal: AbortSignal.timeout(18000),
+            body: JSON.stringify({
+              contents: [{ parts }],
+              generationConfig: {
+                responseModalities: ["IMAGE"],
+              },
+            }),
+          });
+
+          if (geminiRes.ok) {
+            const data = await geminiRes.json();
+            const candidateParts = data.candidates?.[0]?.content?.parts || [];
+            const imgPart = candidateParts.find((p: any) => p.inlineData?.data);
+
+            if (imgPart?.inlineData?.data) {
+              const base64Data = imgPart.inlineData.data;
+              const mime = imgPart.inlineData.mimeType || "image/png";
+
+              // Persist generated image to local disk for permanent fast serving
+              try {
+                const uploadDir = path.join(process.cwd(), "public", "uploads", "ai-generated");
+                await fs.mkdir(uploadDir, { recursive: true });
+                const fileName = `photoshoot-${Date.now()}-${Math.random().toString(36).substring(2, 7)}.png`;
+                await fs.writeFile(path.join(uploadDir, fileName), Buffer.from(base64Data, "base64"));
+                outputUrl = `/uploads/ai-generated/${fileName}`;
+              } catch (fsErr) {
+                outputUrl = `data:${mime};base64,${base64Data}`;
+              }
+
+              isLive = true;
+              costIdr = 540; // ~$0.034 USD per image
+              break;
+            } else {
+              console.warn(`[Nano Banana] ${modelName} returned OK but no image part found:`, data);
+              apiWarnings.push(`Nano Banana (${modelName}) returned OK but image part was missing.`);
+            }
+          } else {
+            const errDetail = await geminiRes.text();
+            console.error(`[Nano Banana] ${modelName} HTTP ${geminiRes.status}:`, errDetail);
+            apiWarnings.push(`Nano Banana (${modelName}) HTTP ${geminiRes.status}: ${errDetail.substring(0, 150)}`);
+          }
+        } catch (callErr: any) {
+          console.warn(`[Nano Banana] ${modelName} network error:`, callErr?.message || callErr);
+          apiWarnings.push(`Nano Banana (${modelName}): ${callErr?.message || "Connection failed"}`);
+        }
+      }
+    }
+
+    // =========================================================================
+    // 2. SECONDARY: fal.ai (Virtual Try-on / Flux Schnell)
+    // =========================================================================
+    if (!outputUrl && !isFalPlaceholder && cleanFalKey.length > 5) {
       try {
         provider = "fal.ai";
-        // Use synchronous fal.run endpoints to receive direct image URL immediately
         const falEndpoint = rawImageUrl
           ? "https://fal.run/fal-ai/fashn-tryon"
           : "https://fal.run/fal-ai/flux/schnell";
@@ -97,10 +236,9 @@ export async function POST(request: Request) {
       }
     }
 
-    // 2. Try Replicate (IDM-VTON / Flux Schnell)
-    const cleanRepToken = (replicateToken || "").trim().replace(/^["']|["']$/g, "");
-    const isRepPlaceholder = cleanRepToken.includes("demo_") || cleanRepToken.includes("your_") || cleanRepToken === "demo_key";
-
+    // =========================================================================
+    // 3. TERTIARY: Replicate (IDM-VTON / Flux Schnell)
+    // =========================================================================
     if (!outputUrl && !isRepPlaceholder && cleanRepToken.length > 5) {
       try {
         provider = "replicate";
@@ -137,10 +275,12 @@ export async function POST(request: Request) {
       }
     }
 
-    // 3. Try OpenAI DALL-E 3
-    if (!outputUrl && openaiKey && !openaiKey.includes("your_")) {
+    // =========================================================================
+    // 4. QUATERNARY: OpenAI DALL-E 3
+    // =========================================================================
+    if (!outputUrl && openaiKey && !openaiKey.includes("your_") && !openaiKey.includes("sk-proj-")) {
       try {
-        provider = "openai-dalle3";
+        provider = "openai-dall-e-3";
         const oaiRes = await fetch("https://api.openai.com/v1/images/generations", {
           method: "POST",
           headers: {
@@ -161,7 +301,7 @@ export async function POST(request: Request) {
           if (data.data && data.data[0]?.url) {
             outputUrl = data.data[0].url;
             isLive = true;
-            costIdr = 600;
+            costIdr = 640;
           }
         }
       } catch (err) {
@@ -169,7 +309,9 @@ export async function POST(request: Request) {
       }
     }
 
-    // 4. Fallback / Mock Simulation Mode
+    // =========================================================================
+    // 5. FALLBACK / MOCK SIMULATOR MODE
+    // =========================================================================
     if (!outputUrl) {
       provider = "mock-sandbox";
       isLive = false;
@@ -237,7 +379,13 @@ export async function POST(request: Request) {
       service: "AI Photoshoot Studio",
       provider,
       isLive,
-      endpoint: isLive ? (provider === "fal.ai" ? "https://queue.fal.run/fal-ai/flux/dev" : "https://api.replicate.com") : undefined,
+      endpoint: isLive
+        ? provider.includes("google-nano-banana")
+          ? "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent"
+          : provider === "fal.ai"
+          ? "https://fal.run/fal-ai/flux/schnell"
+          : "https://api.replicate.com"
+        : undefined,
       durationMs,
       costEstimate: `Rp ${costIdr} (~$${(costIdr / 16000).toFixed(3)} USD)`,
       inputs: {
@@ -255,7 +403,7 @@ export async function POST(request: Request) {
         ? `Model AI berhasil memproses gambar secara nyata via cloud ${provider}.`
         : apiWarnings.length > 0
         ? `Panggilan ke ${provider} gagal (${apiWarnings[0]}). Beralih otomatis ke Sandbox Simulator agar sistem tidak error.`
-        : "Saat ini berjalan di Mode Sandbox Simulator. Jika sudah memasang FAL_KEY di .env, jalankan 'docker compose down && docker compose up -d' agar container Docker membaca perubahan .env.",
+        : "Saat ini berjalan di Mode Sandbox Simulator. Untuk merender baju mentah secara live via Cloud AI, pasang GEMINI_API_KEY (Google Nano Banana) di file .env.",
     });
 
     return NextResponse.json({
