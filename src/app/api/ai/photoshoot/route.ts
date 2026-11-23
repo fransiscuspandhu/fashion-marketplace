@@ -93,8 +93,9 @@ export async function POST(request: Request) {
     // =========================================================================
     if (!isGeminiPlaceholder && cleanGeminiKey.length > 5) {
       const nanoBananaModels = [
-        "gemini-2.5-flash-image",
-        "gemini-3.1-flash-lite-image",
+        "gemini-3-pro-image", // Nano Banana Pro (Unlocked on Google AI Studio Pro / Paid Tier)
+        "gemini-2.5-flash-image", // Flagship Nano Banana Workhorse
+        "gemini-3.1-flash-lite-image", // Nano Banana 2 Lite (Fast)
         "gemini-3.1-flash-image",
       ];
 
