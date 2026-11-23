@@ -492,7 +492,7 @@ export default function CheckoutPage() {
                     <div key={item.id} className="pt-4 first:pt-0 flex gap-4 items-center">
                       <div className="w-16 h-20 bg-zinc-100 rounded overflow-hidden shrink-0 border border-zinc-200">
                         <img
-                          src={`https://images.unsplash.com/photo-${1584917865442 + item.product.id * 1000}?auto=format&fit=crop&w=200&q=80`}
+                          src={item.product.imageUrl || "https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=200&q=80"}
                           alt={item.product.name}
                           className="w-full h-full object-cover"
                         />

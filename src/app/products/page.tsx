@@ -575,7 +575,7 @@ function ProductCatalogContent() {
               ) : (
                 <div className="w-full h-full max-h-[480px] flex items-center justify-center">
                   <img
-                    src={`https://images.unsplash.com/photo-${1584917865442 + activeModalProduct.id * 1000}?auto=format&fit=crop&w=800&q=80`}
+                    src={activeModalProduct.imageUrl || "https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=800&q=80"}
                     alt={activeModalProduct.name}
                     className="max-h-[460px] w-auto object-contain rounded"
                   />

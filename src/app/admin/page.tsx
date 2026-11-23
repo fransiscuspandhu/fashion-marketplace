@@ -3751,7 +3751,7 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
                   Manajemen Pesanan & Input Resi Pengiriman (AWB)
                 </h1>
                 <p className="text-xs text-zinc-500">
-                  Kelola alur transaksi per tahap (Menunggu Bayar $\rightarrow$ Dikemas $\rightarrow$ Dikirim $\rightarrow$ Selesai) tersinkron dengan halaman Profil Pelanggan
+                  Kelola alur transaksi per tahap (Menunggu Bayar → Dikemas → Dikirim → Selesai) tersinkron dengan halaman Profil Pelanggan
                 </p>
               </div>
 
