@@ -15,6 +15,7 @@ Platform e-commerce marketplace busana muslim wanita, pakaian anak, dan baju ham
 | **State & Auth** | React Context (`StoreContext`) | Dual-session management terpisah (Customer Session & Admin RBAC Session) |
 | **Media & Storage** | Local Uploads (`/api/upload`) & [Cloudflare R2](https://developers.cloudflare.com/r2/) | Upload foto produk server-side (JPG/PNG/WebP maks 10MB) + video short PDP (9:16) |
 | **Payment Gateway** | Midtrans / Xendit Ready | QRIS Instant, Virtual Account Bank (BCA, Mandiri, BRI), Kartu Kredit, dan COD |
+| **AI Studio Engine** | [Google Gemini & Nano Banana](https://aistudio.google.com) | Single API Key (`GEMINI_API_KEY`) untuk Photoshoot Model Studio (Nano Banana Pro/Flash), AI Stylist, & SEO Copywriter |
 | **Mobile App (Add-on)** | [React Native](https://reactnative.dev) + [Expo SDK 52](https://expo.dev) | Mobile application cross-platform (iOS & Android) |
 
 ---
