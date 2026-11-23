@@ -182,7 +182,7 @@ export async function POST(request: Request) {
       try {
         provider = "fal.ai";
         const falEndpoint = rawImageUrl
-          ? "https://fal.run/fal-ai/fashn-tryon"
+          ? "https://fal.run/fal-ai/fashn/tryon/v1.5"
           : "https://fal.run/fal-ai/flux/schnell";
 
         const falAuth = cleanFalKey.startsWith("Key ") ? cleanFalKey : `Key ${cleanFalKey}`;
