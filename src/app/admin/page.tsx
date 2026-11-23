@@ -81,6 +81,7 @@ export default function AdminPage() {
   const {
     adminUser,
     isAdminLoggedIn,
+    adminLogin,
     adminLogout,
     adminSwitchRole,
     products,
@@ -133,12 +134,23 @@ export default function AdminPage() {
     setIsMounted(true);
   }, []);
 
-  // Auth gate: redirect to /admin/login if not authenticated
+  // Auth gate: redirect to /admin/login if not authenticated, or support demo=true
   useEffect(() => {
-    if (isMounted && !isAdminLoggedIn) {
-      router.push("/admin/login");
+    if (isMounted) {
+      if (typeof window !== "undefined" && window.location.search.includes("demo=true")) {
+        adminLogin("owner@rahayufashion.id", "Rahayu#Admin2026", "SUPER_ADMIN");
+        const urlParams = new URLSearchParams(window.location.search);
+        const tab = urlParams.get("tab") as AdminModuleId;
+        if (tab) {
+          setActiveModule(tab);
+        }
+        return;
+      }
+      if (!isAdminLoggedIn) {
+        router.push("/admin/login");
+      }
     }
-  }, [isMounted, isAdminLoggedIn, router]);
+  }, [isMounted, isAdminLoggedIn, router, adminLogin]);
 
   const [activeModule, setActiveModule] = useState<AdminModuleId>("analytics");
 
