@@ -116,6 +116,9 @@ export default function AdminPage() {
     isLiveActive,
     liveViewers,
     toggleLiveActive,
+    tiktokConfig,
+    updateTikTokConfig,
+    syncTikTokLiveNow,
     aiFeaturesConfig,
     updateAiFeaturesConfig,
     aiLogs,
@@ -123,6 +126,7 @@ export default function AdminPage() {
   } = useStore();
 
   const [isMounted, setIsMounted] = useState(false);
+  const [isSyncingTikTok, setIsSyncingTikTok] = useState(false);
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
   const [lockedModuleNotice, setLockedModuleNotice] = useState<{
     moduleId: AdminModuleId;
@@ -5033,20 +5037,281 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
           {/* MODULE 8: SEO CMS & TIKTOK LIVE BROADCAST */}
           {activeModule === "cms-seo" && (
             <div className="space-y-6">
-              <div>
-                <h1 className="text-xl font-bold text-zinc-900">
-                  SEO CMS & Pengaturan Media Sosial / TikTok Live
-                </h1>
-                <p className="text-xs text-zinc-500">
-                  Konfigurasikan meta tag SEO, Schema.org ClothingStore, dan jadwal siaran langsung
-                  TikTok Live.
-                </p>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                  <h1 className="text-xl font-bold text-zinc-900">
+                    Konektor TikTok Live, Keranjang Kuning & SEO CMS
+                  </h1>
+                  <p className="text-xs text-zinc-500">
+                    Hubungkan akun TikTok Live toko, atur produk yang sedang di-spill di keranjang kuning,
+                    dan kelola meta tag SEO halaman publik.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={isSyncingTikTok}
+                    onClick={async () => {
+                      setIsSyncingTikTok(true);
+                      const res = await syncTikTokLiveNow();
+                      setIsSyncingTikTok(false);
+                      const probeMsg = res?.probe?.reachable
+                        ? res.probe.isLiveOnTikTok
+                          ? `Terdeteksi sedang LIVE di TikTok (Room ID: ${res.probe.roomId})`
+                          : `Akun @${tiktokConfig.username} terhubung ke TikTok (Mode Simulcast Toko Aktif)`
+                        : `Tersinkronisasi dengan Studio Simulcast @${tiktokConfig.username}`;
+                      showAdminToast("Sinkronisasi TikTok Berhasil", probeMsg, "success");
+                      openAdminAlert({
+                        variant: "success",
+                        badgeText: "TIKTOK LIVE CONNECTOR",
+                        title: `Konektor @${tiktokConfig.username} Tersinkronisasi!`,
+                        message: `${probeMsg}. Status di beranda toko saat ini: ${
+                          tiktokConfig.isLive
+                            ? `LIVE (${tiktokConfig.viewers.toLocaleString("id-ID")} penonton)`
+                            : "OFFLINE (Menampilkan Jadwal Rutin)"
+                        }.`,
+                        confirmLabel: "Selesai",
+                      });
+                    }}
+                    className="px-4 py-2.5 bg-zinc-900 hover:bg-purple-800 text-white rounded-lg text-xs font-bold flex items-center gap-2 cursor-pointer transition shadow-xs"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isSyncingTikTok ? "animate-spin" : ""}`} />
+                    <span>{isSyncingTikTok ? "Menghubungkan..." : "Test & Sinkronkan TikTok Live"}</span>
+                  </button>
+                  <a
+                    href={tiktokConfig.isLive ? tiktokConfig.liveUrl : tiktokConfig.profileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition shadow-xs"
+                  >
+                    <Radio className="w-3.5 h-3.5" />
+                    <span>Buka TikTok @{tiktokConfig.username}</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              </div>
+
+              {/* TOP LIVE CONNECTOR STATUS BANNER */}
+              <div className="bg-gradient-to-r from-zinc-900 via-purple-950 to-zinc-900 text-white p-6 rounded-xl border border-purple-500/30 shadow-lg">
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {tiktokConfig.isLive ? (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-600 text-white text-[11px] font-extrabold uppercase tracking-wider">
+                          <span className="w-2 h-2 rounded-full bg-white animate-ping"></span>
+                          <span>TIKTOK LIVE AKTIF</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-700 text-zinc-300 text-[11px] font-bold uppercase tracking-wider">
+                          <span className="w-2 h-2 rounded-full bg-zinc-400"></span>
+                          <span>SIARAN OFFLINE</span>
+                        </span>
+                      )}
+                      <span className="px-2.5 py-1 rounded-full bg-purple-500/20 border border-purple-400/30 text-purple-200 text-[11px] font-semibold">
+                        Mode: {tiktokConfig.mode === "AUTO_SYNC" ? "Auto-Sync Public TikTok" : "Studio Simulcast Control"}
+                      </span>
+                      <span className="text-[11px] text-zinc-400">
+                        Sinkron terakhir: {tiktokConfig.lastSyncedAt}
+                      </span>
+                    </div>
+                    <h2 className="text-lg font-bold text-white">
+                      @{tiktokConfig.username} — {tiktokConfig.title}
+                    </h2>
+                    <p className="text-xs text-zinc-300">
+                      Produk Di-Spill (Etalase #01):{" "}
+                      <strong className="text-amber-300">
+                        {products.find((p) => p.id === tiktokConfig.pinnedProductId)?.name || products[0]?.name}
+                      </strong>{" "}
+                      · Voucher Live: <strong className="text-pink-300 font-mono">{tiktokConfig.voucherCode}</strong>
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-3">
+                    <div className="bg-white/10 border border-white/15 rounded-lg px-4 py-2.5 text-center">
+                      <div className="text-[10px] uppercase tracking-wider text-zinc-300">Penonton Aktif</div>
+                      <div className="text-lg font-extrabold text-white">
+                        {tiktokConfig.isLive ? tiktokConfig.viewers.toLocaleString("id-ID") : "0"}
+                      </div>
+                    </div>
+                    <div className="bg-white/10 border border-white/15 rounded-lg px-4 py-2.5 text-center">
+                      <div className="text-[10px] uppercase tracking-wider text-zinc-300">Total Likes</div>
+                      <div className="text-lg font-extrabold text-rose-400">
+                        {tiktokConfig.likes.toLocaleString("id-ID")}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const nextLive = !tiktokConfig.isLive;
+                        updateTikTokConfig({ isLive: nextLive });
+                        showAdminToast(
+                          nextLive ? "Siaran TikTok Live Diaktifkan" : "Siaran TikTok Live Dimatikan",
+                          nextLive
+                            ? `Banner LIVE @${tiktokConfig.username} kini menyala di seluruh halaman beranda toko.`
+                            : "Widget beranda kini menampilkan jadwal siaran rutin.",
+                          nextLive ? "success" : "info"
+                        );
+                      }}
+                      className={`px-4 py-3 rounded-lg text-xs font-extrabold uppercase tracking-wider cursor-pointer transition ${
+                        tiktokConfig.isLive
+                          ? "bg-rose-600 hover:bg-rose-700 text-white"
+                          : "bg-emerald-600 hover:bg-emerald-700 text-white"
+                      }`}
+                    >
+                      {tiktokConfig.isLive ? "Matikan Status Live" : "Nyalakan Status Live"}
+                    </button>
+                  </div>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-white p-6 rounded-lg border border-zinc-200 shadow-2xs space-y-4 text-xs">
-                  <h3 className="font-bold text-xs uppercase tracking-wider text-zinc-800 border-b border-zinc-100 pb-2">
-                    Pengaturan Meta SEO & Schema.org
+                {/* LEFT CARD: TIKTOK LIVE CONNECTOR & KERANJANG KUNING STUDIO */}
+                <div className="bg-white p-6 rounded-xl border border-zinc-200 shadow-2xs space-y-4 text-xs">
+                  <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
+                    <div>
+                      <h3 className="font-bold text-sm text-zinc-900">
+                        Pengaturan Konektor TikTok Live & Keranjang Kuning
+                      </h3>
+                      <p className="text-[11px] text-zinc-500">
+                        Tersinkronisasi langsung dengan widget TikTok Live di Beranda & Header Toko
+                      </p>
+                    </div>
+                    <span className="px-2.5 py-0.5 bg-rose-50 text-rose-700 border border-rose-200 rounded-full text-[10px] font-bold">
+                      Live Connector
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-semibold text-zinc-700 mb-1">
+                        Username TikTok Toko (Tanpa @)
+                      </label>
+                      <input
+                        type="text"
+                        value={tiktokConfig.username}
+                        onChange={(e) =>
+                          updateTikTokConfig({ username: e.target.value.replace(/^@/, "") })
+                        }
+                        placeholder="rahayufashion.store"
+                        className="w-full px-3 py-2 border border-zinc-300 rounded-md text-xs font-medium"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-zinc-700 mb-1">
+                        Mode Sinkronisasi Live
+                      </label>
+                      <select
+                        value={tiktokConfig.mode}
+                        onChange={(e) =>
+                          updateTikTokConfig({
+                            mode: e.target.value as "AUTO_SYNC" | "MANUAL_LIVE",
+                          })
+                        }
+                        className="w-full px-3 py-2 border border-zinc-300 rounded-md text-xs bg-white font-medium"
+                      >
+                        <option value="MANUAL_LIVE">Studio Simulcast (Kontrol Manual Admin)</option>
+                        <option value="AUTO_SYNC">Auto-Sync Public TikTok Live (@username)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-zinc-700 mb-1">
+                      Judul Siaran Live (Tampil di Widget Beranda)
+                    </label>
+                    <input
+                      type="text"
+                      value={tiktokConfig.title}
+                      onChange={(e) => updateTikTokConfig({ title: e.target.value })}
+                      className="w-full px-3 py-2 border border-zinc-300 rounded-md text-xs"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-zinc-700 mb-1">
+                      📌 Produk Sedang Di-Spill di Live (Etalase Utama Keranjang Kuning)
+                    </label>
+                    <select
+                      value={tiktokConfig.pinnedProductId}
+                      onChange={(e) =>
+                        updateTikTokConfig({ pinnedProductId: Number(e.target.value) })
+                      }
+                      className="w-full px-3 py-2 border border-purple-300 bg-purple-50/40 rounded-md text-xs font-semibold text-zinc-900"
+                    >
+                      {products.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          #{p.id} — {p.name} (Rp {p.priceIdr.toLocaleString("id-ID")} · Stok: {p.stock})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block font-semibold text-zinc-700 mb-1">
+                        Kode Voucher Live
+                      </label>
+                      <input
+                        type="text"
+                        value={tiktokConfig.voucherCode}
+                        onChange={(e) =>
+                          updateTikTokConfig({ voucherCode: e.target.value.toUpperCase() })
+                        }
+                        className="w-full px-3 py-2 border border-zinc-300 rounded-md text-xs font-mono font-bold"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-zinc-700 mb-1">
+                        Jumlah Penonton
+                      </label>
+                      <input
+                        type="number"
+                        value={tiktokConfig.viewers}
+                        onChange={(e) =>
+                          updateTikTokConfig({ viewers: Math.max(0, Number(e.target.value)) })
+                        }
+                        className="w-full px-3 py-2 border border-zinc-300 rounded-md text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-zinc-700 mb-1">
+                        Jadwal Rutin Live
+                      </label>
+                      <input
+                        type="text"
+                        value={tiktokConfig.schedule}
+                        onChange={(e) => updateTikTokConfig({ schedule: e.target.value })}
+                        className="w-full px-3 py-2 border border-zinc-300 rounded-md text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-2 flex items-center justify-between border-t border-zinc-100">
+                    <span className="text-[11px] text-emerald-700 font-semibold flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      Perubahan otomatis tersinkron ke Frontstore
+                    </span>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        await updateTikTokConfig(tiktokConfig);
+                        showAdminToast(
+                          "Konfigurasi TikTok Live Disimpan",
+                          `Pengaturan @${tiktokConfig.username} dan produk di-spill berhasil diperbarui ke beranda.`,
+                          "success"
+                        );
+                      }}
+                      className="px-4 py-2 bg-purple-700 hover:bg-purple-800 text-white rounded-lg text-xs font-bold cursor-pointer transition"
+                    >
+                      Simpan Konfigurasi TikTok
+                    </button>
+                  </div>
+                </div>
+
+                {/* RIGHT CARD: META SEO, SCHEMA.ORG & SOCIAL MEDIA LINKS */}
+                <div className="bg-white p-6 rounded-xl border border-zinc-200 shadow-2xs space-y-4 text-xs">
+                  <h3 className="font-bold text-sm text-zinc-900 border-b border-zinc-100 pb-3">
+                    Pengaturan Meta SEO, Schema.org & Tautan Sosial
                   </h3>
                   <div>
                     <label className="block font-semibold text-zinc-700 mb-1">
@@ -5054,8 +5319,8 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
                     </label>
                     <input
                       type="text"
-                      defaultValue="Rahayu Fashion Store — Koleksi Hijab, Busana Muslim Wanita, Baju Hamil & Anak Resmi"
-                      className="w-full px-3 py-2 border border-zinc-300 rounded text-xs"
+                      defaultValue="Rahayu Fashion Store — Koleksi Fashion Modern, Hijab, Baju Hamil & Anak Resmi"
+                      className="w-full px-3 py-2 border border-zinc-300 rounded-md text-xs"
                     />
                   </div>
                   <div>
@@ -5064,9 +5329,33 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
                     </label>
                     <input
                       type="text"
-                      defaultValue="Rahayu Fashion, Hijab Voal, Tunik Modest, Baju Hamil Busui, Celana Legging, Pakaian Anak"
-                      className="w-full px-3 py-2 border border-zinc-300 rounded text-xs"
+                      defaultValue="Rahayu Fashion, Pakaian Wanita Modern, Hijab Voal, Baju Hamil, Celana Legging, Pakaian Anak"
+                      className="w-full px-3 py-2 border border-zinc-300 rounded-md text-xs"
                     />
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-semibold text-zinc-700 mb-1">
+                        Instagram Resmi
+                      </label>
+                      <input
+                        type="text"
+                        value={tiktokConfig.instagramUrl}
+                        onChange={(e) => updateTikTokConfig({ instagramUrl: e.target.value })}
+                        className="w-full px-3 py-2 border border-zinc-300 rounded-md text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-zinc-700 mb-1">
+                        WhatsApp CS Resmi
+                      </label>
+                      <input
+                        type="text"
+                        value={tiktokConfig.whatsappUrl}
+                        onChange={(e) => updateTikTokConfig({ whatsappUrl: e.target.value })}
+                        className="w-full px-3 py-2 border border-zinc-300 rounded-md text-xs"
+                      />
+                    </div>
                   </div>
                   <div>
                     <label className="block font-semibold text-zinc-700 mb-1">
@@ -5075,66 +5364,30 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
                     <input
                       type="text"
                       disabled
-                      defaultValue="https://schema.org/ClothingStore (Terpasang)"
-                      className="w-full px-3 py-2 border border-zinc-200 bg-zinc-50 rounded text-xs text-zinc-500"
+                      defaultValue="https://schema.org/ClothingStore (Terpasang & Valid)"
+                      className="w-full px-3 py-2 border border-zinc-200 bg-zinc-50 rounded-md text-xs text-zinc-500"
                     />
                   </div>
                   <button
                     onClick={() => {
                       showAdminToast(
-                        "Konfigurasi SEO Disimpan",
-                        "Meta Title, Silo Keywords & Schema.org ClothingStore telah diperbarui.",
+                        "Konfigurasi SEO & Sosial Disimpan",
+                        "Meta Title, Silo Keywords & Tautan Media Sosial telah diperbarui.",
                         "success"
                       );
                       openAdminAlert({
                         variant: "success",
                         badgeText: "SEO & SCHEMA.ORG",
-                        title: "Pengaturan SEO Berhasil Diperbarui!",
+                        title: "Pengaturan SEO & Media Sosial Diperbarui!",
                         message:
-                          "Konfigurasi Meta Title, Meta Keywords Silo, serta struktur JSON-LD Schema.org ClothingStore telah disinkronkan ke seluruh halaman publik.",
+                          "Konfigurasi Meta Title, Meta Keywords Silo, tautan Instagram/WhatsApp, serta struktur JSON-LD Schema.org ClothingStore telah disinkronkan ke seluruh halaman publik.",
                         confirmLabel: "Selesai",
                       });
                     }}
-                    className="px-4 py-2 bg-zinc-900 hover:bg-purple-900 text-white rounded text-xs font-bold cursor-pointer"
+                    className="px-4 py-2 bg-zinc-900 hover:bg-purple-900 text-white rounded-lg text-xs font-bold cursor-pointer transition"
                   >
-                    Simpan SEO
+                    Simpan SEO & Tautan Sosial
                   </button>
-                </div>
-
-                <div className="bg-white p-6 rounded-lg border border-zinc-200 shadow-2xs space-y-4 text-xs">
-                  <h3 className="font-bold text-xs uppercase tracking-wider text-zinc-800 border-b border-zinc-100 pb-2">
-                    Tautan Media Sosial Resmi
-                  </h3>
-                  <div>
-                    <label className="block font-semibold text-zinc-700 mb-1">
-                      TikTok (@rahayufashion.store)
-                    </label>
-                    <input
-                      type="text"
-                      defaultValue="https://www.tiktok.com/@rahayufashion.store"
-                      className="w-full px-3 py-2 border border-zinc-300 rounded text-xs"
-                    />
-                  </div>
-                  <div>
-                    <label className="block font-semibold text-zinc-700 mb-1">
-                      Instagram (@rahayufashion.id)
-                    </label>
-                    <input
-                      type="text"
-                      defaultValue="https://www.instagram.com/rahayufashion.id"
-                      className="w-full px-3 py-2 border border-zinc-300 rounded text-xs"
-                    />
-                  </div>
-                  <div>
-                    <label className="block font-semibold text-zinc-700 mb-1">
-                      WhatsApp CS Resmi
-                    </label>
-                    <input
-                      type="text"
-                      defaultValue="https://wa.me/6281288776655"
-                      className="w-full px-3 py-2 border border-zinc-300 rounded text-xs"
-                    />
-                  </div>
                 </div>
               </div>
             </div>

@@ -49,6 +49,7 @@ export default function HeaderNavbar({
     openCartDrawer,
     isLiveActive,
     liveViewers,
+    tiktokConfig,
     categories,
     pillars,
     orders,
@@ -118,14 +119,28 @@ export default function HeaderNavbar({
             {/* TikTok Live Stream Toggle / Alert */}
             {isLiveActive ? (
               <button
-                onClick={onOpenLiveModal}
+                onClick={() => {
+                  if (onOpenLiveModal) {
+                    onOpenLiveModal();
+                  } else if (typeof window !== "undefined") {
+                    window.open(tiktokConfig.liveUrl, "_blank", "noopener,noreferrer");
+                  }
+                }}
                 className="inline-flex items-center gap-1.5 text-rose-400 hover:text-rose-300 font-bold tracking-wider uppercase cursor-pointer"
+                title={`Tonton Siaran Langsung @${tiktokConfig.username}`}
               >
                 <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
                 <span>LIVE DI TIKTOK SEKARANG ({liveViewers.toLocaleString("id-ID")})</span>
               </button>
             ) : (
-              <span className="text-zinc-400">Jadwal Live: Setiap Hari 19:00 WIB</span>
+              <a
+                href={tiktokConfig.profileUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-zinc-400 hover:text-white transition"
+              >
+                Jadwal Live @{tiktokConfig.username}: {tiktokConfig.schedule}
+              </a>
             )}
 
             {/* Separate Admin Access Link (Demo Connector Toggle) */}

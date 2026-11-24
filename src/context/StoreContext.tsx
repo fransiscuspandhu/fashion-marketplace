@@ -488,6 +488,24 @@ export const DEMO_ADMIN_ACCOUNTS: AdminUser[] = [
   },
 ];
 
+export interface TikTokLiveConfig {
+  username: string;
+  mode: "AUTO_SYNC" | "MANUAL_LIVE";
+  isLive: boolean;
+  viewers: number;
+  likes: number;
+  title: string;
+  voucherCode: string;
+  schedule: string;
+  pinnedProductId: number;
+  instagramUrl: string;
+  whatsappUrl: string;
+  profileUrl: string;
+  liveUrl: string;
+  lastSyncedAt: string;
+  connectionStatus: "CONNECTED_LIVE" | "SIMULCAST_ACTIVE" | "OFFLINE";
+}
+
 interface StoreContextType {
   // Customer Auth & Profile (Frontweb Store)
   user: CustomerUser | null;
@@ -565,10 +583,13 @@ interface StoreContextType {
   updatePaymentFee: (methodId: string, fee: number) => void;
   updatePaymentMethod: (methodId: string, updated: Partial<PaymentConfig>) => void;
 
-  // Live Stream
+  // Live Stream & TikTok Connector
   isLiveActive: boolean;
   liveViewers: number;
   toggleLiveActive: () => void;
+  tiktokConfig: TikTokLiveConfig;
+  updateTikTokConfig: (partial: Partial<TikTokLiveConfig>) => Promise<void>;
+  syncTikTokLiveNow: (customUsername?: string) => Promise<any>;
 
   // AI Switchboard & Modular Features
   aiFeaturesConfig: AiFeaturesConfig;
@@ -2069,11 +2090,147 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     }).catch((err) => console.warn("Failed to update payment method in DB:", err));
   };
 
-  // 9. Live Stream State
-  const [isLiveActive, setIsLiveActive] = useState<boolean>(true);
-  const [liveViewers] = useState<number>(1420);
+  // 9. Live Stream & TikTok Connector State
+  const [tiktokConfig, setTiktokConfig] = useState<TikTokLiveConfig>({
+    username: "rahayufashion.store",
+    mode: "MANUAL_LIVE",
+    isLive: true,
+    viewers: 1428,
+    likes: 48200,
+    title: "Live Try-On & Flash Sale: Koleksi Fashion Modern & Hijab Voal",
+    voucherCode: "RAHAYULIVE20",
+    schedule: "Setiap Hari 19:00 – 22:00 WIB",
+    pinnedProductId: 1,
+    instagramUrl: "https://www.instagram.com/rahayufashion.id",
+    whatsappUrl: "https://wa.me/6281288776655",
+    profileUrl: "https://www.tiktok.com/@rahayufashion.store",
+    liveUrl: "https://www.tiktok.com/@rahayufashion.store/live",
+    lastSyncedAt: "Baru saja",
+    connectionStatus: "SIMULCAST_ACTIVE",
+  });
 
-  const toggleLiveActive = () => setIsLiveActive((prev) => !prev);
+  useEffect(() => {
+    async function loadTikTokState() {
+      try {
+        const saved = localStorage.getItem("rahayu_tiktok_config");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          setTiktokConfig((prev) => ({ ...prev, ...parsed }));
+        }
+        const res = await fetch("/api/tiktok/live-status", {
+          signal: AbortSignal.timeout(3000),
+        });
+        const data = await res.json();
+        if (data?.success) {
+          setTiktokConfig((prev) => {
+            const merged: TikTokLiveConfig = {
+              ...prev,
+              username: data.username || prev.username,
+              mode: data.mode || prev.mode,
+              isLive: typeof data.isLive === "boolean" ? data.isLive : prev.isLive,
+              viewers: typeof data.viewers === "number" ? data.viewers : prev.viewers,
+              likes: typeof data.likes === "number" ? data.likes : prev.likes,
+              title: data.title || prev.title,
+              voucherCode: data.voucherCode || prev.voucherCode,
+              schedule: data.schedule || prev.schedule,
+              pinnedProductId:
+                typeof data.pinnedProductId === "number"
+                  ? data.pinnedProductId
+                  : prev.pinnedProductId,
+              instagramUrl: data.instagramUrl || prev.instagramUrl,
+              whatsappUrl: data.whatsappUrl || prev.whatsappUrl,
+              profileUrl: data.profileUrl || `https://www.tiktok.com/@${data.username || prev.username}`,
+              liveUrl: data.liveUrl || `https://www.tiktok.com/@${data.username || prev.username}/live`,
+              lastSyncedAt: data.lastSyncedAt || prev.lastSyncedAt,
+              connectionStatus: data.connectionStatus || prev.connectionStatus,
+            };
+            localStorage.setItem("rahayu_tiktok_config", JSON.stringify(merged));
+            return merged;
+          });
+        }
+      } catch (e) {
+        // Fallback silently to local/default state
+      }
+    }
+    loadTikTokState();
+  }, []);
+
+  const updateTikTokConfig = async (partial: Partial<TikTokLiveConfig>) => {
+    const cleanUsername = (partial.username ?? tiktokConfig.username).replace(/^@/, "").trim() || "rahayufashion.store";
+    const nextState: TikTokLiveConfig = {
+      ...tiktokConfig,
+      ...partial,
+      username: cleanUsername,
+      profileUrl: `https://www.tiktok.com/@${cleanUsername}`,
+      liveUrl: `https://www.tiktok.com/@${cleanUsername}/live`,
+      lastSyncedAt:
+        new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }) + " WIB",
+    };
+    setTiktokConfig(nextState);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("rahayu_tiktok_config", JSON.stringify(nextState));
+    }
+    try {
+      const res = await fetch("/api/tiktok/live-status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(nextState),
+      });
+      const data = await res.json();
+      if (data?.success) {
+        setTiktokConfig((prev) => ({
+          ...prev,
+          ...data,
+          profileUrl: data.profileUrl || prev.profileUrl,
+          liveUrl: data.liveUrl || prev.liveUrl,
+        }));
+      }
+    } catch (e) {
+      console.warn("Could not persist TikTok config to API:", e);
+    }
+  };
+
+  const syncTikTokLiveNow = async (customUsername?: string) => {
+    const targetUser = (customUsername ?? tiktokConfig.username).replace(/^@/, "").trim() || "rahayufashion.store";
+    try {
+      const res = await fetch("/api/tiktok/live-status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...tiktokConfig,
+          username: targetUser,
+          action: "TEST_CONNECTION",
+        }),
+      });
+      const data = await res.json();
+      if (data?.success) {
+        const nextState: TikTokLiveConfig = {
+          ...tiktokConfig,
+          ...data,
+          username: data.username || targetUser,
+          profileUrl: `https://www.tiktok.com/@${data.username || targetUser}`,
+          liveUrl: `https://www.tiktok.com/@${data.username || targetUser}/live`,
+        };
+        setTiktokConfig(nextState);
+        if (typeof window !== "undefined") {
+          localStorage.setItem("rahayu_tiktok_config", JSON.stringify(nextState));
+        }
+        return data;
+      }
+      return data;
+    } catch (err: any) {
+      return { success: false, error: err?.message || "Connection test failed" };
+    }
+  };
+
+  const isLiveActive = tiktokConfig.isLive;
+  const liveViewers = tiktokConfig.viewers;
+  const toggleLiveActive = () => {
+    updateTikTokConfig({
+      isLive: !tiktokConfig.isLive,
+      connectionStatus: !tiktokConfig.isLive ? "SIMULCAST_ACTIVE" : "OFFLINE",
+    });
+  };
 
   // 10. AI Modular Features Switchboard State
   const [aiFeaturesConfig, setAiFeaturesConfig] = useState<AiFeaturesConfig>(DEFAULT_AI_FEATURES_CONFIG);
@@ -2194,6 +2351,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         isLiveActive,
         liveViewers,
         toggleLiveActive,
+        tiktokConfig,
+        updateTikTokConfig,
+        syncTikTokLiveNow,
         aiFeaturesConfig,
         updateAiFeaturesConfig,
         aiLogs,

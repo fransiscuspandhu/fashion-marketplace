@@ -14,8 +14,13 @@ import AiVirtualStylistChat from "@/components/AiVirtualStylistChat";
 
 export default function HomePage() {
   const router = useRouter();
-  const { categories, products, addToCart, homepageConfig, aiFeaturesConfig, showStoreToast } = useStore();
+  const { categories, products, addToCart, homepageConfig, aiFeaturesConfig, tiktokConfig, showStoreToast } = useStore();
   const [isLiveModalOpen, setIsLiveModalOpen] = useState<boolean>(false);
+
+  const pinnedLiveProduct =
+    products.find((p) => p.id === tiktokConfig.pinnedProductId) || products[0] || PRODUCTS_DATA[0];
+  const pinnedLiveCategory =
+    categories.find((c) => c.id === pinnedLiveProduct?.category) || categories[0];
 
   // PDP Modal State
   const [activeModalProduct, setActiveModalProduct] = useState<ProductItem | null>(null);
@@ -148,31 +153,59 @@ export default function HomePage() {
               )}
             </div>
 
-            {/* Right TikTok Live Widget */}
+            {/* Right TikTok Live Widget (Connected to StoreContext tiktokConfig) */}
             <div className="lg:col-span-3 bg-zinc-900 text-white p-5 flex flex-col justify-between border border-zinc-800">
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-rose-600 text-[10px] font-bold uppercase tracking-widest">
-                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span> TIKTOK LIVE
+                  {tiktokConfig.isLive ? (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-rose-600 text-[10px] font-bold uppercase tracking-widest">
+                      <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span> TIKTOK LIVE
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-zinc-700 text-zinc-300 text-[10px] font-bold uppercase tracking-widest">
+                      <span className="w-1.5 h-1.5 rounded-full bg-zinc-400"></span> JADWAL LIVE
+                    </span>
+                  )}
+                  <span className="text-[11px] text-zinc-400 font-mono">
+                    {tiktokConfig.isLive
+                      ? `${tiktokConfig.viewers.toLocaleString("id-ID")} Penonton`
+                      : tiktokConfig.schedule}
                   </span>
-                  <span className="text-[11px] text-zinc-400 font-mono">1.428 Penonton</span>
                 </div>
-                <div className="text-xs font-semibold text-[#E879F9]">@rahayufashion.store</div>
+                <a
+                  href={tiktokConfig.profileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs font-semibold text-[#E879F9] hover:underline inline-block"
+                >
+                  @{tiktokConfig.username} ↗
+                </a>
                 <h3 className="editorial-serif text-lg font-normal leading-snug">
-                  Live Try-On: Koleksi Tunik Silk & Hijab Voal
+                  {tiktokConfig.title}
                 </h3>
                 <p className="text-[11px] text-zinc-400 leading-relaxed">
-                  Host sedang memperagakan ukuran S, M, L, XL secara langsung. Klaim voucher <strong className="text-white font-mono">RAHAYULIVE20</strong>.
+                  Host sedang memperagakan ukuran lengkap secara langsung. Klaim voucher{" "}
+                  <strong className="text-white font-mono">{tiktokConfig.voucherCode}</strong>.
                 </p>
               </div>
 
-              <div className="my-4 p-3 bg-zinc-800/90 border border-zinc-700 space-y-1.5">
-                <div className="text-[10px] uppercase tracking-wider text-amber-400 font-bold">📌 Sedang Di-Spill di Live</div>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-medium truncate">Amira Armani Silk Tunic</span>
-                  <span className="text-rose-400 font-bold shrink-0">Rp 249.000</span>
+              <div
+                onClick={() => openPdpModal(pinnedLiveProduct)}
+                className="my-4 p-3 bg-zinc-800/90 hover:bg-zinc-800 border border-zinc-700 hover:border-purple-500/60 space-y-1.5 cursor-pointer transition"
+              >
+                <div className="text-[10px] uppercase tracking-wider text-amber-400 font-bold flex items-center justify-between">
+                  <span>📌 Sedang Di-Spill di Live</span>
+                  <span className="text-[9px] text-purple-300">Klik Detail →</span>
                 </div>
-                <div className="text-[10px] text-zinc-400">Ukuran tersedia: S · M · L · XL</div>
+                <div className="flex items-center justify-between text-xs gap-2">
+                  <span className="font-medium truncate">{pinnedLiveProduct.name}</span>
+                  <span className="text-rose-400 font-bold shrink-0">
+                    Rp {pinnedLiveProduct.priceIdr.toLocaleString("id-ID")}
+                  </span>
+                </div>
+                <div className="text-[10px] text-zinc-400">
+                  Ukuran tersedia: {(pinnedLiveCategory?.sizes || ["S", "M", "L", "XL"]).join(" · ")}
+                </div>
               </div>
 
               <button
@@ -816,7 +849,7 @@ export default function HomePage() {
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-white animate-pulse"></span>
                 <span className="text-xs font-bold tracking-wider uppercase">
-                  TIKTOK LIVE PREVIEW · @rahayufashion.store
+                  TIKTOK LIVE PREVIEW · @{tiktokConfig.username}
                 </span>
               </div>
               <button onClick={() => setIsLiveModalOpen(false)} className="w-7 h-7 bg-black/30 text-white text-xs font-bold cursor-pointer">
@@ -824,39 +857,77 @@ export default function HomePage() {
               </button>
             </div>
             <div className="p-5 space-y-4 text-xs">
-              <div className="p-4 bg-zinc-800 border border-zinc-700 flex items-center justify-between">
+              <div className="p-3.5 bg-zinc-800/80 border border-zinc-700 space-y-1">
+                <div className="text-[11px] font-bold text-white">{tiktokConfig.title}</div>
+                <div className="text-[11px] text-zinc-400">
+                  Status:{" "}
+                  {tiktokConfig.isLive ? (
+                    <span className="text-emerald-400 font-bold">
+                      ● LIVE ({tiktokConfig.viewers.toLocaleString("id-ID")} penonton ·{" "}
+                      {tiktokConfig.likes.toLocaleString("id-ID")} likes)
+                    </span>
+                  ) : (
+                    <span className="text-zinc-300">Jadwal: {tiktokConfig.schedule}</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="p-4 bg-zinc-800 border border-zinc-700 flex items-center justify-between gap-3">
                 <div>
-                  <div className="text-amber-400 font-bold">🎁 Voucher Penonton Live: RAHAYULIVE20</div>
-                  <div className="text-zinc-300 mt-0.5">Potongan ekstra 20% untuk produk yang sedang di-spill!</div>
+                  <div className="text-amber-400 font-bold">
+                    🎁 Voucher Penonton Live: {tiktokConfig.voucherCode}
+                  </div>
+                  <div className="text-zinc-300 mt-0.5">
+                    Klaim kode voucher saat checkout untuk potongan ekstra!
+                  </div>
                 </div>
                 <a
-                  href="https://www.tiktok.com/@rahayufashion.store"
+                  href={tiktokConfig.isLive ? tiktokConfig.liveUrl : tiktokConfig.profileUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="px-3.5 py-2 bg-rose-600 text-white font-bold uppercase tracking-wider text-[10px]"
+                  className="px-3.5 py-2 bg-rose-600 hover:bg-rose-500 text-white font-bold uppercase tracking-wider text-[10px] shrink-0 transition"
                 >
                   Buka TikTok ↗
                 </a>
               </div>
               <div className="space-y-2">
-                {PRODUCTS_DATA.slice(0, 4).map((p, idx) => (
-                  <div key={p.id} className="p-3 bg-zinc-800 border border-zinc-700 flex items-center justify-between gap-2">
-                    <div>
-                      <span className="text-[10px] font-bold text-rose-400">Etalase #0{idx + 1} · {p.category}</span>
-                      <div className="font-bold text-white text-xs">{p.name}</div>
-                      <div className="text-amber-300 font-bold text-xs mt-0.5">Rp {p.priceIdr.toLocaleString("id-ID")}</div>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setIsLiveModalOpen(false);
-                        openPdpModal(p);
-                      }}
-                      className="px-3 py-1.5 bg-white text-zinc-900 text-[10px] font-bold uppercase tracking-wider shrink-0 cursor-pointer"
+                {[
+                  pinnedLiveProduct,
+                  ...products.filter((p) => p.id !== pinnedLiveProduct?.id),
+                ]
+                  .slice(0, 4)
+                  .map((p, idx) => (
+                    <div
+                      key={p.id}
+                      className={`p-3 bg-zinc-800 border flex items-center justify-between gap-2 ${
+                        idx === 0 ? "border-amber-400/70 ring-1 ring-amber-400/30" : "border-zinc-700"
+                      }`}
                     >
-                      Pilih Ukuran
-                    </button>
-                  </div>
-                ))}
+                      <div>
+                        <span className="text-[10px] font-bold text-rose-400">
+                          Etalase #0{idx + 1} · {p.category}{" "}
+                          {idx === 0 && (
+                            <span className="ml-1 px-1.5 py-0.5 bg-amber-400/20 text-amber-300 rounded text-[9px]">
+                              📌 SEDANG DI-SPILL
+                            </span>
+                          )}
+                        </span>
+                        <div className="font-bold text-white text-xs">{p.name}</div>
+                        <div className="text-amber-300 font-bold text-xs mt-0.5">
+                          Rp {p.priceIdr.toLocaleString("id-ID")}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setIsLiveModalOpen(false);
+                          openPdpModal(p);
+                        }}
+                        className="px-3 py-1.5 bg-white hover:bg-purple-200 text-zinc-900 text-[10px] font-bold uppercase tracking-wider shrink-0 cursor-pointer transition"
+                      >
+                        Pilih Ukuran
+                      </button>
+                    </div>
+                  ))}
               </div>
             </div>
           </div>
