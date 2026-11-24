@@ -490,10 +490,19 @@ export const DEMO_ADMIN_ACCOUNTS: AdminUser[] = [
 
 export interface TikTokLiveConfig {
   username: string;
+  nickname?: string;
+  avatarUrl?: string;
+  signature?: string;
+  verified?: boolean;
+  accountFound?: boolean;
+  isLiveOnTikTok?: boolean;
   mode: "AUTO_SYNC" | "MANUAL_LIVE";
   isLive: boolean;
   viewers: number;
+  enterCount?: number;
   likes: number;
+  followers?: number;
+  videoCount?: number;
   title: string;
   voucherCode: string;
   schedule: string;
@@ -503,7 +512,7 @@ export interface TikTokLiveConfig {
   profileUrl: string;
   liveUrl: string;
   lastSyncedAt: string;
-  connectionStatus: "CONNECTED_LIVE" | "SIMULCAST_ACTIVE" | "OFFLINE";
+  connectionStatus: "CONNECTED_LIVE" | "ACCOUNT_SYNCED_OFFLINE" | "SIMULCAST_ACTIVE" | "OFFLINE";
 }
 
 interface StoreContextType {
@@ -2093,10 +2102,19 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   // 9. Live Stream & TikTok Connector State
   const [tiktokConfig, setTiktokConfig] = useState<TikTokLiveConfig>({
     username: "rahayufashion.store",
-    mode: "MANUAL_LIVE",
-    isLive: true,
-    viewers: 1428,
-    likes: 48200,
+    nickname: "Rahayu Fashion Store",
+    avatarUrl: "",
+    signature: "",
+    verified: false,
+    accountFound: false,
+    isLiveOnTikTok: false,
+    mode: "AUTO_SYNC",
+    isLive: false,
+    viewers: 0,
+    enterCount: 0,
+    likes: 0,
+    followers: 0,
+    videoCount: 0,
     title: "Live Try-On & Flash Sale: Koleksi Fashion Modern & Hijab Voal",
     voucherCode: "RAHAYULIVE20",
     schedule: "Setiap Hari 19:00 – 22:00 WIB",
@@ -2105,20 +2123,22 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     whatsappUrl: "https://wa.me/6281288776655",
     profileUrl: "https://www.tiktok.com/@rahayufashion.store",
     liveUrl: "https://www.tiktok.com/@rahayufashion.store/live",
-    lastSyncedAt: "Baru saja",
-    connectionStatus: "SIMULCAST_ACTIVE",
+    lastSyncedAt: "Menyinkronkan...",
+    connectionStatus: "OFFLINE",
   });
 
   useEffect(() => {
     async function loadTikTokState() {
       try {
-        const saved = localStorage.getItem("rahayu_tiktok_config");
+        // Clear legacy v1 localStorage cache that held hardcoded 1428/48200
+        localStorage.removeItem("rahayu_tiktok_config");
+        const saved = localStorage.getItem("rahayu_tiktok_live_v2");
         if (saved) {
           const parsed = JSON.parse(saved);
           setTiktokConfig((prev) => ({ ...prev, ...parsed }));
         }
-        const res = await fetch("/api/tiktok/live-status", {
-          signal: AbortSignal.timeout(3000),
+        const res = await fetch("/api/tiktok/live-status?probe=true", {
+          signal: AbortSignal.timeout(10000),
         });
         const data = await res.json();
         if (data?.success) {
@@ -2126,10 +2146,19 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             const merged: TikTokLiveConfig = {
               ...prev,
               username: data.username || prev.username,
+              nickname: data.nickname ?? prev.nickname,
+              avatarUrl: data.avatarUrl ?? prev.avatarUrl,
+              signature: data.signature ?? prev.signature,
+              verified: Boolean(data.verified),
+              accountFound: Boolean(data.accountFound),
+              isLiveOnTikTok: Boolean(data.isLiveOnTikTok),
               mode: data.mode || prev.mode,
               isLive: typeof data.isLive === "boolean" ? data.isLive : prev.isLive,
-              viewers: typeof data.viewers === "number" ? data.viewers : prev.viewers,
-              likes: typeof data.likes === "number" ? data.likes : prev.likes,
+              viewers: typeof data.viewers === "number" ? data.viewers : 0,
+              enterCount: typeof data.enterCount === "number" ? data.enterCount : 0,
+              likes: typeof data.likes === "number" ? data.likes : 0,
+              followers: typeof data.followers === "number" ? data.followers : 0,
+              videoCount: typeof data.videoCount === "number" ? data.videoCount : 0,
               title: data.title || prev.title,
               voucherCode: data.voucherCode || prev.voucherCode,
               schedule: data.schedule || prev.schedule,
@@ -2144,7 +2173,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
               lastSyncedAt: data.lastSyncedAt || prev.lastSyncedAt,
               connectionStatus: data.connectionStatus || prev.connectionStatus,
             };
-            localStorage.setItem("rahayu_tiktok_config", JSON.stringify(merged));
+            localStorage.setItem("rahayu_tiktok_live_v2", JSON.stringify(merged));
             return merged;
           });
         }
@@ -2153,6 +2182,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       }
     }
     loadTikTokState();
+    const interval = setInterval(loadTikTokState, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   const updateTikTokConfig = async (partial: Partial<TikTokLiveConfig>) => {
@@ -2164,26 +2195,32 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       profileUrl: `https://www.tiktok.com/@${cleanUsername}`,
       liveUrl: `https://www.tiktok.com/@${cleanUsername}/live`,
       lastSyncedAt:
-        new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }) + " WIB",
+        new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" }) + " WIB",
     };
     setTiktokConfig(nextState);
     if (typeof window !== "undefined") {
-      localStorage.setItem("rahayu_tiktok_config", JSON.stringify(nextState));
+      localStorage.setItem("rahayu_tiktok_live_v2", JSON.stringify(nextState));
     }
     try {
       const res = await fetch("/api/tiktok/live-status", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(nextState),
+        body: JSON.stringify(partial.username ? { ...nextState, action: "SYNC_NOW" } : nextState),
       });
       const data = await res.json();
       if (data?.success) {
-        setTiktokConfig((prev) => ({
-          ...prev,
-          ...data,
-          profileUrl: data.profileUrl || prev.profileUrl,
-          liveUrl: data.liveUrl || prev.liveUrl,
-        }));
+        setTiktokConfig((prev) => {
+          const updated: TikTokLiveConfig = {
+            ...prev,
+            ...data,
+            profileUrl: data.profileUrl || prev.profileUrl,
+            liveUrl: data.liveUrl || prev.liveUrl,
+          };
+          if (typeof window !== "undefined") {
+            localStorage.setItem("rahayu_tiktok_live_v2", JSON.stringify(updated));
+          }
+          return updated;
+        });
       }
     } catch (e) {
       console.warn("Could not persist TikTok config to API:", e);
@@ -2197,8 +2234,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...tiktokConfig,
           username: targetUser,
+          mode: tiktokConfig.mode,
           action: "TEST_CONNECTION",
         }),
       });
@@ -2213,7 +2250,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         };
         setTiktokConfig(nextState);
         if (typeof window !== "undefined") {
-          localStorage.setItem("rahayu_tiktok_config", JSON.stringify(nextState));
+          localStorage.setItem("rahayu_tiktok_live_v2", JSON.stringify(nextState));
         }
         return data;
       }
@@ -2226,9 +2263,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const isLiveActive = tiktokConfig.isLive;
   const liveViewers = tiktokConfig.viewers;
   const toggleLiveActive = () => {
+    const nextLive = !tiktokConfig.isLive;
     updateTikTokConfig({
-      isLive: !tiktokConfig.isLive,
-      connectionStatus: !tiktokConfig.isLive ? "SIMULCAST_ACTIVE" : "OFFLINE",
+      mode: "MANUAL_LIVE",
+      isLive: nextLive,
+      connectionStatus: nextLive ? "SIMULCAST_ACTIVE" : "OFFLINE",
     });
   };
 

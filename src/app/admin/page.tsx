@@ -127,6 +127,7 @@ export default function AdminPage() {
 
   const [isMounted, setIsMounted] = useState(false);
   const [isSyncingTikTok, setIsSyncingTikTok] = useState(false);
+  const [tiktokUsernameInput, setTiktokUsernameInput] = useState(tiktokConfig.username);
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
   const [lockedModuleNotice, setLockedModuleNotice] = useState<{
     moduleId: AdminModuleId;
@@ -137,6 +138,12 @@ export default function AdminPage() {
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (tiktokConfig.username) {
+      setTiktokUsernameInput(tiktokConfig.username);
+    }
+  }, [tiktokConfig.username]);
 
   // Auth gate: redirect to /admin/login if not authenticated, or support demo=true
   useEffect(() => {
@@ -5043,8 +5050,8 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
                     Konektor TikTok Live, Keranjang Kuning & SEO CMS
                   </h1>
                   <p className="text-xs text-zinc-500">
-                    Hubungkan akun TikTok Live toko, atur produk yang sedang di-spill di keranjang kuning,
-                    dan kelola meta tag SEO halaman publik.
+                    Tarik data real-time dari akun publik TikTok (Penonton Live, Followers, Total Likes),
+                    atur produk keranjang kuning, dan kelola SEO.
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -5053,30 +5060,40 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
                     disabled={isSyncingTikTok}
                     onClick={async () => {
                       setIsSyncingTikTok(true);
-                      const res = await syncTikTokLiveNow();
+                      const res = await syncTikTokLiveNow(tiktokUsernameInput);
                       setIsSyncingTikTok(false);
-                      const probeMsg = res?.probe?.reachable
-                        ? res.probe.isLiveOnTikTok
-                          ? `Terdeteksi sedang LIVE di TikTok (Room ID: ${res.probe.roomId})`
-                          : `Akun @${tiktokConfig.username} terhubung ke TikTok (Mode Simulcast Toko Aktif)`
-                        : `Tersinkronisasi dengan Studio Simulcast @${tiktokConfig.username}`;
-                      showAdminToast("Sinkronisasi TikTok Berhasil", probeMsg, "success");
+                      const found = Boolean(res?.accountFound);
+                      const isLiveNow = Boolean(res?.isLiveOnTikTok);
+                      const realLikes = Number(res?.likes ?? 0).toLocaleString("id-ID");
+                      const realFollowers = Number(res?.followers ?? 0).toLocaleString("id-ID");
+                      const realViewers = Number(res?.viewers ?? 0).toLocaleString("id-ID");
+                      const realEnter = Number(res?.enterCount ?? 0).toLocaleString("id-ID");
+
+                      const probeMsg = found
+                        ? isLiveNow
+                          ? `🔴 SEDANG LIVE di TikTok! Penonton aktif: ${realViewers} (${realEnter} total masuk) · Total Likes: ${realLikes} · Followers: ${realFollowers}`
+                          : `✓ Akun "${res?.nickname || res?.username}" ditemukan (Saat ini sedang Offline / 0 penonton live) · Total Likes Akun: ${realLikes} · Followers: ${realFollowers}`
+                        : `Akun @${tiktokUsernameInput} tidak ditemukan di publik TikTok (Pastikan username benar tanpa @).`;
+
+                      showAdminToast(
+                        found ? "Data TikTok Berhasil Disinkronkan!" : "Username TikTok Tidak Ditemukan",
+                        probeMsg,
+                        found ? "success" : "warning"
+                      );
                       openAdminAlert({
-                        variant: "success",
-                        badgeText: "TIKTOK LIVE CONNECTOR",
-                        title: `Konektor @${tiktokConfig.username} Tersinkronisasi!`,
-                        message: `${probeMsg}. Status di beranda toko saat ini: ${
-                          tiktokConfig.isLive
-                            ? `LIVE (${tiktokConfig.viewers.toLocaleString("id-ID")} penonton)`
-                            : "OFFLINE (Menampilkan Jadwal Rutin)"
-                        }.`,
+                        variant: found ? "success" : "warning",
+                        badgeText: "REAL-TIME TIKTOK PUBLIC SYNC",
+                        title: found
+                          ? `Data Real-Time @${res?.username} (${res?.nickname}) Berhasil Ditarik!`
+                          : `Akun @${tiktokUsernameInput} Tidak Ditemukan di TikTok`,
+                        message: probeMsg,
                         confirmLabel: "Selesai",
                       });
                     }}
                     className="px-4 py-2.5 bg-zinc-900 hover:bg-purple-800 text-white rounded-lg text-xs font-bold flex items-center gap-2 cursor-pointer transition shadow-xs"
                   >
                     <RefreshCw className={`w-3.5 h-3.5 ${isSyncingTikTok ? "animate-spin" : ""}`} />
-                    <span>{isSyncingTikTok ? "Menghubungkan..." : "Test & Sinkronkan TikTok Live"}</span>
+                    <span>{isSyncingTikTok ? "Menarik Data TikTok..." : "Test & Sinkronkan TikTok Live"}</span>
                   </button>
                   <a
                     href={tiktokConfig.isLive ? tiktokConfig.liveUrl : tiktokConfig.profileUrl}
@@ -5096,10 +5113,15 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                   <div className="space-y-2">
                     <div className="flex flex-wrap items-center gap-2">
-                      {tiktokConfig.isLive ? (
+                      {tiktokConfig.isLiveOnTikTok ? (
                         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-600 text-white text-[11px] font-extrabold uppercase tracking-wider">
                           <span className="w-2 h-2 rounded-full bg-white animate-ping"></span>
-                          <span>TIKTOK LIVE AKTIF</span>
+                          <span>🔴 LIVE DI TIKTOK SEKARANG</span>
+                        </span>
+                      ) : tiktokConfig.isLive ? (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-600 text-white text-[11px] font-extrabold uppercase tracking-wider">
+                          <span className="w-2 h-2 rounded-full bg-white animate-pulse"></span>
+                          <span>SIMULCAST TOKO AKTIF (TIKTOK OFFLINE)</span>
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-700 text-zinc-300 text-[11px] font-bold uppercase tracking-wider">
@@ -5107,15 +5129,27 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
                           <span>SIARAN OFFLINE</span>
                         </span>
                       )}
-                      <span className="px-2.5 py-1 rounded-full bg-purple-500/20 border border-purple-400/30 text-purple-200 text-[11px] font-semibold">
-                        Mode: {tiktokConfig.mode === "AUTO_SYNC" ? "Auto-Sync Public TikTok" : "Studio Simulcast Control"}
-                      </span>
+
+                      {tiktokConfig.accountFound ? (
+                        <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-[11px] font-bold">
+                          ✓ Akun Terverifikasi: {tiktokConfig.nickname} (@{tiktokConfig.username})
+                        </span>
+                      ) : (
+                        <span className="px-2.5 py-1 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-200 text-[11px] font-semibold">
+                          Mode: {tiktokConfig.mode === "AUTO_SYNC" ? "Auto-Sync Public TikTok" : "Studio Simulcast"}
+                        </span>
+                      )}
+
                       <span className="text-[11px] text-zinc-400">
                         Sinkron terakhir: {tiktokConfig.lastSyncedAt}
                       </span>
                     </div>
                     <h2 className="text-lg font-bold text-white">
-                      @{tiktokConfig.username} — {tiktokConfig.title}
+                      @{tiktokConfig.username}{" "}
+                      {tiktokConfig.nickname && tiktokConfig.nickname !== tiktokConfig.username
+                        ? `(${tiktokConfig.nickname})`
+                        : ""}{" "}
+                      — {tiktokConfig.title}
                     </h2>
                     <p className="text-xs text-zinc-300">
                       Produk Di-Spill (Etalase #01):{" "}
@@ -5123,32 +5157,56 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
                         {products.find((p) => p.id === tiktokConfig.pinnedProductId)?.name || products[0]?.name}
                       </strong>{" "}
                       · Voucher Live: <strong className="text-pink-300 font-mono">{tiktokConfig.voucherCode}</strong>
+                      {typeof tiktokConfig.videoCount === "number" && tiktokConfig.videoCount > 0 && (
+                        <span> · Total Video TikTok: <strong>{tiktokConfig.videoCount.toLocaleString("id-ID")}</strong></span>
+                      )}
                     </p>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-3">
-                    <div className="bg-white/10 border border-white/15 rounded-lg px-4 py-2.5 text-center">
-                      <div className="text-[10px] uppercase tracking-wider text-zinc-300">Penonton Aktif</div>
+                    <div className="bg-white/10 border border-white/15 rounded-lg px-3.5 py-2 text-center min-w-[110px]">
+                      <div className="text-[10px] uppercase tracking-wider text-zinc-300">Penonton Live</div>
                       <div className="text-lg font-extrabold text-white">
-                        {tiktokConfig.isLive ? tiktokConfig.viewers.toLocaleString("id-ID") : "0"}
+                        {tiktokConfig.viewers.toLocaleString("id-ID")}
+                      </div>
+                      <div className="text-[9px] text-zinc-400">
+                        {tiktokConfig.enterCount
+                          ? `${tiktokConfig.enterCount.toLocaleString("id-ID")} total masuk`
+                          : tiktokConfig.isLiveOnTikTok
+                          ? "Real-time TikTok"
+                          : "0 (Offline)"}
                       </div>
                     </div>
-                    <div className="bg-white/10 border border-white/15 rounded-lg px-4 py-2.5 text-center">
+
+                    <div className="bg-white/10 border border-white/15 rounded-lg px-3.5 py-2 text-center min-w-[110px]">
+                      <div className="text-[10px] uppercase tracking-wider text-zinc-300">Followers TikTok</div>
+                      <div className="text-lg font-extrabold text-purple-300">
+                        {(tiktokConfig.followers ?? 0).toLocaleString("id-ID")}
+                      </div>
+                      <div className="text-[9px] text-zinc-400">Data Asli Akun</div>
+                    </div>
+
+                    <div className="bg-white/10 border border-white/15 rounded-lg px-3.5 py-2 text-center min-w-[110px]">
                       <div className="text-[10px] uppercase tracking-wider text-zinc-300">Total Likes</div>
                       <div className="text-lg font-extrabold text-rose-400">
                         {tiktokConfig.likes.toLocaleString("id-ID")}
                       </div>
+                      <div className="text-[9px] text-zinc-400">Akumulasi Hearts</div>
                     </div>
+
                     <button
                       type="button"
                       onClick={() => {
                         const nextLive = !tiktokConfig.isLive;
-                        updateTikTokConfig({ isLive: nextLive });
+                        updateTikTokConfig({
+                          mode: nextLive ? "MANUAL_LIVE" : "AUTO_SYNC",
+                          isLive: nextLive,
+                        });
                         showAdminToast(
-                          nextLive ? "Siaran TikTok Live Diaktifkan" : "Siaran TikTok Live Dimatikan",
+                          nextLive ? "Banner Live Toko Diaktifkan" : "Mode Auto-Sync TikTok Aktif",
                           nextLive
-                            ? `Banner LIVE @${tiktokConfig.username} kini menyala di seluruh halaman beranda toko.`
-                            : "Widget beranda kini menampilkan jadwal siaran rutin.",
+                            ? `Banner LIVE @${tiktokConfig.username} dinyalakan di beranda toko.`
+                            : "Status live kini mengikuti status asli akun TikTok secara otomatis.",
                           nextLive ? "success" : "info"
                         );
                       }}
@@ -5173,30 +5231,57 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
                         Pengaturan Konektor TikTok Live & Keranjang Kuning
                       </h3>
                       <p className="text-[11px] text-zinc-500">
-                        Tersinkronisasi langsung dengan widget TikTok Live di Beranda & Header Toko
+                        Ketik username TikTok asli (contoh: <code className="text-purple-700 font-bold">buttonscarves</code> atau akun Anda) lalu klik Tarik Data
                       </p>
                     </div>
                     <span className="px-2.5 py-0.5 bg-rose-50 text-rose-700 border border-rose-200 rounded-full text-[10px] font-bold">
-                      Live Connector
+                      Real-Time Sync
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
+                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+                    <div className="sm:col-span-7">
                       <label className="block font-semibold text-zinc-700 mb-1">
                         Username TikTok Toko (Tanpa @)
                       </label>
-                      <input
-                        type="text"
-                        value={tiktokConfig.username}
-                        onChange={(e) =>
-                          updateTikTokConfig({ username: e.target.value.replace(/^@/, "") })
-                        }
-                        placeholder="rahayufashion.store"
-                        className="w-full px-3 py-2 border border-zinc-300 rounded-md text-xs font-medium"
-                      />
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={tiktokUsernameInput}
+                          onChange={(e) => setTiktokUsernameInput(e.target.value.replace(/^@/, ""))}
+                          onKeyDown={async (e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              setIsSyncingTikTok(true);
+                              await syncTikTokLiveNow(tiktokUsernameInput);
+                              setIsSyncingTikTok(false);
+                            }
+                          }}
+                          placeholder="cth. buttonscarves atau username Anda"
+                          className="w-full px-3 py-2 border border-zinc-300 rounded-md text-xs font-bold text-zinc-900"
+                        />
+                        <button
+                          type="button"
+                          disabled={isSyncingTikTok}
+                          onClick={async () => {
+                            setIsSyncingTikTok(true);
+                            const res = await syncTikTokLiveNow(tiktokUsernameInput);
+                            setIsSyncingTikTok(false);
+                            showAdminToast(
+                              res?.accountFound ? "Data Akun TikTok Ditarik!" : "Akun Tidak Ditemukan",
+                              res?.accountFound
+                                ? `@${res.username}: ${Number(res.likes ?? 0).toLocaleString("id-ID")} Likes · ${Number(res.followers ?? 0).toLocaleString("id-ID")} Followers · ${Number(res.viewers ?? 0).toLocaleString("id-ID")} Penonton Live`
+                                : `Username @${tiktokUsernameInput} tidak ditemukan di TikTok.`,
+                              res?.accountFound ? "success" : "warning"
+                            );
+                          }}
+                          className="px-3 py-2 bg-purple-700 hover:bg-purple-800 text-white rounded-md text-xs font-bold shrink-0 cursor-pointer transition"
+                        >
+                          {isSyncingTikTok ? "..." : "Tarik Data"}
+                        </button>
+                      </div>
                     </div>
-                    <div>
+                    <div className="sm:col-span-5">
                       <label className="block font-semibold text-zinc-700 mb-1">
                         Mode Sinkronisasi Live
                       </label>
@@ -5204,20 +5289,21 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
                         value={tiktokConfig.mode}
                         onChange={(e) =>
                           updateTikTokConfig({
+                            username: tiktokUsernameInput,
                             mode: e.target.value as "AUTO_SYNC" | "MANUAL_LIVE",
                           })
                         }
                         className="w-full px-3 py-2 border border-zinc-300 rounded-md text-xs bg-white font-medium"
                       >
-                        <option value="MANUAL_LIVE">Studio Simulcast (Kontrol Manual Admin)</option>
-                        <option value="AUTO_SYNC">Auto-Sync Public TikTok Live (@username)</option>
+                        <option value="AUTO_SYNC">Auto-Sync Real-Time TikTok (@username)</option>
+                        <option value="MANUAL_LIVE">Studio Simulcast (Override Manual)</option>
                       </select>
                     </div>
                   </div>
 
                   <div>
                     <label className="block font-semibold text-zinc-700 mb-1">
-                      Judul Siaran Live (Tampil di Widget Beranda)
+                      Judul Siaran Live (Otomatis dari TikTok Live / Kustom)
                     </label>
                     <input
                       type="text"
@@ -5262,15 +5348,23 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
                     </div>
                     <div>
                       <label className="block font-semibold text-zinc-700 mb-1">
-                        Jumlah Penonton
+                        Penonton Live {tiktokConfig.mode === "AUTO_SYNC" ? "(Real-Time)" : "(Manual)"}
                       </label>
                       <input
                         type="number"
                         value={tiktokConfig.viewers}
+                        disabled={tiktokConfig.mode === "AUTO_SYNC"}
                         onChange={(e) =>
-                          updateTikTokConfig({ viewers: Math.max(0, Number(e.target.value)) })
+                          updateTikTokConfig({
+                            mode: "MANUAL_LIVE",
+                            viewers: Math.max(0, Number(e.target.value)),
+                          })
                         }
-                        className="w-full px-3 py-2 border border-zinc-300 rounded-md text-xs"
+                        className={`w-full px-3 py-2 border rounded-md text-xs font-bold ${
+                          tiktokConfig.mode === "AUTO_SYNC"
+                            ? "border-zinc-200 bg-zinc-50 text-zinc-600"
+                            : "border-zinc-300 bg-white text-zinc-900"
+                        }`}
                       />
                     </div>
                     <div>
@@ -5289,21 +5383,24 @@ Cuci dengan tangan atau putaran mesin lembut suhu air normal. Hindari pemutih pa
                   <div className="pt-2 flex items-center justify-between border-t border-zinc-100">
                     <span className="text-[11px] text-emerald-700 font-semibold flex items-center gap-1">
                       <CheckCircle2 className="w-3.5 h-3.5" />
-                      Perubahan otomatis tersinkron ke Frontstore
+                      Auto-polling TikTok aktif setiap 30 detik
                     </span>
                     <button
                       type="button"
+                      disabled={isSyncingTikTok}
                       onClick={async () => {
-                        await updateTikTokConfig(tiktokConfig);
+                        setIsSyncingTikTok(true);
+                        const res = await syncTikTokLiveNow(tiktokUsernameInput);
+                        setIsSyncingTikTok(false);
                         showAdminToast(
-                          "Konfigurasi TikTok Live Disimpan",
-                          `Pengaturan @${tiktokConfig.username} dan produk di-spill berhasil diperbarui ke beranda.`,
+                          "Konfigurasi & Data TikTok Disinkronkan",
+                          `@${res?.username || tiktokUsernameInput}: ${Number(res?.likes ?? 0).toLocaleString("id-ID")} Likes · ${Number(res?.viewers ?? 0).toLocaleString("id-ID")} Penonton Live.`,
                           "success"
                         );
                       }}
                       className="px-4 py-2 bg-purple-700 hover:bg-purple-800 text-white rounded-lg text-xs font-bold cursor-pointer transition"
                     >
-                      Simpan Konfigurasi TikTok
+                      Simpan & Sinkronkan TikTok
                     </button>
                   </div>
                 </div>

@@ -155,7 +155,7 @@ export default function HomePage() {
 
             {/* Right TikTok Live Widget (Connected to StoreContext tiktokConfig) */}
             <div className="lg:col-span-3 bg-zinc-900 text-white p-5 flex flex-col justify-between border border-zinc-800">
-              <div className="space-y-3">
+              <div className="space-y-2.5">
                 <div className="flex items-center justify-between">
                   {tiktokConfig.isLive ? (
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-rose-600 text-[10px] font-bold uppercase tracking-widest">
@@ -163,29 +163,37 @@ export default function HomePage() {
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-zinc-700 text-zinc-300 text-[10px] font-bold uppercase tracking-widest">
-                      <span className="w-1.5 h-1.5 rounded-full bg-zinc-400"></span> JADWAL LIVE
+                      <span className="w-1.5 h-1.5 rounded-full bg-zinc-400"></span> OFFLINE
                     </span>
                   )}
-                  <span className="text-[11px] text-zinc-400 font-mono">
-                    {tiktokConfig.isLive
-                      ? `${tiktokConfig.viewers.toLocaleString("id-ID")} Penonton`
-                      : tiktokConfig.schedule}
+                  <span className="text-[11px] text-zinc-300 font-mono font-bold">
+                    {tiktokConfig.viewers.toLocaleString("id-ID")} Penonton
                   </span>
                 </div>
-                <a
-                  href={tiktokConfig.profileUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs font-semibold text-[#E879F9] hover:underline inline-block"
-                >
-                  @{tiktokConfig.username} ↗
-                </a>
-                <h3 className="editorial-serif text-lg font-normal leading-snug">
+                <div className="flex items-center justify-between gap-2">
+                  <a
+                    href={tiktokConfig.profileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs font-semibold text-[#E879F9] hover:underline truncate"
+                  >
+                    @{tiktokConfig.username} ↗
+                  </a>
+                  <span className="text-[10px] text-rose-400 font-mono shrink-0">
+                    ♥ {tiktokConfig.likes.toLocaleString("id-ID")} Likes
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 text-[10px] text-zinc-400 border-b border-zinc-800 pb-2">
+                  <span>Followers: <strong className="text-zinc-200">{(tiktokConfig.followers ?? 0).toLocaleString("id-ID")}</strong></span>
+                  <span>·</span>
+                  <span className="truncate">{tiktokConfig.schedule}</span>
+                </div>
+                <h3 className="editorial-serif text-base font-normal leading-snug pt-0.5">
                   {tiktokConfig.title}
                 </h3>
                 <p className="text-[11px] text-zinc-400 leading-relaxed">
-                  Host sedang memperagakan ukuran lengkap secara langsung. Klaim voucher{" "}
-                  <strong className="text-white font-mono">{tiktokConfig.voucherCode}</strong>.
+                  Klaim kode voucher{" "}
+                  <strong className="text-white font-mono">{tiktokConfig.voucherCode}</strong> saat checkout.
                 </p>
               </div>
 
