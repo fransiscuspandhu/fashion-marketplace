@@ -166,7 +166,7 @@ export default function CheckoutPage() {
               Masuk Akun untuk Melanjutkan Checkout
             </h1>
             <p className="text-xs text-zinc-500 mb-6 leading-relaxed">
-              Sesuai standar Tokopedia & Rahayu Store, alamat pengiriman dan pelacakan pesanan Anda
+              Demi kenyamanan transaksi di Rahayu Fashion Store, alamat pengiriman dan pelacakan pesanan Anda
               tersimpan aman di akun profil pelanggan Anda.
             </p>
 
@@ -263,7 +263,7 @@ export default function CheckoutPage() {
       setAppliedVoucher({
         code: "RAHAYU10",
         discount: Math.round(subtotal * 0.1),
-        description: "Diskon 10% Spesial Tokopedia Flow!",
+        description: "Diskon 10% Spesial Pelanggan Rahayu!",
       });
       showStoreToast("Diskon 10% Aktif", "Potongan 10% berhasil diterapkan.", "success");
     } else {
@@ -370,7 +370,7 @@ export default function CheckoutPage() {
             </span>
             <span className="text-zinc-300">/</span>
             <span className="text-zinc-500 hidden sm:inline">
-              Alur Tokopedia Standard Checkout
+              Alur Checkout Cepat & Terintegrasi
             </span>
           </div>
 

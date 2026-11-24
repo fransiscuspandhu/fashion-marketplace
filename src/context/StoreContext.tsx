@@ -993,16 +993,16 @@ const INITIAL_AI_LOGS: AiPhotoLog[] = [
     background: "Monochrome Concrete & Olive Tree Branch Shadow",
     costIdr: 520,
     status: "COMPLETED",
-    prompt: "Full-body portrait of Indonesian woman wearing royal plum modest loose tunic, standing gracefully against clean textured beige wall, natural soft shadows, Zalora premium aesthetic.",
+    prompt: "Full-body portrait of Indonesian woman wearing royal plum loose silk tunic, standing gracefully against clean textured beige wall, natural soft shadows, luxury studio editorial aesthetic.",
     outputUrl: "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=800&q=80",
   },
 ];
 
 const INITIAL_HOMEPAGE_CONFIG: HomepageSectionConfig = {
   hero: {
-    badge: "KOLEKSI RAYA & MODEST 2026",
-    title: "Elegansi Kesederhanaan Busana Muslimah",
-    description: "Koleksi busana muslim wanita, hijab voal ultrafine, baju hamil busui friendly, dan pakaian anak dengan material katun & silk bersertifikasi standar tinggi.",
+    badge: "KOLEKSI FASHION MODERN 2026",
+    title: "Eksplorasi Gaya Fashion Modern Setiap Hari",
+    description: "Koleksi pakaian wanita modern, atasan & bawahan kasual, celana & legging, hijab voal ultrafine, baju hamil nyaman, hingga pakaian anak berkualitas tinggi.",
     ctaText: "Jelajahi Koleksi",
     ctaLink: "/products",
     backgroundImageUrl: "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=1920&q=80",
